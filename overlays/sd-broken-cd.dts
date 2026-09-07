@@ -1,0 +1,25 @@
+/dts-v1/;
+/plugin/;
+
+/*
+ * Fly Lite 2.1: Orange Pi Lite DTB uses PF6 as SD card-detect.
+ * Live U-Boot (Armbian 2026.07, model Xunlong Orange Pi Lite) reports
+ * "MMC: no card present" after SPL already loaded U-Boot from that card.
+ * Ignore CD so mmc0 always scans.
+ *
+ *   sudo armbian-add-overlay overlays/sd-broken-cd.dts
+ *
+ * U-Boot itself also needs this in its DTB, or use: mmc dev 0 0 1
+ */
+
+/ {
+	compatible = "allwinner,sun8i-h3";
+
+	fragment@0 {
+		target = <&mmc0>;
+		__overlay__ {
+			broken-cd;
+			/delete-property/ cd-gpios;
+		};
+	};
+};

@@ -33,6 +33,10 @@ That file already enables MMC0 (SD), MMC1 (SDIO Wi-Fi), EHCI/OHCI 1 and 2, HDMI,
 
 Dump those from the official H3 FlyOS image with `scripts/extract-flyos.sh`.
 
+## Live U-Boot (Armbian 2026.07 on Lite 2.1)
+
+Confirmed on serial: H3, 512 MiB, model `Xunlong Orange Pi Lite`, USB EHCI/OHCI 1 and 2 up, no Ethernet. SPL loads from the SD card, then U-Boot treats `mmc0` as empty because the Orange Pi Lite DTB has `cd-gpios = PF6`. Workaround at the `=>` prompt: `mmc dev 0 0 1`. Overlay: `overlays/sd-broken-cd.dts`.
+
 - Debian image: https://www.armbian.com/orange-pi-lite/
 - Trixie Minimal CLI: https://dl.armbian.com/orangepilite/Trixie_current_minimal
 - FlyOS Lite2 / 2.1: https://mellow.klipper.cn/en/docs/ResDownload/system-img/fly-lite2/

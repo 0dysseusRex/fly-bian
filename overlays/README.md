@@ -8,6 +8,7 @@ sudo armbian-add-overlay overlays/sdio-wifi-rtl8189.dts
 
 | File | When to use |
 | --- | --- |
+| `sd-broken-cd.dts` | U-Boot/Linux say `MMC: no card present` after SPL already booted from the SD card. Fly Lite does not use Orange Pi Lite’s PF6 CD pin. |
 | `sdio-wifi-rtl8189.dts` | MMC1 is missing or disabled and you expect SDIO Wi-Fi |
 | `usb-otg-peripheral.dts` | Type-C serial works on FlyOS, not on Debian, and you already have another login |
 | `fly-tft-spi-candidate.dts` | Only after a FlyOS DTB dump confirms the GPIOs. Panel node is `disabled` on purpose. |
