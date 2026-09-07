@@ -34,7 +34,7 @@ fdt resize 4096
 fdt rm /soc/mmc@1c0f000 cd-gpios
 fdt set /soc/mmc@1c0f000 broken-cd
 fdt set /soc/mmc@1c0f000 non-removable
-setenv bootargs console=ttyS0,115200 root=/dev/mmcblk0p1 rootwait rootfstype=ext4
+setenv bootargs console=ttyS0,115200 root=/dev/mmcblk0p1 rootwait rootfstype=ext4 module_blacklist=8189fs,rtl8189fs,r8188eu cma=16M bpf_jit_enable=0 systemd.mask=armbian-zram-config.service
 bootz ${kernel_addr_r} ${ramdisk_addr_r} ${fdt_addr_r}
 ```
 
@@ -94,11 +94,32 @@ dmesg | grep mmc | tail
 
 If `devmem` is missing, use `busybox devmem` in those two lines. If `/dev/mmcblk0p1` appears: `exit` (initramfs retries the mount). If it does not: `reboot -f` and use the U-Boot paste with `fdt rm`.
 
+## Kernel panic after `Welcome to Armbian`
+
+The FDT edit worked: `mmc0: new high speed SDHC card`, `mmcblk0: 29.1 GiB`, `EXT4-fs mounted`, systemd 257, hostname `orangepilite`.
+
+Then Armbian’s zram service sized **248 MB** of compressed swap on a 512 MB SoC (102 MB already reserved as CMA). Seconds later udev-worker oopsed in `__seccomp_filter` / BPF (`PC` landed in slab, not executable filter code) and the kernel panicked (`stack-protector: Kernel stack is corrupted`).
+
+That is a 32-bit sunxi 6.18 + tight RAM bug, not a dead card. The paste above now:
+
+- `cma=16M` — free ~86 MB of CMA
+- `bpf_jit_enable=0` — skip the ARM Thumb2 BPF JIT that udev’s seccomp walked into
+- `systemd.mask=armbian-zram-config.service` — do not allocate 248 MB zram on first boot
+- keeps the 8189fs blacklist so SDIO Wi-Fi does not pile on
+
+If it still panics, same paste but this `bootargs` (root shell, no systemd):
+
+```
+setenv bootargs console=ttyS0,115200 root=/dev/mmcblk0p1 rootwait rootfstype=ext4 rw init=/bin/bash
+```
+
+Then: `mount -o remount,rw /` if needed, `passwd`, add a user, and write a 1 GB swap **file** before turning zram back on.
+
 ## After Linux
 
 1. Finish Armbian’s first-run user. Do not live as root.
-2. 512 MB: keep zram; add a 1 GB swap file before compiling.
-3. Wi-Fi: `nmtui` or `nmcli` (no pre-boot file on this card — there is no FAT partition).
+2. 512 MB: **do not** re-enable stock zram until a 1 GB swap file exists. The default 248 MB zram panicked 6.18.49 on this board.
+3. Wi-Fi: `nmtui` or `nmcli` after you drop `module_blacklist` on a later boot (or `modprobe 8189fs` once you have a shell).
 4. `scripts/first-boot-checks.sh` (or the commands in the web guide).
 
 Autoboot will keep dying on PF6 until we patch **U-Boot’s** DTB (`broken-cd`, delete `cd-gpios` on `mmc@1c0f000`). `overlays/sd-broken-cd.dts` is for Linux only. `saveenv` expects FAT and will not persist a `bootcmd` on this image.

@@ -97,7 +97,7 @@ fdt resize 4096
 fdt rm /soc/mmc@1c0f000 cd-gpios
 fdt set /soc/mmc@1c0f000 broken-cd
 fdt set /soc/mmc@1c0f000 non-removable
-setenv bootargs console=ttyS0,115200 root=/dev/mmcblk0p1 rootwait rootfstype=ext4
+setenv bootargs console=ttyS0,115200 root=/dev/mmcblk0p1 rootwait rootfstype=ext4 module_blacklist=8189fs,rtl8189fs,r8188eu cma=16M bpf_jit_enable=0 systemd.mask=armbian-zram-config.service
 bootz ${kernel_addr_r} ${ramdisk_addr_r} ${fdt_addr_r}
 ```
 
