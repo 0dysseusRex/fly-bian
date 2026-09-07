@@ -12,7 +12,7 @@ The Lite is an Allwinner H3 host (512 MB, **MicroSD only**, onboard 2.4 GHz Wi-F
 
 **Armbian Debian 13 Trixie Minimal CLI for Orange Pi Lite** on a **second** MicroSD. Keep FlyOS on the original card.
 
-**Live status:** Debian mounts. systemd/udev then panics this 6.18.49 sunxi kernel (zram/seccomp, then cfg80211 + tickless timer). Boot `init=/bin/bash` and persist swap + blacklists: [`docs/lite21-bringup.md`](docs/lite21-bringup.md).
+**Live status:** Root shell works. Image was never expanded (~1.3 GiB full on a 29 GiB card). Grow `mmcblk0p1` + `resize2fs` before more files. Then systemd without `init=/bin/bash`: [`docs/lite21-bringup.md`](docs/lite21-bringup.md).
 
 1. Flash: https://dl.armbian.com/orangepilite/Trixie_current_minimal
 2. This Trixie image is **one ext4 partition** (no FAT `armbi_boot`), so skip `fly-net.txt` until Linux is up. Use Type-C serial.

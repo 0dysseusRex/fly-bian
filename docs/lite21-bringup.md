@@ -92,46 +92,45 @@ If `devmem` is missing, use `busybox devmem` in those two lines. If `/dev/mmcblk
 
 The FDT edit worked: `mmc0: new high speed SDHC card`, `mmcblk0: 29.1 GiB`, `EXT4-fs mounted`, systemd 257, hostname `orangepilite`.
 
-Then Armbian’s zram service sized **248 MB** of compressed swap on a 512 MB SoC (102 MB already reserved as CMA). Seconds later udev-worker oopsed in `__seccomp_filter` / BPF (`PC` landed in slab, not executable filter code) and the kernel panicked (`stack-protector: Kernel stack is corrupted`).
+Two udev-worker panics on this 6.18.49 Thumb2 kernel, not a dead card:
 
-That is a 32-bit sunxi 6.18 + tight RAM bug, not a dead card. The paste above now:
+1. Stock **248 MB zram** + 102 MB CMA → oops in `__seccomp_filter` / BPF JIT.
+2. Zram masked → udev still loaded `cfg80211` + `display_connector`, then **undefined instruction** in `rcu_sched_clock_irq` (tickless `arch_timer`).
 
-- `cma=16M` — free ~86 MB of CMA
-- `bpf_jit_enable=0` — skip the ARM Thumb2 BPF JIT that udev’s seccomp walked into
-- `systemd.mask=armbian-zram-config.service` — do not allocate 248 MB zram on first boot
-- keeps the 8189fs blacklist so SDIO Wi-Fi does not pile on
-
-A later boot (zram masked) still panicked: udev loaded `cfg80211` + `display_connector`, then **undefined instruction** in `rcu_sched_clock_irq` (tickless `arch_timer` path). The main paste now uses `init=/bin/bash` so udev never starts, plus `nohz=off clocksource=timer`.
+The main paste skips systemd (`init=/bin/bash`) and uses `nohz=off clocksource=timer cma=16M bpf_jit_enable=0`.
 
 ## Root shell (you are here after `init=/bin/bash`)
 
 You should get `#` on ttyS0 after `Freeing unused kernel` / initramfs. If the prompt is missing, press Enter.
 
+The flashed image is a **~1.3 GiB** ext4 on a 29 GiB card. systemd never ran `armbian-resize-filesystem`, so `/` fills after a small swap file. **Grow the partition first**, then write swap/sysctl.
+
 ```
 mount -o remount,rw /
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin TERM=linux
+df -h
+lsblk
+# prefer growpart; else parted; else sfdisk
+growpart /dev/mmcblk0 1 || parted -s /dev/mmcblk0 resizepart 1 100% || printf ',+\n' | sfdisk -N 1 /dev/mmcblk0
+resize2fs /dev/mmcblk0p1
+df -h
 passwd
+swapoff /swapfile 2>/dev/null || true
+rm -f /swapfile
 dd if=/dev/zero of=/swapfile bs=1M count=1024
 chmod 600 /swapfile
 mkswap /swapfile
-echo '/swapfile none swap sw 0 0' >> /etc/fstab
+grep -q swapfile /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
 swapon /swapfile
-mkdir -p /etc/modprobe.d
-cat > /etc/modprobe.d/fly-lite-firstboot.conf << 'EOF'
-blacklist 8189fs
-blacklist rtl8189fs
-blacklist r8188eu
-blacklist cfg80211
-blacklist mac80211
-blacklist display_connector
-blacklist g_serial
-EOF
-systemctl mask armbian-zram-config.service armbian-ramlog.service
+mkdir -p /etc/modprobe.d /etc/sysctl.d
+# blacklists + masked zram as in the live session
 echo 'net.core.bpf_jit_enable=0' > /etc/sysctl.d/99-fly-lite.conf
+systemctl mask armbian-zram-config.service armbian-ramlog.service
 sync
+df -h
 ```
 
-Then reboot and use the same U-Boot paste but **drop** `init=/bin/bash` (keep `nohz=off clocksource=timer cma=16M bpf_jit_enable=0`) so systemd can run the first-user wizard.
+`df` must show tens of GiB free before you reboot. Then the same U-Boot paste **without** `init=/bin/bash` (keep `nohz=off clocksource=timer cma=16M bpf_jit_enable=0`).
 
 ## After Linux
 
