@@ -35,7 +35,9 @@ Dump those from the official H3 FlyOS image with `scripts/extract-flyos.sh`.
 
 ## Live U-Boot (Armbian 2026.07 on Lite 2.1)
 
-Confirmed on serial: H3, 512 MiB, model `Xunlong Orange Pi Lite`, USB EHCI/OHCI 1 and 2 up, no Ethernet. SPL loads from the SD card, then U-Boot treats `mmc0` as empty because the Orange Pi Lite DTB has `cd-gpios = PF6`. Workaround at the `=>` prompt: `mmc dev 0 0 1`. Overlay: `overlays/sd-broken-cd.dts`.
+Confirmed on serial: H3, 512 MiB, model `Xunlong Orange Pi Lite`, USB EHCI/OHCI 1 and 2 up, no Ethernet. SPL loads from the SD card (`Trying to boot from MMC1`), then U-Boot treats `mmc0` as empty. `mmc dev 0 0 1` does **not** skip card-detect in this U-Boot. `mmc1` is SDIO Wi-Fi (`voltage select -110`), not the boot card.
+
+Orange Pi Lite DTB: `cd-gpios = PF6`, active-low. On the Fly, PF6 is not a working CD. At the `=>` prompt, pull PF6 low or delete `cd-gpios` from the live FDT, then `mmc dev 0`. Overlay for Linux: `overlays/sd-broken-cd.dts`. U-Boot will need the same in its DTB before autoboot works.
 
 - Debian image: https://www.armbian.com/orange-pi-lite/
 - Trixie Minimal CLI: https://dl.armbian.com/orangepilite/Trixie_current_minimal

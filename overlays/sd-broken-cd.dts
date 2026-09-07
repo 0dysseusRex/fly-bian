@@ -9,7 +9,10 @@
  *
  *   sudo armbian-add-overlay overlays/sd-broken-cd.dts
  *
- * U-Boot itself also needs this in its DTB, or use: mmc dev 0 0 1
+ * U-Boot 2026.07 still honors cd-gpios after `mmc dev 0 0 1`.
+ * At the prompt: `gpio clear PF6` then `mmc dev 0`, or
+ * `fdt rm /soc/mmc@1c0f000 cd-gpios` then `mmc dev 0`.
+ * Autoboot needs this change in the U-Boot DTB, not only Linux.
  */
 
 / {
