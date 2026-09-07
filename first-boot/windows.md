@@ -92,8 +92,13 @@ setenv ramdisk_addr_r 0x43300000
 ext4load mmc 0:1 ${kernel_addr_r} /boot/vmlinuz-6.18.49-current-sunxi
 ext4load mmc 0:1 ${ramdisk_addr_r} /boot/uInitrd-6.18.49-current-sunxi
 ext4load mmc 0:1 ${fdt_addr_r} /boot/dtb-6.18.49-current-sunxi/sun8i-h3-orangepi-lite.dtb
-setenv bootargs console=ttyS0,115200 earlyprintk root=/dev/mmcblk0p1 rootwait rootfstype=ext4
+fdt addr ${fdt_addr_r}
+fdt resize 4096
+fdt rm /soc/mmc@1c0f000 cd-gpios
+fdt set /soc/mmc@1c0f000 broken-cd
+fdt set /soc/mmc@1c0f000 non-removable
+setenv bootargs console=ttyS0,115200 root=/dev/mmcblk0p1 rootwait rootfstype=ext4
 bootz ${kernel_addr_r} ${ramdisk_addr_r} ${fdt_addr_r}
 ```
 
-Expect ~10.5 MiB, ~14.1 MiB, then ~34541 bytes. Then wait for the kernel and the first-boot resize. Same block lives in `docs/lite21-bringup.md`.
+Expect ~10.5 MiB, ~14.1 MiB, then ~34541 bytes. The `fdt` lines stop Linux from hiding the SD card (`ALERT! /dev/mmcblk0p1 does not exist`). Same block lives in `docs/lite21-bringup.md`.

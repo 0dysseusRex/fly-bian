@@ -245,7 +245,7 @@ export const phases = [
     title: "Boot Debian",
     likelihood: "High",
     summary:
-      "SPL already loads U-Boot from the SD card. U-Boot then honors Orange Pi Lite’s PF6 card-detect, which is high on this PCB, so autoboot says MMC: no card present. gpio clear PF6 then ext4load the real kernel, uInitrd, and flat sun8i-h3-orangepi-lite.dtb. Do not use the allwinner/ path or /boot/zImage (symlink).",
+      "Kernel 6.18.49 starts. Without an FDT edit, Linux also honors PF6 (`Got CD GPIO`) and initramfs never sees /dev/mmcblk0p1. After loading the DTB, fdt rm /soc/mmc@1c0f000 cd-gpios and set broken-cd before bootz.",
   },
   {
     id: "console",
@@ -264,16 +264,16 @@ export const phases = [
   {
     id: "wifi",
     title: "Onboard 2.4 GHz Wi-Fi",
-    likelihood: "Medium-high",
+    likelihood: "High",
     summary:
-      "H3 lite boards almost always put an RTL8189-class chip on MMC1/SDIO. If Mellow did the same, the Orange Pi Lite image may bring wlan0 up. If not, extract the FlyOS DTB and firmware.",
+      "Live 6.18.49 log: mmc1 came up as a high-speed SDIO card (Orange Pi Lite DTS names this rtl8189ftv). Radio hardware is on MMC1. After rootfs mounts, check wlan0 / firmware — not whether the bus exists.",
   },
   {
     id: "hdmi",
     title: "FPC-HDMI",
     likelihood: "Medium",
     summary:
-      "HDMI lives in the H3, not in a Fly ASIC. If the FPC is just a compact connector on the same TMDS pins, enabling &hdmi is enough. The “HDMI + USB one-cable” accessory is a separate mux problem.",
+      "sun4i-drm and sun8i-dw-hdmi bound on this boot. No CRTC/sizes with nothing on the FPC (or a wiring mismatch). Plug a known-good HDMI panel after the rootfs mounts; do not debug TFT yet.",
   },
   {
     id: "tft",
@@ -298,7 +298,7 @@ export const features = [
   {
     name: "USB-A host × 2",
     status: "Expected",
-    how: "ehci1/ehci2 + ohci1/ohci2 are on in sun8i-h3-orangepi-lite.dts.",
+    how: "Live log: EHCI/OHCI at 1c1b000 and 1c1c000 started. Plug a keyboard or Ethernet dongle after the rootfs mounts.",
   },
   {
     name: "Type-C 5 V power",
@@ -312,8 +312,8 @@ export const features = [
   },
   {
     name: "Onboard 2.4 GHz Wi-Fi",
-    status: "First experiment",
-    how: "Look for MMC1 and an RTL8189/8723/8821 SDIO function. Copy firmware from FlyOS if the chip probes but firmware is missing.",
+    status: "SDIO probed",
+    how: "mmc1 is a high-speed SDIO card on 6.18.49. After Debian mounts, ip link / nmcli. Copy rtl8189 firmware from FlyOS only if the function is there and wlan0 is not.",
   },
   {
     name: "FPC-HDMI",
@@ -352,7 +352,7 @@ export const steps = [
   },
   {
     title: "First boot: serial past U-Boot, then HDMI+USB or Wi-Fi",
-    body: "Independent 5 V. Fit the IPEX antenna. Unplug the printer MCU and TFT. This Trixie image is a single ext4 partition (no FAT), so fly-net.txt cannot be applied from Windows. At the U-Boot => prompt paste the block in docs/lite21-bringup.md. DTB path is /boot/dtb-<ver>-current-sunxi/sun8i-h3-orangepi-lite.dtb — not allwinner/. Finish the Armbian user wizard on ttyS0.",
+    body: "Independent 5 V. Fit the IPEX antenna. Unplug the printer MCU and TFT. Paste the U-Boot block in docs/lite21-bringup.md, including fdt rm of mmc0 cd-gpios before bootz. Otherwise the kernel starts and initramfs never sees the SD card. Finish the Armbian user wizard on ttyS0.",
   },
   {
     title: "Create a normal sudo user and add swap",
@@ -364,7 +364,7 @@ export const steps = [
   },
   {
     title: "Identify the Wi-Fi chip",
-    body: "Run the first-boot script in this repo. If MMC1 shows an SDIO vendor, you are one firmware file away from wlan0. If MMC1 is empty, dump the FlyOS DTB next.",
+    body: "MMC1 already probed as SDIO on this board. After login, ip link and nmcli. Firmware only if the SDIO function is there and wlan0 is missing.",
   },
   {
     title: "Extract FlyOS when a peripheral is missing",
@@ -404,7 +404,12 @@ setenv ramdisk_addr_r 0x43300000
 ext4load mmc 0:1 \${kernel_addr_r} /boot/vmlinuz-6.18.49-current-sunxi
 ext4load mmc 0:1 \${ramdisk_addr_r} /boot/uInitrd-6.18.49-current-sunxi
 ext4load mmc 0:1 \${fdt_addr_r} /boot/dtb-6.18.49-current-sunxi/sun8i-h3-orangepi-lite.dtb
-setenv bootargs console=ttyS0,115200 earlyprintk root=/dev/mmcblk0p1 rootwait rootfstype=ext4
+fdt addr \${fdt_addr_r}
+fdt resize 4096
+fdt rm /soc/mmc@1c0f000 cd-gpios
+fdt set /soc/mmc@1c0f000 broken-cd
+fdt set /soc/mmc@1c0f000 non-removable
+setenv bootargs console=ttyS0,115200 root=/dev/mmcblk0p1 rootwait rootfstype=ext4
 bootz \${kernel_addr_r} \${ramdisk_addr_r} \${fdt_addr_r}`;
 
 export const faqs = [
@@ -455,5 +460,9 @@ export const faqs = [
   {
     q: "Why did a bare bootz reset the board?",
     a: "bootz without a loaded FDT leaves Working FDT set to 0. This U-Boot has no ATAGS fallback. Load kernel, ramdisk, and the flat orangepi-lite.dtb, then bootz with all three addresses.",
+  },
+  {
+    q: "Kernel starts, then ALERT! /dev/mmcblk0p1 does not exist",
+    a: "Linux reused Orange Pi Lite’s PF6 CD. gpio clear PF6 only helps U-Boot. After ext4load of the DTB, fdt rm /soc/mmc@1c0f000 cd-gpios and fdt set broken-cd, then bootz. reboot -f from initramfs and paste the updated block.",
   },
 ];

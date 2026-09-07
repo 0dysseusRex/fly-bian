@@ -39,7 +39,9 @@ Confirmed on serial: H3, 512 MiB, model `Xunlong Orange Pi Lite`, USB EHCI/OHCI 
 
 Orange Pi Lite DTB: `cd-gpios = PF6`, active-low. On the Fly, PF6 is not a working CD. At the `=>` prompt, `gpio clear PF6` then `mmc dev 0`. Overlay for Linux: `overlays/sd-broken-cd.dts`. U-Boot will need the same in its DTB before autoboot works.
 
-This Trixie image is **single ext4**. DTBs sit **flat** in `/boot/dtb-6.18.49-current-sunxi/` (file `sun8i-h3-orangepi-lite.dtb`, 34541 bytes). There is **no** `allwinner/` subdirectory. `/boot/zImage` is a symlink U-Boot cannot follow. Exact paste: [`docs/lite21-bringup.md`](../docs/lite21-bringup.md).
+This Trixie image is **single ext4**. DTBs sit **flat** in `/boot/dtb-6.18.49-current-sunxi/` (file `sun8i-h3-orangepi-lite.dtb`, 34541 bytes). There is **no** `allwinner/` subdirectory. `/boot/zImage` is a symlink U-Boot cannot follow.
+
+Linux 6.18.49 starts, then repeats the PF6 CD check (`Got CD GPIO`) so initramfs has no `mmcblk0`. After `ext4load` of the DTB, `fdt rm /soc/mmc@1c0f000 cd-gpios` and set `broken-cd` before `bootz`. MMC1 already probed as SDIO Wi-Fi. Exact paste: [`docs/lite21-bringup.md`](../docs/lite21-bringup.md).
 
 - Debian image: https://www.armbian.com/orange-pi-lite/
 - Trixie Minimal CLI: https://dl.armbian.com/orangepilite/Trixie_current_minimal

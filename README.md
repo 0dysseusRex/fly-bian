@@ -12,7 +12,7 @@ The Lite is an Allwinner H3 host (512 MB, **MicroSD only**, onboard 2.4 GHz Wi-F
 
 **Armbian Debian 13 Trixie Minimal CLI for Orange Pi Lite** on a **second** MicroSD. Keep FlyOS on the original card.
 
-**Live status:** SPL boots from SD. U-Boot then ignores the card (PF6 CD). Kernel and ramdisk already load. The DTB is **flat** in `/boot/dtb-6.18.49-current-sunxi/` — not `allwinner/`. Paste at `=>`: [`docs/lite21-bringup.md`](docs/lite21-bringup.md).
+**Live status:** Kernel 6.18.49 starts. Linux then hides the SD card (same PF6 CD). After loading the DTB, `fdt rm /soc/mmc@1c0f000 cd-gpios` before `bootz`. MMC1 SDIO Wi-Fi already probed. Paste: [`docs/lite21-bringup.md`](docs/lite21-bringup.md).
 
 1. Flash: https://dl.armbian.com/orangepilite/Trixie_current_minimal
 2. This Trixie image is **one ext4 partition** (no FAT `armbi_boot`), so skip `fly-net.txt` until Linux is up. Use Type-C serial.

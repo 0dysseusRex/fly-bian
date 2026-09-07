@@ -63,6 +63,7 @@ const likelihoodStyle: Record<string, string> = {
   Expected: "text-emerald-300",
   Hardware: "text-emerald-200",
   "First experiment": "text-amber-100",
+  "SDIO probed": "text-emerald-300",
   Plausible: "text-amber-200",
   "Extract from FlyOS": "text-amber-200",
   "May differ": "text-muted-foreground",
@@ -351,13 +352,11 @@ WIFI_COUNTRY=US
             <CardHeader>
               <CardTitle>Stuck at U-Boot on this card</CardTitle>
               <CardDescription>
-                Live log: kernel and ramdisk load. The DTB is{" "}
-                <code className="font-mono text-xs">
-                  /boot/dtb-6.18.49-current-sunxi/sun8i-h3-orangepi-lite.dtb
-                </code>
-                — not under <code className="font-mono text-xs">allwinner/</code>
-                . Do not <code className="font-mono text-xs">bootz</code> until
-                that load prints a byte count. Full notes:{" "}
+                Kernel 6.18.49 starts. Then Linux honors PF6 CD and initramfs
+                has no <code className="font-mono text-xs">mmcblk0</code>. After
+                the DTB load, delete <code className="font-mono text-xs">cd-gpios</code>{" "}
+                on <code className="font-mono text-xs">mmc@1c0f000</code> before{" "}
+                <code className="font-mono text-xs">bootz</code>. Full notes:{" "}
                 <code className="font-mono text-xs">docs/lite21-bringup.md</code>
                 .
               </CardDescription>

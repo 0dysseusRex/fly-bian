@@ -29,7 +29,12 @@ setenv ramdisk_addr_r 0x43300000
 ext4load mmc 0:1 ${kernel_addr_r} /boot/vmlinuz-6.18.49-current-sunxi
 ext4load mmc 0:1 ${ramdisk_addr_r} /boot/uInitrd-6.18.49-current-sunxi
 ext4load mmc 0:1 ${fdt_addr_r} /boot/dtb-6.18.49-current-sunxi/sun8i-h3-orangepi-lite.dtb
-setenv bootargs console=ttyS0,115200 earlyprintk root=/dev/mmcblk0p1 rootwait rootfstype=ext4
+fdt addr ${fdt_addr_r}
+fdt resize 4096
+fdt rm /soc/mmc@1c0f000 cd-gpios
+fdt set /soc/mmc@1c0f000 broken-cd
+fdt set /soc/mmc@1c0f000 non-removable
+setenv bootargs console=ttyS0,115200 root=/dev/mmcblk0p1 rootwait rootfstype=ext4
 bootz ${kernel_addr_r} ${ramdisk_addr_r} ${fdt_addr_r}
 ```
 
@@ -41,9 +46,34 @@ Each `ext4load` must print bytes read:
 | `uInitrd-6.18.49-current-sunxi` | ~14.1 MiB (`14830693` seen) |
 | `sun8i-h3-orangepi-lite.dtb` | ~34 KiB (`34541` listed) |
 
+`fdt rm` / `fdt set` must run **after** the DTB `ext4load` and **before** `bootz`. That is what stops Linux from repeating U-Boot’s PF6 mistake (`Got CD GPIO`, then no `mmcblk0`). If `fdt rm` says the path is missing, `fdt list /soc` and use the `mmc@1c0f000` node it prints.
+
 Then wait. First boot resizes the rootfs and can sit quiet for several minutes. Console is `ttyS0,115200`.
 
 If the board resets back to SPL, wait for `Hit any key to stop autoboot` — **do not press a key unless you want the prompt**. After `MMC: no card present` and PXE, you get `=>` again. Repeat the paste (PF6 is high after every reset).
+
+## Kernel started, `(initramfs)` has no `/dev/mmcblk0p1`
+
+That is the same CD pin. Linux reclaimed PF6 (`sunxi-mmc 1c0f000.mmc: Got CD GPIO`) and never created `mmcblk0`. `mmc1` **did** come up as SDIO (`mmc1: new high speed SDIO card`) — onboard Wi-Fi hardware is there.
+
+**Prefer a reset + the `fdt` lines above.** That is the reliable fix.
+
+If you want to try this initramfs session first (optional):
+
+```
+ls /proc/device-tree/soc/mmc@1c0f000
+ls /dev/mmc* /sys/class/mmc_host
+echo 1c0f000.mmc > /sys/bus/platform/drivers/sunxi-mmc/unbind
+pul=$(devmem 0x01C208D0 32)
+echo PUL0=$pul
+devmem 0x01C208D0 32 $(( (pul & ~0x3000) | 0x2000 ))
+echo 1c0f000.mmc > /sys/bus/platform/drivers/sunxi-mmc/bind
+sleep 2
+ls -l /dev/mmcblk*
+dmesg | grep mmc | tail
+```
+
+If `devmem` is missing, use `busybox devmem` in those two lines. If `/dev/mmcblk0p1` appears: `exit` (initramfs retries the mount). If it does not: `reboot -f` and use the U-Boot paste with `fdt rm`.
 
 ## After Linux
 

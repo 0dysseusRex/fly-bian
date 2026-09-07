@@ -53,8 +53,8 @@ dmesg | egrep -i 'mmc|sdio|wlan|rtl|8189|8723|usb|hdmi|spi|uart|musb|gadget|brcm
 
 section "next"
 cat <<'EOF'
-If MMC1 is missing, extract the official H3 FlyOS DTB.
-If MMC1 exists but wlan0 does not, copy rtlwifi firmware from that extract.
+Lite 2.1 live: MMC1 already probed as SDIO. If wlan0 is missing, copy rtl8189 firmware from the official H3 FlyOS extract.
+If MMC1 is missing on another board, extract that DTB.
 If Type-C serial never appeared on the PC, try overlays/usb-otg-peripheral.dts
 after you have another login path (USB Ethernet).
 Do not apply overlays/fly-tft-spi-candidate.dts until the FlyOS DTB confirms pins.
