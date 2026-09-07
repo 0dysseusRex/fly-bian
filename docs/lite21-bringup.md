@@ -50,6 +50,25 @@ Each `ext4load` must print bytes read:
 
 Then wait. First boot resizes the rootfs and can sit quiet for several minutes. Console is `ttyS0,115200`.
 
+## Quiet after `cfg80211: Loading compiled-in X.509 certificates`
+
+That line is the Wi-Fi stack, not a panic. On this board `mmc1` already probed as SDIO, so `cfg80211` often prints around 10–15 s and then the console goes idle while:
+
+- initramfs finishes and systemd starts
+- Armbian expands `/` from ~1.3 GiB to the rest of the card (minutes on a slow SD)
+
+Press **Enter** once. A login or first-run wizard can be sitting there without a reprint.
+
+Give it **10–15 minutes** if you already saw `EXT4-fs` mount or `systemd` before that line. Do not reset during resize.
+
+If there was **no** `EXT4-fs` / `systemd` / `Debian GNU/Linux` banner after ~15 minutes, the 8189fs SDIO driver may be blocking. Power-cycle, get `=>`, and use the same paste but this `bootargs` line instead:
+
+```
+setenv bootargs console=ttyS0,115200 root=/dev/mmcblk0p1 rootwait rootfstype=ext4 module_blacklist=8189fs,rtl8189fs,r8188eu
+```
+
+That skips onboard Wi-Fi for this boot so you can finish the user wizard. Bring the radio back after login.
+
 If the board resets back to SPL, wait for `Hit any key to stop autoboot` — **do not press a key unless you want the prompt**. After `MMC: no card present` and PXE, you get `=>` again. Repeat the paste (PF6 is high after every reset).
 
 ## Kernel started, `(initramfs)` has no `/dev/mmcblk0p1`
