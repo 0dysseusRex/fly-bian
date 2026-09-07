@@ -1,6 +1,3 @@
-"use client";
-
-import { useState } from "react";
 import { ChevronDown, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -26,6 +23,10 @@ const imageTabs = [
       "Complete the Armbian first-run user. Keep that user; do not live as root.",
     ],
     links: downloads.debian,
+    inputClass: "peer/armbian",
+    panelClass: "hidden peer-checked/armbian:flex",
+    labelClass:
+      "peer-checked/armbian:border-transparent peer-checked/armbian:bg-primary peer-checked/armbian:text-primary-foreground peer-checked/armbian:hover:bg-primary/80",
   },
   {
     id: "dietpi",
@@ -38,6 +39,10 @@ const imageTabs = [
       "Overlays are easier to keep on Armbian.",
     ],
     links: downloads.build.filter((link) => link.href.includes("dietpi")),
+    inputClass: "peer/dietpi",
+    panelClass: "hidden peer-checked/dietpi:flex",
+    labelClass:
+      "peer-checked/dietpi:border-transparent peer-checked/dietpi:bg-primary peer-checked/dietpi:text-primary-foreground peer-checked/dietpi:hover:bg-primary/80",
   },
   {
     id: "custom",
@@ -50,6 +55,10 @@ const imageTabs = [
       "Freeze kernel and u-boot once the custom DTB works.",
     ],
     links: downloads.build.filter((link) => !link.href.includes("dietpi")),
+    inputClass: "peer/custom",
+    panelClass: "hidden peer-checked/custom:flex",
+    labelClass:
+      "peer-checked/custom:border-transparent peer-checked/custom:bg-primary peer-checked/custom:text-primary-foreground peer-checked/custom:hover:bg-primary/80",
   },
   {
     id: "avoid",
@@ -69,57 +78,57 @@ const imageTabs = [
         href: "https://github.com/reemo3dp/mellowfly-geminipi-armbian",
       },
     ],
+    inputClass: "peer/avoid",
+    panelClass: "hidden peer-checked/avoid:flex",
+    labelClass:
+      "peer-checked/avoid:border-transparent peer-checked/avoid:bg-primary peer-checked/avoid:text-primary-foreground peer-checked/avoid:hover:bg-primary/80",
   },
 ] as const;
 
 export function ImageTabs() {
-  const [active, setActive] = useState<(typeof imageTabs)[number]["id"]>(
-    "armbian"
-  );
-  const tab = imageTabs.find((item) => item.id === active) ?? imageTabs[0];
-
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {imageTabs.map((item) => {
-          const selected = item.id === active;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => setActive(item.id)}
-              className={`h-auto min-h-8 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-                selected
-                  ? "border-transparent bg-primary text-primary-foreground"
-                  : "border-border bg-background text-foreground hover:bg-muted"
-              }`}
-            >
-              {item.label}
-            </button>
-          );
-        })}
-      </div>
-      <Card>
-        <CardHeader>
-          <Badge variant="outline" className="w-fit">
-            {tab.label}
-          </Badge>
-          <CardTitle>{tab.title}</CardTitle>
-          <CardDescription className="leading-6">{tab.body}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <ul className="space-y-2 text-sm leading-6 text-muted-foreground">
-            {tab.points.map((point) => (
-              <li key={point} className="flex gap-2">
-                <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />
-                <span>{point}</span>
-              </li>
-            ))}
-          </ul>
-          <LinkList links={[...tab.links]} />
-        </CardContent>
-      </Card>
+    <div className="flex flex-wrap gap-2">
+      {imageTabs.map((tab, index) => (
+        <input
+          key={`in-${tab.id}`}
+          type="radio"
+          name="image-tab"
+          id={`image-${tab.id}`}
+          defaultChecked={index === 0}
+          className={`sr-only ${tab.inputClass}`}
+        />
+      ))}
+      {imageTabs.map((tab) => (
+        <label
+          key={`lb-${tab.id}`}
+          htmlFor={`image-${tab.id}`}
+          className={`cursor-pointer rounded-lg border border-border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted ${tab.labelClass}`}
+        >
+          {tab.label}
+        </label>
+      ))}
+      {imageTabs.map((tab) => (
+        <Card key={`pn-${tab.id}`} className={`w-full ${tab.panelClass}`}>
+          <CardHeader>
+            <Badge variant="outline" className="w-fit">
+              {tab.label}
+            </Badge>
+            <CardTitle>{tab.title}</CardTitle>
+            <CardDescription className="leading-6">{tab.body}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <ul className="space-y-2 text-sm leading-6 text-muted-foreground">
+              {tab.points.map((point) => (
+                <li key={point} className="flex gap-2">
+                  <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />
+                  <span>{point}</span>
+                </li>
+              ))}
+            </ul>
+            <LinkList links={[...tab.links]} />
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }
