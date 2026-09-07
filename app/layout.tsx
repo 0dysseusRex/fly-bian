@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Debian on Fly Lite 2.1",
+  title: "Fly Debian — Lite 2.1 first",
   description:
-    "Bring-up guide for a real Debian userspace on the Mellow Fly Lite 2.1, with as much board hardware enabled as possible.",
+    "Debian images for Mellow Fly hosts. Start with Fly Lite 2.1: flash Armbian, set Wi-Fi before first boot, then enable the hardware.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

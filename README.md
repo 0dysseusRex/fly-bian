@@ -1,48 +1,38 @@
-# Debian on the Mellow Fly Lite 2.1
+# Fly Debian
 
-Bring-up notes and tools for running a real Debian userspace on the Fly Lite 2.1, with as much of the board enabled as the public H3 support plus the official FlyOS DTB will allow.
+Debian-based images for Mellow Fly hosts. **Fly Lite 2.1 first**: boot a real Debian userspace, enable as much original hardware as possible, then bake a flashable image. **Fly Pi V3** is next. Other boards get blurbs until we pick one up.
 
-The Lite 2.1 is an Allwinner H3 host (512 MB, SD boot, onboard 2.4 GHz Wi-Fi, two USB-A ports, Type-C, FPC-HDMI, FPC-TFT). It is not a Raspberry Pi and it is not a printer MCU.
+The later image will flash to MicroSD, and to eMMC on boards that have it (Lite 2.1 does not). Every image keeps an easy text file for Wi-Fi before first boot, plus serial and HDMI+USB as setup paths.
 
-## Recommended first image
+Project plan: [`docs/project.md`](docs/project.md).
 
-**Armbian Debian 13 (Trixie) Minimal CLI for Orange Pi Lite.** Same SoC class, same RAM, no Ethernet, SDIO Wi-Fi, two USB hosts. Flash it to a **second** MicroSD card. Keep official FlyOS on the original card.
+## Right now — Lite 2.1
 
-- Board page: https://www.armbian.com/orange-pi-lite/
-- Direct image (follows current trunk): https://dl.armbian.com/orangepilite/Trixie_current_minimal
-- Checksum: https://dl.armbian.com/orangepilite/Trixie_current_minimal.sha
-- Flasher: https://www.armbian.com/imager/
+The Lite is an Allwinner H3 host (512 MB, **MicroSD only**, onboard 2.4 GHz Wi-Fi, two USB-A, Type-C, FPC-HDMI, FPC-TFT). Not a Raspberry Pi. Not a printer MCU.
 
-Official FlyOS for this board (loot the DTB, do not stay on FAST): https://mellow.klipper.cn/en/docs/ResDownload/system-img/fly-lite2/
+**Armbian Debian 13 Trixie Minimal CLI for Orange Pi Lite** on a **second** MicroSD. Keep FlyOS on the original card.
 
-Then:
+1. Flash: https://dl.armbian.com/orangepilite/Trixie_current_minimal
+2. Edit [`first-boot/fly-net.txt`](first-boot/fly-net.txt) and run `./scripts/prepare-sd.sh /media/$USER/armbi_boot`
+3. Independent 5 V. IPEX antenna. Leave TFT unplugged.
+4. Login via Type-C serial at 115200, FPC-HDMI + USB keyboard, or SSH after the Wi-Fi lease.
+5. On the board: `scripts/first-boot-checks.sh`
+6. If Wi-Fi or a display is missing, loot the official H3 FlyOS DTB (`scripts/extract-flyos.sh` or `scripts/pull-live-flyos.sh`)
 
-1. Independent 5 V power. Fit the IPEX antenna. Leave TFT/HDMI unplugged.
-2. Console over Type-C serial (115200) or a USB Ethernet dongle on a USB-A port.
-3. Run `scripts/first-boot-checks.sh` on the board.
-4. If Wi-Fi or a display is missing, extract the official H3 FlyOS image with `scripts/extract-flyos.sh` and diff the DTB.
-
-If FlyOS is still running on the board (Wi-Fi or COM4 @ 115200), dump DTB/firmware/config from a machine on that LAN:
-
-```bash
-FLYOS_HOST=192.168.1.147 ./scripts/pull-live-flyos.sh
-```
-
-Klipper host pins and macros: [`docs/klipper-pins-and-macros.md`](docs/klipper-pins-and-macros.md).
+Klipper host pins: [`docs/klipper-pins-and-macros.md`](docs/klipper-pins-and-macros.md).
 
 ## Repo layout
 
 | Path | What it is |
 | --- | --- |
-| This web guide | Phased bring-up, hardware table, first-experiment helper |
-| `docs/klipper-pins-and-macros.md` | Every host pin, sys-config key, and Klipper macro a future install needs |
-| `klipper/host-fragments/` | Official `[mcu host]`, PLR, client variables, USB LIS2DW |
+| This web guide | Project, board family, first-boot, Lite 2.1 bring-up |
+| `docs/project.md` | Roadmap and image contract |
+| `first-boot/fly-net.txt` | Edit SSID/password; copy to the FAT boot partition |
+| `scripts/prepare-sd.sh` | Writes Armbian `armbian_first_run.txt` from that file |
+| `docs/klipper-pins-and-macros.md` | Host pins, sys-config keys, PLR / client macros |
+| `klipper/host-fragments/` | `[mcu host]`, PLR, USB LIS2DW |
 | `flyos-artifacts/` | Seeded FlyOS/vendor files + live-pull destination |
-| `board/` | Hardware notes |
-| `scripts/pull-live-flyos.sh` | SSH dump from a live FAST board (run on your LAN) |
-| `scripts/first-boot-checks.sh` | Probe MMC, USB, Wi-Fi, HDMI, serial |
-| `scripts/extract-flyos.sh` | Copy DTB, overlays, and firmware out of a FlyOS H3 image |
-| `overlays/` | Candidate device-tree overlays. TFT overlay is disabled by default. |
+| `overlays/` | Candidate DTB overlays. TFT stays disabled. |
 
 ## Run the guide locally
 

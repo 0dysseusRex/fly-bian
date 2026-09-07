@@ -1,5 +1,7 @@
 # Fly Lite 2.1 board notes
 
+Current target for Fly Debian. See `docs/project.md` for the image family and later boards.
+
 Compact Allwinner H3 host. Not a printer MCU. Not a Raspberry Pi.
 
 ## Hardware that matters for Debian

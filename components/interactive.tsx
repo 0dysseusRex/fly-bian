@@ -22,7 +22,8 @@ const imageTabs = [
     points: [
       "Open the Orange Pi Lite board page or use the Trixie Minimal short URL below.",
       "Flash with Armbian Imager, Raspberry Pi Imager, Etcher, or dd. This is a normal .img.xz.",
-      "First boot on the spare card only. Independent 5 V.",
+      "Remount the FAT boot partition. Edit first-boot/fly-net.txt and run scripts/prepare-sd.sh.",
+      "First boot on the spare card only. Independent 5 V. Serial, HDMI+USB, or SSH after the lease.",
       "Complete the Armbian first-run user. Keep that user; do not live as root.",
     ],
     links: downloads.debian,

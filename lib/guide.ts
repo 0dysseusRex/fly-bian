@@ -94,6 +94,14 @@ export const sources = [
     href: "https://mellow.klipper.cn/en/docs/ProductDoc/SBC/fly-lite/lite2.1/",
   },
   {
+    label: "FLY-Pi V3 product docs",
+    href: "https://mellow.klipper.cn/en/docs/ProductDoc/SBC/fly-pi-v3/",
+  },
+  {
+    label: "Armbian first-run Wi-Fi template",
+    href: "https://github.com/armbian/build/blob/master/packages/bsp/armbian_first_run.txt.template",
+  },
+  {
     label: "Lite 2.1 SSH / Type-C serial",
     href: "https://mellow.klipper.cn/en/docs/ProductDoc/SBC/fly-lite/lite2.1/host/ssh",
   },
@@ -135,6 +143,91 @@ export const sources = [
   },
 ] as const;
 
+export const project = {
+  now: "Fly Lite 2.1 — boot Debian, then enable every connector that works",
+  next: "Bake a Lite 2.1 image, then port the same first-boot contract to Fly Pi V3",
+  later: "Named images per SoC family. One file for Wi-Fi before first boot; serial and HDMI+USB stay as setup paths.",
+} as const;
+
+export const boards = [
+  {
+    id: "lite21",
+    name: "Fly Lite 2.1",
+    status: "Now",
+    soc: "Allwinner H3, 4× Cortex-A7, 512 MB, armhf",
+    storage: "MicroSD only. No eMMC.",
+    network: "Onboard 2.4 GHz Wi-Fi (IPEX1). No Ethernet.",
+    display: "FPC-HDMI + FPC-TFT (16P). Type-C serial.",
+    image: "Armbian Debian 13 Trixie Minimal CLI, board = Orange Pi Lite",
+    note: "Current work. Closest public DTB. Keep FlyOS on a second card.",
+  },
+  {
+    id: "piv3",
+    name: "Fly Pi V3",
+    status: "Next",
+    soc: "Allwinner H618, 4× Cortex-A53, 1 GB DDR4, aarch64",
+    storage: "MicroSD, or official FLY M2WE eMMC (not generic M.2).",
+    network: "100 M Ethernet onboard. No onboard Wi-Fi — M2WE or USB radio.",
+    display: "Micro-HDMI + FPC-HDMI + FPC-TFT. 12–24 V or Type-C 5 V.",
+    image: "Not yet. Will need an H618 board file (Orange Pi Zero 2 / similar), not the Lite image.",
+    note: "Different SoC and boot chain. Do not flash the Lite 2.1 card here.",
+  },
+  {
+    id: "piv2",
+    name: "Fly Pi V2",
+    status: "Later",
+    soc: "Allwinner H5, 4× Cortex-A53, 1 GB, aarch64",
+    storage: "MicroSD or FLY M2WE eMMC.",
+    network: "100 M Ethernet. No onboard Wi-Fi — M2WE or USB.",
+    display: "FPC-HDMI, FPC-TFT, Micro-HDMI. TFT shares SPI with the ADXL header.",
+    image: "Likely an Orange Pi PC2 / Prime class Armbian image plus Fly DTB.",
+    note: "Pi-shaped host. Community Gemini/Pi Armbian trees are a method reference.",
+  },
+  {
+    id: "minipad",
+    name: "Fly MiniPad",
+    status: "Later",
+    soc: "Allwinner H3 family (same official FAST image as Lite2).",
+    storage: "MicroSD.",
+    network: "Onboard Wi-Fi in the H3 FlyOS family.",
+    display: "Integrated pad / TFT first, not a generic HDMI host.",
+    image: "Same H3 loot path as Lite 2.1. Confirm DTB before sharing an image.",
+    note: "Mellow ships one H3 FAST image for MiniPad and Lite2/2.1.",
+  },
+  {
+    id: "gemini",
+    name: "Fly Gemini V3",
+    status: "Later",
+    soc: "H5-class host plus an onboard STM32 printer MCU",
+    storage: "MicroSD or M2WE eMMC.",
+    network: "Ethernet / M2WE. Not a Lite.",
+    display: "Host + MCU on one PCB. Different pinmux and DRAM.",
+    image: "Do not use a Gemini community image on the Lite. Reverse is also wrong.",
+    note: "Useful later as a combined host+MCU target, not as a Lite shortcut.",
+  },
+] as const;
+
+export const setupPaths = [
+  {
+    id: "wifi-file",
+    title: "Pre-boot Wi-Fi file",
+    summary:
+      "Edit first-boot/fly-net.txt, run scripts/prepare-sd.sh on the mounted FAT boot partition. Stock Armbian reads armbian_first_run.txt on first boot.",
+  },
+  {
+    id: "serial",
+    title: "Serial console",
+    summary:
+      "Type-C on the Lite 2.1 at 115200 8N1 (COM4 on Windows if the same cable as FlyOS). Complete Armbian’s first-login wizard here.",
+  },
+  {
+    id: "hdmi-usb",
+    title: "HDMI + USB keyboard",
+    summary:
+      "FPC-HDMI and a USB-A keyboard. Leave the TFT unplugged. If /sys/class/drm never shows a connected display, loot the FlyOS DTB next.",
+  },
+] as const;
+
 export const specs = [
   { label: "SoC", value: "Allwinner H3, 4× Cortex-A7, 32-bit" },
   { label: "GPU", value: "Mali-400 MP2" },
@@ -152,7 +245,7 @@ export const phases = [
     title: "Boot Debian",
     likelihood: "High",
     summary:
-      "The Lite boots from MicroSD. Armbian Bookworm CLI for Orange Pi Lite is the closest public H3 image: same SoC, 512 MB, no Ethernet, SDIO Wi-Fi, two USB hosts.",
+      "The Lite boots from MicroSD. Armbian Debian 13 Trixie Minimal CLI for Orange Pi Lite is the closest public H3 image: same SoC, 512 MB, no Ethernet, SDIO Wi-Fi, two USB hosts.",
   },
   {
     id: "console",
@@ -254,8 +347,12 @@ export const steps = [
     body: "Use the current Minimal (CLI) image from the Orange Pi Lite board page. Not the Ubuntu Xfce desktop, not Raspberry Pi OS. H3 is 32-bit ARM (armhf).",
   },
   {
-    title: "First boot with nothing but power and console",
-    body: "Independent 5 V. Fit the IPEX antenna. Unplug the printer MCU, TFT, and HDMI. Watch the activity LED. Open Type-C serial at 115200 8N1 if a port appears.",
+    title: "Optional: write fly-net.txt onto the boot partition",
+    body: "After flashing, remount the FAT boot volume and run scripts/prepare-sd.sh so Armbian joins Wi-Fi on first boot. Still keep serial or HDMI+USB as a fallback — the radio may not probe yet.",
+  },
+  {
+    title: "First boot: serial, HDMI+USB, or the Wi-Fi lease",
+    body: "Independent 5 V. Fit the IPEX antenna. Unplug the printer MCU and TFT. Use Type-C serial at 115200, or FPC-HDMI plus a USB keyboard, or SSH after fly-net.txt. Finish the Armbian user wizard.",
   },
   {
     title: "Create a normal sudo user and add swap",
@@ -300,6 +397,14 @@ export const extractFlow = [
 
 export const faqs = [
   {
+    q: "When do we write a custom image?",
+    a: "After Debian boots on the Lite 2.1 and USB, Wi-Fi, serial, and HDMI are characterized. Baking an .img before that freezes the wrong DTB. The first-boot Wi-Fi file is already the contract that image will keep.",
+  },
+  {
+    q: "Can I flash this to eMMC?",
+    a: "Not on the Lite 2.1 — it has no eMMC. Fly Pi V3 and Pi V2 can use the official FLY M2WE module (private connector, not a generic M.2). We will add an eMMC install path when we get to those boards.",
+  },
+  {
     q: "Why Orange Pi Lite and not Orange Pi One or PC?",
     a: "Lite matches the product: H3, 512 MB, no Ethernet jack, SDIO Wi-Fi, two USB hosts. One has no Wi-Fi. PC has Ethernet and more RAM. Start from Lite; you can still turn unused nodes off.",
   },
@@ -322,5 +427,9 @@ export const faqs = [
   {
     q: "Do I need to rebuild Armbian from source?",
     a: "Not for the first boot. Flash a stock Orange Pi Lite image. Rebuild only if you want a named fly-lite-2.1 board config, a custom kernel, or a DTB compiled in. Extraction plus overlays is faster.",
+  },
+  {
+    q: "Will one image boot every Fly board?",
+    a: "No. Lite 2.1 is H3/armhf. Pi V2 and Gemini are H5/aarch64. Pi V3 is H618/aarch64. Same first-boot file and bring-up method, different board files.",
   },
 ];

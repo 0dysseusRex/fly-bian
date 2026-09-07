@@ -25,8 +25,9 @@ const questions = [
     prompt: "How will you talk to the board on the first boot?",
     options: [
       { id: "serial", label: "Type-C serial" },
-      { id: "dongle", label: "USB Ethernet / USB Wi-Fi" },
-      { id: "hope", label: "Onboard Wi-Fi only" },
+      { id: "hdmi", label: "HDMI + USB keyboard" },
+      { id: "file", label: "fly-net.txt on the card" },
+      { id: "hope", label: "Onboard Wi-Fi, no file" },
     ],
   },
   {
@@ -56,7 +57,7 @@ function outcome(answers: Answers) {
     return {
       tone: "caution" as const,
       title: "Do not make onboard Wi-Fi your only login path",
-      body: "It might come up on the Orange Pi Lite image. If it does not, you have a silent board. Get Type-C serial or a USB network dongle working first, then chase MMC1.",
+      body: "Write first-boot/fly-net.txt onto the card, or use Type-C serial / HDMI+USB. A silent radio with no console is a paperweight.",
     };
   }
 
@@ -78,7 +79,9 @@ function outcome(answers: Answers) {
 
   if (
     answers.spareCard === "yes" &&
-    (answers.console === "serial" || answers.console === "dongle") &&
+    (answers.console === "serial" ||
+      answers.console === "hdmi" ||
+      answers.console === "file") &&
     answers.display === "none"
   ) {
     return {
@@ -111,8 +114,8 @@ export function DecisionHelper() {
       <CardHeader>
         <CardTitle className="text-xl">Where to start</CardTitle>
         <CardDescription>
-          Three questions. This picks the first image and the first test, not
-          the final desktop.
+          Three questions. This picks the Lite 2.1 first login, not the final
+          custom image.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

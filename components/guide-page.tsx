@@ -28,10 +28,13 @@ import {
 import { DecisionHelper } from "@/components/decision-helper";
 import { FaqList, ImageTabs } from "@/components/interactive";
 import {
+  boards,
   downloads,
   extractFlow,
   features,
   phases,
+  project,
+  setupPaths,
   sources,
   specs,
   steps,
@@ -40,11 +43,12 @@ import {
 
 const nav = [
   { href: "#goal", label: "Goal" },
+  { href: "#boards", label: "Boards" },
+  { href: "#firstboot", label: "First boot" },
   { href: "#downloads", label: "Downloads" },
-  { href: "#board", label: "Board" },
+  { href: "#board", label: "Lite 2.1" },
   { href: "#image", label: "Image" },
   { href: "#bringup", label: "Bring-up" },
-  { href: "#extract", label: "FlyOS extract" },
   { href: "#features", label: "Hardware" },
   { href: "#faq", label: "FAQ" },
 ];
@@ -74,15 +78,16 @@ export function GuidePage() {
         <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-3">
             <p className="font-mono text-xs tracking-[0.24em] text-primary uppercase">
-              Debian on H3
+              Fly Debian
             </p>
             <h1 className="max-w-2xl text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-              Fly Lite 2.1, as much of the board as Debian will take
+              Debian images for Fly boards, Lite 2.1 first
             </h1>
             <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-              Goal: a real Debian userspace with apt, and every connector that
-              can be enabled without Mellow’s locked FlyOS-FAST image. Start
-              from Orange Pi Lite. Steal the rest from the official H3 DTB.
+              Flashable Debian for Mellow Fly hosts. Right now we boot a real
+              Debian userspace on the Lite 2.1 and turn on as much hardware as
+              the public H3 DTB plus FlyOS loot will allow. A named image comes
+              after that works.
             </p>
           </div>
           <nav className="flex flex-wrap gap-2 text-sm">
@@ -103,48 +108,136 @@ export function GuidePage() {
         <section id="goal" className="space-y-6">
           <SectionHeading
             kicker="01"
-            title="What is actually possible"
-            text="The Lite 2.1 is an Allwinner H3 computer. Debian is not a hack. Full FlyOS appliance behaviour is not the target. Working USB, Wi-Fi, console, and then the display ports is."
+            title="What we are building"
+            text="A Debian image you can flash to a MicroSD card — and later to eMMC on boards that have it — with an easy text file for Wi-Fi before first boot. Serial and HDMI+USB stay as setup paths. We do not bake that image until the Lite 2.1 boots and the hardware is characterized."
           />
           <div className="grid gap-4 md:grid-cols-3">
             <Card className="border-emerald-500/30 bg-emerald-950/40">
               <CardHeader>
-                <Badge variant="outline">Do this</Badge>
-                <CardTitle className="text-lg">Debian 12 on the SD card</CardTitle>
+                <Badge variant="outline">Now</Badge>
+                <CardTitle className="text-lg">Lite 2.1 Debian</CardTitle>
               </CardHeader>
               <CardContent className="text-sm leading-6 text-muted-foreground">
-                Armbian Bookworm CLI. Normal users, apt, sshd, NetworkManager.
-                This is a usable Linux host, not FlyOS with the locks picked.
+                {project.now}. Armbian Debian 13 Trixie Minimal CLI, spare
+                MicroSD, apt and a normal user.
               </CardContent>
             </Card>
             <Card className="border-amber-400/30 bg-amber-950/35">
               <CardHeader>
-                <Badge variant="outline">Then this</Badge>
-                <CardTitle className="text-lg">Enable hardware in order</CardTitle>
+                <Badge variant="outline">Next</Badge>
+                <CardTitle className="text-lg">Image, then Pi V3</CardTitle>
               </CardHeader>
               <CardContent className="text-sm leading-6 text-muted-foreground">
-                Console, USB, Wi-Fi, HDMI, TFT. Each step has a probe command.
-                Stop guessing pinmux until the official DTB says what Mellow
-                wired.
+                {project.next}
               </CardContent>
             </Card>
             <Card className="border-red-400/30 bg-red-950/35">
               <CardHeader>
-                <Badge variant="outline">Not the goal</Badge>
+                <Badge variant="outline">Not yet</Badge>
                 <CardTitle className="text-lg">Clone FlyOS-FAST</CardTitle>
               </CardHeader>
               <CardContent className="text-sm leading-6 text-muted-foreground">
-                OTA, KPPM scripts, auto MCU flash, and the read-only root are
-                Mellow product. You can port pieces later. They are not required
-                for Debian to own the board.
+                OTA, KPPM scripts, and a read-only root are Mellow product. The
+                image we write later is Debian with Fly hardware, not FAST with
+                the locks picked.
               </CardContent>
             </Card>
           </div>
         </section>
 
-        <section id="downloads" className="space-y-6">
+        <section id="boards" className="space-y-6">
           <SectionHeading
             kicker="02"
+            title="Fly hosts"
+            text="One first-boot file and the same method. Different SoCs, so different images. Lite 2.1 has no eMMC; Pi V3 does via the official M2WE module only."
+          />
+          <div className="grid gap-4 lg:grid-cols-2">
+            {boards.map((board) => (
+              <Card
+                key={board.id}
+                className={
+                  board.status === "Now"
+                    ? "border-emerald-500/35 bg-emerald-950/25"
+                    : board.status === "Next"
+                      ? "border-amber-400/30 bg-amber-950/20"
+                      : undefined
+                }
+              >
+                <CardHeader>
+                  <div className="flex items-center justify-between gap-2">
+                    <CardTitle className="text-lg">{board.name}</CardTitle>
+                    <Badge variant="outline">{board.status}</Badge>
+                  </div>
+                  <CardDescription>{board.soc}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm leading-6 text-muted-foreground">
+                  <p>
+                    <span className="text-foreground">Storage.</span>{" "}
+                    {board.storage}
+                  </p>
+                  <p>
+                    <span className="text-foreground">Network.</span>{" "}
+                    {board.network}
+                  </p>
+                  <p>
+                    <span className="text-foreground">Display / console.</span>{" "}
+                    {board.display}
+                  </p>
+                  <p>
+                    <span className="text-foreground">Image.</span> {board.image}
+                  </p>
+                  <p>{board.note}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        <section id="firstboot" className="space-y-6">
+          <SectionHeading
+            kicker="03"
+            title="Three ways to finish first boot"
+            text="The custom image will keep all three. Stock Armbian already does. On the Lite, do not make a silent onboard radio your only login."
+          />
+          <div className="grid gap-4 md:grid-cols-3">
+            {setupPaths.map((path) => (
+              <Card key={path.id}>
+                <CardHeader>
+                  <CardTitle className="text-lg">{path.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm leading-6 text-muted-foreground">
+                  {path.summary}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <Card className="border-primary/25">
+            <CardHeader>
+              <CardTitle>fly-net.txt</CardTitle>
+              <CardDescription>
+                Edit <code>first-boot/fly-net.txt</code>, then copy it onto the
+                FAT boot partition.{" "}
+                <code>scripts/prepare-sd.sh</code> also writes Armbian’s{" "}
+                <code>armbian_first_run.txt</code>.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <pre className="overflow-x-auto rounded-lg bg-black/40 p-4 font-mono text-xs leading-6 text-amber-100">
+                {`# first-boot/fly-net.txt
+WIFI_ENABLED=1
+WIFI_SSID=YourNetwork
+WIFI_PSK=YourPassword
+WIFI_COUNTRY=US
+
+./scripts/prepare-sd.sh /media/$USER/armbi_boot`}
+              </pre>
+            </CardContent>
+          </Card>
+        </section>
+
+        <section id="downloads" className="space-y-6">
+          <SectionHeading
+            kicker="04"
             title="Downloads"
             text="These are the pages you actually click. Image short URLs follow Armbian’s current trunk; if a filename changes, use the board page."
           />
@@ -170,7 +263,7 @@ export function GuidePage() {
 
         <section id="board" className="space-y-6">
           <SectionHeading
-            kicker="02"
+            kicker="05"
             title="The board, without the marketing"
             text="Mellow sells this as a Pi replacement. Electrically it is a compact Orange Pi Lite cousin with Fly connectors."
           />
@@ -233,7 +326,7 @@ export function GuidePage() {
 
         <section id="image" className="space-y-6">
           <SectionHeading
-            kicker="03"
+            kicker="06"
             title="Which Debian image to flash"
             text="Use a public H3 image first. A custom Armbian board config is a later refinement, not the first boot."
           />
@@ -242,7 +335,7 @@ export function GuidePage() {
 
         <section id="bringup" className="space-y-6">
           <SectionHeading
-            kicker="04"
+            kicker="07"
             title="Bring-up order"
             text="Likelihood is for a stock Orange Pi Lite Armbian image on this PCB, before any Fly DTB work."
           />
@@ -310,7 +403,7 @@ nmcli dev status`}
 
         <section id="extract" className="space-y-6">
           <SectionHeading
-            kicker="05"
+            kicker="08"
             title="When the public DTB is not enough"
             text="Fly’s official H3 image is the only complete description of this PCB. You do not run FAST. You loot it."
           />
@@ -355,7 +448,7 @@ nmcli dev status`}
 
         <section id="features" className="space-y-6">
           <SectionHeading
-            kicker="06"
+            kicker="09"
             title="Connector by connector"
             text="Expected means the Orange Pi Lite DTB already describes it. Everything else is a measured experiment."
           />
@@ -392,7 +485,7 @@ nmcli dev status`}
 
         <section id="repo" className="space-y-6">
           <SectionHeading
-            kicker="07"
+            kicker="10"
             title="What is in this repo"
             text="Scripts and overlays you can take to a workbench. Overlays that touch TFT pins are candidates, not a claim that this PCB was probed here."
           />
@@ -402,6 +495,12 @@ nmcli dev status`}
                 <CardTitle>scripts/</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm leading-6 text-muted-foreground">
+                <p>
+                  <code className="font-mono text-xs">prepare-sd.sh</code> —
+                  write <code>fly-net.txt</code> and Armbian’s{" "}
+                  <code>armbian_first_run.txt</code> onto the FAT boot
+                  partition before first power-on.
+                </p>
                 <p>
                   <code className="font-mono text-xs">extract-flyos.sh</code> —
                   mount a FlyOS H3 image and copy DTB, overlays, firmware, and
@@ -439,7 +538,7 @@ nmcli dev status`}
 
         <section id="decide" className="space-y-6">
           <SectionHeading
-            kicker="08"
+            kicker="11"
             title="Pick the first experiment"
             text="If you only do one thing this week: spare card, Orange Pi Lite Armbian, console or USB dongle, no displays."
           />
@@ -447,7 +546,7 @@ nmcli dev status`}
         </section>
 
         <section id="faq" className="space-y-6">
-          <SectionHeading kicker="09" title="FAQ" />
+          <SectionHeading kicker="12" title="FAQ" />
           <Card>
             <CardContent>
               <FaqList />
@@ -457,7 +556,7 @@ nmcli dev status`}
 
         <section id="sources" className="space-y-4 pb-8">
           <SectionHeading
-            kicker="10"
+            kicker="13"
             title="Sources"
             text="Public Mellow docs and mainline sunxi board files. This is not an official Mellow Debian port."
           />

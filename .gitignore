@@ -44,6 +44,9 @@ next-env.d.ts
 /agent-tools/
 /out/
 
+# Local first-boot secrets (keep the template in first-boot/fly-net.txt)
+first-boot/fly-net.local.txt
+
 # FlyOS image blobs and live dumps (may contain Wi-Fi / printer secrets)
 *.img
 *.img.xz
