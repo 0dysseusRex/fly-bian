@@ -97,8 +97,8 @@ fdt resize 4096
 fdt rm /soc/mmc@1c0f000 cd-gpios
 fdt set /soc/mmc@1c0f000 broken-cd
 fdt set /soc/mmc@1c0f000 non-removable
-setenv bootargs console=ttyS0,115200 root=/dev/mmcblk0p1 rootwait rootfstype=ext4 module_blacklist=8189fs,rtl8189fs,r8188eu cma=16M bpf_jit_enable=0 systemd.mask=armbian-zram-config.service
+setenv bootargs console=ttyS0,115200 root=/dev/mmcblk0p1 rootwait rootfstype=ext4 rw init=/bin/bash nohz=off clocksource=timer cma=16M bpf_jit_enable=0
 bootz ${kernel_addr_r} ${ramdisk_addr_r} ${fdt_addr_r}
 ```
 
-Expect ~10.5 MiB, ~14.1 MiB, then ~34541 bytes. The `fdt` lines stop Linux from hiding the SD card (`ALERT! /dev/mmcblk0p1 does not exist`). Same block lives in `docs/lite21-bringup.md`.
+Expect ~10.5 MiB, ~14.1 MiB, then ~34541 bytes. `init=/bin/bash` skips systemd/udev (both 6.18.49 panics were in udev-worker). At `#`, follow the persist commands in `docs/lite21-bringup.md`.

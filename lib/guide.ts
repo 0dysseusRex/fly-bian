@@ -409,7 +409,7 @@ fdt resize 4096
 fdt rm /soc/mmc@1c0f000 cd-gpios
 fdt set /soc/mmc@1c0f000 broken-cd
 fdt set /soc/mmc@1c0f000 non-removable
-setenv bootargs console=ttyS0,115200 root=/dev/mmcblk0p1 rootwait rootfstype=ext4 module_blacklist=8189fs,rtl8189fs,r8188eu cma=16M bpf_jit_enable=0 systemd.mask=armbian-zram-config.service
+setenv bootargs console=ttyS0,115200 root=/dev/mmcblk0p1 rootwait rootfstype=ext4 rw init=/bin/bash nohz=off clocksource=timer cma=16M bpf_jit_enable=0
 bootz \${kernel_addr_r} \${ramdisk_addr_r} \${fdt_addr_r}`;
 
 export const faqs = [
@@ -466,7 +466,7 @@ export const faqs = [
     a: "Linux reused Orange Pi Lite’s PF6 CD. gpio clear PF6 only helps U-Boot. After ext4load of the DTB, fdt rm /soc/mmc@1c0f000 cd-gpios and fdt set broken-cd, then bootz. reboot -f from initramfs and paste the updated block.",
   },
   {
-    q: "Welcome to Armbian, then kernel panic in udev-worker / seccomp",
-    a: "Debian mounted. Stock zram (248 MB) plus 102 MB CMA on 512 MB RAM, then udev’s seccomp BPF JIT oopsed on this 6.18.49 Thumb2 kernel. Reboot with cma=16M bpf_jit_enable=0 systemd.mask=armbian-zram-config.service. If it still dies, bootargs rw init=/bin/bash.",
+    q: "Welcome to Armbian, then kernel panic in udev-worker",
+    a: "Debian mounted. First panic was zram + seccomp BPF JIT. Second was udev loading cfg80211/display_connector, then an undefined instruction in rcu_sched_clock_irq (tickless arch timer). Boot with rw init=/bin/bash nohz=off clocksource=timer, persist a swap file and module blacklists, then try systemd again.",
   },
 ];
