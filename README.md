@@ -12,10 +12,12 @@ The Lite is an Allwinner H3 host (512 MB, **MicroSD only**, onboard 2.4 GHz Wi-F
 
 **Armbian Debian 13 Trixie Minimal CLI for Orange Pi Lite** on a **second** MicroSD. Keep FlyOS on the original card.
 
+**Live status:** SPL boots from SD. U-Boot then ignores the card (PF6 CD). Kernel and ramdisk already load. The DTB is **flat** in `/boot/dtb-6.18.49-current-sunxi/` — not `allwinner/`. Paste at `=>`: [`docs/lite21-bringup.md`](docs/lite21-bringup.md).
+
 1. Flash: https://dl.armbian.com/orangepilite/Trixie_current_minimal
-2. Edit [`first-boot/fly-net.txt`](first-boot/fly-net.txt) and run `./scripts/prepare-sd.sh /media/$USER/armbi_boot`
+2. This Trixie image is **one ext4 partition** (no FAT `armbi_boot`), so skip `fly-net.txt` until Linux is up. Use Type-C serial.
 3. Independent 5 V. IPEX antenna. Leave TFT unplugged.
-4. Login via Type-C serial at 115200, FPC-HDMI + USB keyboard, or SSH after the Wi-Fi lease. On Windows see [`first-boot/windows.md`](first-boot/windows.md) — this workspace cannot open COM4.
+4. At U-Boot: `gpio clear PF6`, `mmc dev 0`, then the `ext4load` / `bootz` block in the bring-up doc. On Windows see [`first-boot/windows.md`](first-boot/windows.md) — this workspace cannot open COM4.
 5. On the board: `scripts/first-boot-checks.sh`
 6. If Wi-Fi or a display is missing, loot the official H3 FlyOS DTB (`scripts/extract-flyos.sh` or `scripts/pull-live-flyos.sh`)
 
@@ -27,6 +29,7 @@ Klipper host pins: [`docs/klipper-pins-and-macros.md`](docs/klipper-pins-and-mac
 | --- | --- |
 | This web guide | Project, board family, first-boot, Lite 2.1 bring-up |
 | `docs/project.md` | Roadmap and image contract |
+| `docs/lite21-bringup.md` | Live U-Boot paste (PF6 CD + flat DTB path) |
 | `first-boot/fly-net.txt` | Edit SSID/password; copy to the FAT boot partition |
 | `scripts/prepare-sd.sh` | Writes Armbian `armbian_first_run.txt` from that file |
 | `docs/klipper-pins-and-macros.md` | Host pins, sys-config keys, PLR / client macros |

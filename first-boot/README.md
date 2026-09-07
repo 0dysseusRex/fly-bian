@@ -23,8 +23,9 @@ Wi-Fi still needs the radio to probe. If MMC1 never appears, the file cannot hel
 ## 2. Serial
 
 - Lite 2.1 Type-C to the PC, **115200 8N1**.
-- Data-capable cable. On FlyOS this is COM4; on Debian it is the same hardware or a USB gadget (see `overlays/usb-otg-peripheral.dts`).
-- Armbian first-login wizard runs on the console.
+- Data-capable cable. On FlyOS this is COM4; on Debian it is the same UART (U-Boot prints on it).
+- Stock Armbian autoboot does **not** see the SD card. Paste [`docs/lite21-bringup.md`](../docs/lite21-bringup.md) at `=>`.
+- Armbian first-login wizard runs on `ttyS0` after `bootz`.
 
 ## 3. HDMI + USB keyboard
 

@@ -38,6 +38,7 @@ import {
   sources,
   specs,
   steps,
+  ubootManualBoot,
   type GuideLink,
 } from "@/lib/guide";
 
@@ -65,6 +66,7 @@ const likelihoodStyle: Record<string, string> = {
   Plausible: "text-amber-200",
   "Extract from FlyOS": "text-amber-200",
   "May differ": "text-muted-foreground",
+  "Manual U-Boot": "text-amber-100",
   "FlyOS userspace": "text-red-300",
 };
 
@@ -345,6 +347,27 @@ WIFI_COUNTRY=US
             title="Bring-up order"
             text="Likelihood is for a stock Orange Pi Lite Armbian image on this PCB, before any Fly DTB work."
           />
+          <Card className="border-primary/40">
+            <CardHeader>
+              <CardTitle>Stuck at U-Boot on this card</CardTitle>
+              <CardDescription>
+                Live log: kernel and ramdisk load. The DTB is{" "}
+                <code className="font-mono text-xs">
+                  /boot/dtb-6.18.49-current-sunxi/sun8i-h3-orangepi-lite.dtb
+                </code>
+                — not under <code className="font-mono text-xs">allwinner/</code>
+                . Do not <code className="font-mono text-xs">bootz</code> until
+                that load prints a byte count. Full notes:{" "}
+                <code className="font-mono text-xs">docs/lite21-bringup.md</code>
+                .
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <pre className="overflow-x-auto rounded-lg bg-black/40 p-4 font-mono text-xs leading-6 text-amber-100 whitespace-pre">
+                {ubootManualBoot}
+              </pre>
+            </CardContent>
+          </Card>
           <div className="grid gap-3 md:grid-cols-2">
             {phases.map((phase) => (
               <Card key={phase.id}>

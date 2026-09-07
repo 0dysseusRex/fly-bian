@@ -16,7 +16,7 @@ Three working ways to finish setup. The custom image will keep all three; stock 
 | Path | When to use | What you do |
 | --- | --- | --- |
 | **Pre-boot Wi-Fi file** | Headless, onboard radio or USB Wi-Fi | Edit `first-boot/fly-net.txt`, copy onto the FAT boot partition before first power-on |
-| **Serial** | Safest first login | Type-C (Lite 2.1) or UART at **115200 8N1** |
+| **Serial** | Safest first login — **required on this Trixie card** | Type-C at **115200 8N1**. Autoboot misses the SD (PF6). Paste `docs/lite21-bringup.md`. |
 | **HDMI + USB** | Keyboard and a screen | FPC-HDMI or Micro-HDMI plus a USB keyboard. Do not mix TFT and HDMI while testing |
 
 The editable file is `first-boot/fly-net.txt`. `scripts/prepare-sd.sh` writes Armbian’s `armbian_first_run.txt` from it so a stock Orange Pi Lite image connects on first boot. The later custom image will read `fly-net.txt` directly.

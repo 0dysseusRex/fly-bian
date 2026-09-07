@@ -37,7 +37,9 @@ Dump those from the official H3 FlyOS image with `scripts/extract-flyos.sh`.
 
 Confirmed on serial: H3, 512 MiB, model `Xunlong Orange Pi Lite`, USB EHCI/OHCI 1 and 2 up, no Ethernet. SPL loads from the SD card (`Trying to boot from MMC1`), then U-Boot treats `mmc0` as empty. `mmc dev 0 0 1` does **not** skip card-detect in this U-Boot. `mmc1` is SDIO Wi-Fi (`voltage select -110`), not the boot card.
 
-Orange Pi Lite DTB: `cd-gpios = PF6`, active-low. On the Fly, PF6 is not a working CD. At the `=>` prompt, pull PF6 low or delete `cd-gpios` from the live FDT, then `mmc dev 0`. Overlay for Linux: `overlays/sd-broken-cd.dts`. U-Boot will need the same in its DTB before autoboot works.
+Orange Pi Lite DTB: `cd-gpios = PF6`, active-low. On the Fly, PF6 is not a working CD. At the `=>` prompt, `gpio clear PF6` then `mmc dev 0`. Overlay for Linux: `overlays/sd-broken-cd.dts`. U-Boot will need the same in its DTB before autoboot works.
+
+This Trixie image is **single ext4**. DTBs sit **flat** in `/boot/dtb-6.18.49-current-sunxi/` (file `sun8i-h3-orangepi-lite.dtb`, 34541 bytes). There is **no** `allwinner/` subdirectory. `/boot/zImage` is a symlink U-Boot cannot follow. Exact paste: [`docs/lite21-bringup.md`](../docs/lite21-bringup.md).
 
 - Debian image: https://www.armbian.com/orange-pi-lite/
 - Trixie Minimal CLI: https://dl.armbian.com/orangepilite/Trixie_current_minimal

@@ -35,6 +35,10 @@ Press Enter twice. You should see one of:
 
 Paste that banner back here if you want a read on which OS booted.
 
+**Listen-only is safer until Linux is up.** Opening the port with DTR asserted, or sending Enter during `Hit any key to stop autoboot`, drops you into U-Boot. That is useful when you *want* the `=>` prompt. After a reset, wait for the countdown to hit 0 if you are not pasting yet.
+
+The Trixie image on this Lite is **one ext4 partition**. Windows will not show an `armbi_boot` FAT volume. Skip section 2 until Debian is running, then use `nmtui`.
+
 On Armbian, after you have a shell:
 
 ```bash
@@ -68,3 +72,28 @@ Eject, return the card to the Lite, boot again. First boot can take several minu
 ## 3. If there is no COM port at all
 
 Use FPC-HDMI plus a USB keyboard, or a USB Ethernet dongle on a USB-A port, then SSH. Do not wait on onboard Wi-Fi with no file and no console.
+
+## 4. U-Boot paste (you are here)
+
+You already loaded the kernel and ramdisk. The DTB failed because this image has **no** `/boot/dtb-…/allwinner/` folder. The file is:
+
+```
+/boot/dtb-6.18.49-current-sunxi/sun8i-h3-orangepi-lite.dtb
+```
+
+At `=>` paste the whole block (or one line at a time if paste garbles). Do **not** reset first. Do **not** run `bootz` until every `ext4load` prints a byte count.
+
+```
+gpio clear PF6
+mmc dev 0
+setenv kernel_addr_r 0x42000000
+setenv fdt_addr_r 0x43000000
+setenv ramdisk_addr_r 0x43300000
+ext4load mmc 0:1 ${kernel_addr_r} /boot/vmlinuz-6.18.49-current-sunxi
+ext4load mmc 0:1 ${ramdisk_addr_r} /boot/uInitrd-6.18.49-current-sunxi
+ext4load mmc 0:1 ${fdt_addr_r} /boot/dtb-6.18.49-current-sunxi/sun8i-h3-orangepi-lite.dtb
+setenv bootargs console=ttyS0,115200 earlyprintk root=/dev/mmcblk0p1 rootwait rootfstype=ext4
+bootz ${kernel_addr_r} ${ramdisk_addr_r} ${fdt_addr_r}
+```
+
+Expect ~10.5 MiB, ~14.1 MiB, then ~34541 bytes. Then wait for the kernel and the first-boot resize. Same block lives in `docs/lite21-bringup.md`.

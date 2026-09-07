@@ -159,7 +159,7 @@ export const boards = [
     network: "Onboard 2.4 GHz Wi-Fi (IPEX1). No Ethernet.",
     display: "FPC-HDMI + FPC-TFT (16P). Type-C serial.",
     image: "Armbian Debian 13 Trixie Minimal CLI, board = Orange Pi Lite",
-    note: "Current work. Closest public DTB. Keep FlyOS on a second card.",
+    note: "Current work. Closest public DTB. Keep FlyOS on a second card. Live U-Boot: gpio clear PF6, then load the flat orangepi-lite.dtb — not allwinner/.",
   },
   {
     id: "piv3",
@@ -218,7 +218,7 @@ export const setupPaths = [
     id: "serial",
     title: "Serial console",
     summary:
-      "Type-C on the Lite 2.1 at 115200 8N1 (COM4 on Windows if the same cable as FlyOS). Complete Armbian’s first-login wizard here.",
+      "Type-C at 115200 8N1 (COM4 on Windows if the same cable as FlyOS). Stock Armbian autoboot does not see the SD card (PF6 CD). Paste the U-Boot block in docs/lite21-bringup.md, then finish the first-login wizard on ttyS0.",
   },
   {
     id: "hdmi-usb",
@@ -245,14 +245,14 @@ export const phases = [
     title: "Boot Debian",
     likelihood: "High",
     summary:
-      "The Lite boots from MicroSD. Armbian Debian 13 Trixie Minimal CLI for Orange Pi Lite is the closest public H3 image: same SoC, 512 MB, no Ethernet, SDIO Wi-Fi, two USB hosts.",
+      "SPL already loads U-Boot from the SD card. U-Boot then honors Orange Pi Lite’s PF6 card-detect, which is high on this PCB, so autoboot says MMC: no card present. gpio clear PF6 then ext4load the real kernel, uInitrd, and flat sun8i-h3-orangepi-lite.dtb. Do not use the allwinner/ path or /boot/zImage (symlink).",
   },
   {
     id: "console",
     title: "Get a console",
     likelihood: "High",
     summary:
-      "Mellow’s Type-C port shows up as USB serial on FlyOS. On Debian that is either a hardware UART-USB bridge (best case) or a USB gadget that needs musb in peripheral mode.",
+      "Mellow’s Type-C is a real UART: U-Boot already prints on COM4 at 115200. Stay on that port for the first-login wizard after bootz. HDMI+USB is a fallback, not required to prove Debian.",
   },
   {
     id: "usb",
@@ -287,8 +287,8 @@ export const phases = [
 export const features = [
   {
     name: "MicroSD boot",
-    status: "Expected",
-    how: "Flash Armbian to a second card. Keep official FlyOS on the first card as rollback.",
+    status: "Manual U-Boot",
+    how: "Card is fine. U-Boot CD on PF6 is wrong for this PCB. gpio clear PF6, mmc dev 0, load real filenames. Autoboot needs a U-Boot DTB patch (broken-cd), not only a Linux overlay.",
   },
   {
     name: "CPU, RAM, timers, thermal",
@@ -307,8 +307,8 @@ export const features = [
   },
   {
     name: "Type-C serial console",
-    status: "Likely",
-    how: "If the PC sees a serial port during U-Boot, it is a UART bridge and just works. If it appears only after Linux, enable musb gadget (overlay in this repo).",
+    status: "Hardware",
+    how: "U-Boot and the kernel both use ttyS0 on the Type-C UART. Open COM4 at 115200. Do not wait on g_serial.",
   },
   {
     name: "Onboard 2.4 GHz Wi-Fi",
@@ -351,8 +351,8 @@ export const steps = [
     body: "After flashing, remount the FAT boot volume and run scripts/prepare-sd.sh so Armbian joins Wi-Fi on first boot. Still keep serial or HDMI+USB as a fallback — the radio may not probe yet.",
   },
   {
-    title: "First boot: serial, HDMI+USB, or the Wi-Fi lease",
-    body: "Independent 5 V. Fit the IPEX antenna. Unplug the printer MCU and TFT. Use Type-C serial at 115200, or FPC-HDMI plus a USB keyboard, or SSH after fly-net.txt. Finish the Armbian user wizard.",
+    title: "First boot: serial past U-Boot, then HDMI+USB or Wi-Fi",
+    body: "Independent 5 V. Fit the IPEX antenna. Unplug the printer MCU and TFT. This Trixie image is a single ext4 partition (no FAT), so fly-net.txt cannot be applied from Windows. At the U-Boot => prompt paste the block in docs/lite21-bringup.md. DTB path is /boot/dtb-<ver>-current-sunxi/sun8i-h3-orangepi-lite.dtb — not allwinner/. Finish the Armbian user wizard on ttyS0.",
   },
   {
     title: "Create a normal sudo user and add swap",
@@ -395,7 +395,27 @@ export const extractFlow = [
   },
 ];
 
+/** Paste at the U-Boot `=>` prompt on the Lite 2.1 (Armbian 6.18.49-current-sunxi). */
+export const ubootManualBoot = `gpio clear PF6
+mmc dev 0
+setenv kernel_addr_r 0x42000000
+setenv fdt_addr_r 0x43000000
+setenv ramdisk_addr_r 0x43300000
+ext4load mmc 0:1 \${kernel_addr_r} /boot/vmlinuz-6.18.49-current-sunxi
+ext4load mmc 0:1 \${ramdisk_addr_r} /boot/uInitrd-6.18.49-current-sunxi
+ext4load mmc 0:1 \${fdt_addr_r} /boot/dtb-6.18.49-current-sunxi/sun8i-h3-orangepi-lite.dtb
+setenv bootargs console=ttyS0,115200 earlyprintk root=/dev/mmcblk0p1 rootwait rootfstype=ext4
+bootz \${kernel_addr_r} \${ramdisk_addr_r} \${fdt_addr_r}`;
+
 export const faqs = [
+  {
+    q: "U-Boot says Failed to load …/allwinner/sun8i-h3-orangepi-lite.dtb",
+    a: "This Armbian layout keeps DTBs flat in /boot/dtb-<ver>-current-sunxi/. There is no allwinner/ folder. Load sun8i-h3-orangepi-lite.dtb from that directory. Do not bootz until that ext4load prints ~34541 bytes.",
+  },
+  {
+    q: "Why MMC: no card present after SPL already booted from the card?",
+    a: "Orange Pi Lite’s DTB uses PF6 as SD card-detect, active-low. On the Fly Lite 2.1 PF6 is high, so U-Boot skips mmc0. gpio clear PF6 then mmc dev 0. Autoboot needs the same change in U-Boot’s DTB; a Linux overlay is not enough.",
+  },
   {
     q: "When do we write a custom image?",
     a: "After Debian boots on the Lite 2.1 and USB, Wi-Fi, serial, and HDMI are characterized. Baking an .img before that freezes the wrong DTB. The first-boot Wi-Fi file is already the contract that image will keep.",
@@ -431,5 +451,9 @@ export const faqs = [
   {
     q: "Will one image boot every Fly board?",
     a: "No. Lite 2.1 is H3/armhf. Pi V2 and Gemini are H5/aarch64. Pi V3 is H618/aarch64. Same first-boot file and bring-up method, different board files.",
+  },
+  {
+    q: "Why did a bare bootz reset the board?",
+    a: "bootz without a loaded FDT leaves Working FDT set to 0. This U-Boot has no ATAGS fallback. Load kernel, ramdisk, and the flat orangepi-lite.dtb, then bootz with all three addresses.",
   },
 ];
