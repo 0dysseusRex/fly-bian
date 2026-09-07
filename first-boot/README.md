@@ -33,3 +33,5 @@ Wi-Fi still needs the radio to probe. If MMC1 never appears, the file cannot hel
 - If the HDMI connector stays disconnected in `/sys/class/drm`, the public DTB is not enough — loot FlyOS next.
 
 Do not rely on onboard Wi-Fi alone for the first login.
+
+Windows users (COM4, Disk Management, why the FAT boot volume is missing): [`windows.md`](windows.md).

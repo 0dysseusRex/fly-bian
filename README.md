@@ -15,7 +15,7 @@ The Lite is an Allwinner H3 host (512 MB, **MicroSD only**, onboard 2.4 GHz Wi-F
 1. Flash: https://dl.armbian.com/orangepilite/Trixie_current_minimal
 2. Edit [`first-boot/fly-net.txt`](first-boot/fly-net.txt) and run `./scripts/prepare-sd.sh /media/$USER/armbi_boot`
 3. Independent 5 V. IPEX antenna. Leave TFT unplugged.
-4. Login via Type-C serial at 115200, FPC-HDMI + USB keyboard, or SSH after the Wi-Fi lease.
+4. Login via Type-C serial at 115200, FPC-HDMI + USB keyboard, or SSH after the Wi-Fi lease. On Windows see [`first-boot/windows.md`](first-boot/windows.md) — this workspace cannot open COM4.
 5. On the board: `scripts/first-boot-checks.sh`
 6. If Wi-Fi or a display is missing, loot the official H3 FlyOS DTB (`scripts/extract-flyos.sh` or `scripts/pull-live-flyos.sh`)
 
