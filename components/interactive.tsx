@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { ChevronDown, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -82,18 +81,24 @@ export function ImageTabs() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
-        {imageTabs.map((item) => (
-          <Button
-            key={item.id}
-            type="button"
-            variant={item.id === active ? "default" : "outline"}
-            className="h-auto min-h-8"
-            aria-pressed={item.id === active}
-            onClick={() => setActive(item.id)}
-          >
-            {item.label}
-          </Button>
-        ))}
+        {imageTabs.map((item) => {
+          const selected = item.id === active;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => setActive(item.id)}
+              className={`h-auto min-h-8 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                selected
+                  ? "border-transparent bg-primary text-primary-foreground"
+                  : "border-border bg-background text-foreground hover:bg-muted"
+              }`}
+            >
+              {item.label}
+            </button>
+          );
+        })}
       </div>
       <Card>
         <CardHeader>
@@ -120,33 +125,19 @@ export function ImageTabs() {
 }
 
 export function FaqList() {
-  const [open, setOpen] = useState<string | null>(null);
-
   return (
     <div className="divide-y divide-border">
-      {faqs.map((item) => {
-        const expanded = open === item.q;
-        return (
-          <div key={item.q}>
-            <button
-              type="button"
-              className="flex w-full items-start justify-between gap-3 py-3 text-left text-sm font-medium"
-              aria-expanded={expanded}
-              onClick={() => setOpen(expanded ? null : item.q)}
-            >
-              <span>{item.q}</span>
-              <ChevronDown
-                className={`mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`}
-              />
-            </button>
-            {expanded ? (
-              <p className="pb-3 text-sm leading-6 text-muted-foreground">
-                {item.a}
-              </p>
-            ) : null}
-          </div>
-        );
-      })}
+      {faqs.map((item) => (
+        <details key={item.q} className="group py-1">
+          <summary className="flex cursor-pointer list-none items-start justify-between gap-3 py-3 text-left text-sm font-medium [&::-webkit-details-marker]:hidden">
+            <span>{item.q}</span>
+            <ChevronDown className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+          </summary>
+          <p className="pb-3 text-sm leading-6 text-muted-foreground">
+            {item.a}
+          </p>
+        </details>
+      ))}
     </div>
   );
 }

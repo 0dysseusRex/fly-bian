@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -126,11 +125,14 @@ export function DecisionHelper() {
               {question.options.map((option) => {
                 const active = answers[question.id] === option.id;
                 return (
-                  <Button
+                  <button
                     key={option.id}
                     type="button"
-                    variant={active ? "default" : "outline"}
-                    className="h-auto min-h-8 justify-start whitespace-normal sm:flex-1"
+                    className={`h-auto min-h-8 flex-1 rounded-lg border px-3 py-1.5 text-left text-sm font-medium whitespace-normal transition-colors sm:flex-1 ${
+                      active
+                        ? "border-transparent bg-primary text-primary-foreground"
+                        : "border-border bg-background text-foreground hover:bg-muted"
+                    }`}
                     onClick={() =>
                       setAnswers((current) => ({
                         ...current,
@@ -139,7 +141,7 @@ export function DecisionHelper() {
                     }
                   >
                     {option.label}
-                  </Button>
+                  </button>
                 );
               })}
             </div>

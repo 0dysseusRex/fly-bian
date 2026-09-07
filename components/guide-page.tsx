@@ -70,9 +70,15 @@ const likelihoodStyle: Record<string, string> = {
 
 export function GuidePage() {
   return (
-    <div className="min-h-full">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(232,160,74,0.12),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(120,80,40,0.18),transparent_28%)]" />
-      <div className="pointer-events-none fixed inset-0 opacity-[0.07] [background-image:linear-gradient(to_right,rgba(255,255,255,0.12)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:48px_48px]" />
+    <div className="relative min-h-full">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,rgba(232,160,74,0.12),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(120,80,40,0.18),transparent_28%)]"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 opacity-[0.07] [background-image:linear-gradient(to_right,rgba(255,255,255,0.12)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:48px_48px]"
+      />
 
       <header className="relative border-b border-border/80 bg-background/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 lg:flex-row lg:items-end lg:justify-between">
