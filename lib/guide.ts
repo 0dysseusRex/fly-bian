@@ -1,3 +1,93 @@
+export type GuideLink = {
+  label: string;
+  href: string;
+  note?: string;
+};
+
+export const downloads = {
+  debian: [
+    {
+      label: "Armbian Orange Pi Lite board page",
+      href: "https://www.armbian.com/orange-pi-lite/",
+      note: "Pick the latest Debian Minimal (CLI) image. Do not take the Ubuntu Xfce desktop build.",
+    },
+    {
+      label: "Debian 13 Trixie Minimal CLI (current redirect)",
+      href: "https://dl.armbian.com/orangepilite/Trixie_current_minimal",
+      note: "Stable Armbian short URL. Follows whatever trunk they published most recently.",
+    },
+    {
+      label: "SHA-256 for that image",
+      href: "https://dl.armbian.com/orangepilite/Trixie_current_minimal.sha",
+    },
+    {
+      label: "Armbian Imager",
+      href: "https://www.armbian.com/imager/",
+      note: "Select manufacturer Orange Pi, board Orange Pi Lite, then Debian Minimal.",
+    },
+    {
+      label: "Armbian getting started",
+      href: "https://docs.armbian.com/User-Guide_Getting-Started/",
+    },
+  ] satisfies GuideLink[],
+  flyos: [
+    {
+      label: "Official Lite2 / Lite2.1 image page",
+      href: "https://mellow.klipper.cn/en/docs/ResDownload/system-img/fly-lite2/",
+      note: "Mellow says Lite2 and Lite2.1 use the same H3 image. Download, unzip, then extract — do not boot this if you want Debian.",
+    },
+    {
+      label: "H3 family image notes (MiniPad / Lite)",
+      href: "https://mellow.klipper.cn/en/docs/ResDownload/system-img/fly-minipad/",
+    },
+    {
+      label: "FlyOS-FAST documentation",
+      href: "https://mellow.klipper.cn/en/docs/DebugDoc/flyos-fast/",
+    },
+  ] satisfies GuideLink[],
+  tools: [
+    {
+      label: "Raspberry Pi Imager (can flash any .img)",
+      href: "https://www.raspberrypi.com/software/",
+    },
+    {
+      label: "Balena Etcher",
+      href: "https://etcher.balena.io/",
+    },
+    {
+      label: "Rufus (Windows)",
+      href: "https://rufus.ie/en/",
+    },
+    {
+      label: "Mellow flashing tools list",
+      href: "https://mellow.klipper.cn/en/docs/ResDownload/auxiliary_software/",
+    },
+  ] satisfies GuideLink[],
+  build: [
+    {
+      label: "Armbian build framework",
+      href: "https://github.com/armbian/build",
+    },
+    {
+      label: "Build preparation docs",
+      href: "https://docs.armbian.com/Developer-Guide_Build-Preparation/",
+    },
+    {
+      label: "Orange Pi One images (H3, no onboard Wi-Fi)",
+      href: "https://www.armbian.com/orange-pi-one/",
+    },
+    {
+      label: "DietPi downloads (no Orange Pi Lite image)",
+      href: "https://dietpi.com/#download",
+      note: "DietPi does not ship a Lite image. Start from Armbian if you want DietPi later.",
+    },
+    {
+      label: "DietPi supported hardware list",
+      href: "https://dietpi.com/docs/hardware/",
+    },
+  ] satisfies GuideLink[],
+};
+
 export const sources = [
   {
     label: "FLY Lite 2.1 product docs",
@@ -8,8 +98,20 @@ export const sources = [
     href: "https://mellow.klipper.cn/en/docs/ProductDoc/SBC/fly-lite/lite2.1/host/ssh",
   },
   {
-    label: "FlyOS-FAST H3 image notes (MiniPad / Lite family)",
-    href: "https://mellow.klipper.cn/en/docs/ResDownload/system-img/fly-minipad/",
+    label: "Official Lite2 / Lite2.1 system image (H3 FlyOS)",
+    href: "https://mellow.klipper.cn/en/docs/ResDownload/system-img/fly-lite2/",
+  },
+  {
+    label: "Armbian Orange Pi Lite images",
+    href: "https://www.armbian.com/orange-pi-lite/",
+  },
+  {
+    label: "Debian 13 Trixie Minimal CLI redirect",
+    href: "https://dl.armbian.com/orangepilite/Trixie_current_minimal",
+  },
+  {
+    label: "Armbian Imager",
+    href: "https://www.armbian.com/imager/",
   },
   {
     label: "linux-sunxi Orange Pi Lite (closest public H3 DTS)",
@@ -140,8 +242,8 @@ export const steps = [
     body: "The Lite has no eMMC. Two MicroSD cards is a full rollback. Do not overwrite the only card that already boots FlyOS.",
   },
   {
-    title: "Flash Armbian Debian 12 CLI for Orange Pi Lite",
-    body: "Use the Bookworm / current / minimal CLI image from Armbian. Not a desktop image, not Raspberry Pi OS. H3 is 32-bit ARM (armhf).",
+    title: "Flash Armbian Debian 13 Trixie CLI for Orange Pi Lite",
+    body: "Use the current Minimal (CLI) image from the Orange Pi Lite board page. Not the Ubuntu Xfce desktop, not Raspberry Pi OS. H3 is 32-bit ARM (armhf).",
   },
   {
     title: "First boot with nothing but power and console",
@@ -172,7 +274,7 @@ export const steps = [
 export const extractFlow = [
   {
     title: "Get the official H3 FlyOS image",
-    body: "Mellow’s download pages group Lite2 and MiniPad under the H3 FlyOS-FAST image. Unzip it. Do not flash the .xz.",
+    body: "Use the Lite2 / Lite2.1 image page (same image for both). Unzip it. Do not flash the archive. You want the DTB and firmware, not a FAST boot.",
   },
   {
     title: "Run the extractor on a Linux PC",
@@ -195,7 +297,7 @@ export const faqs = [
   },
   {
     q: "Will Raspberry Pi OS boot?",
-    a: "No. Different boot ROM, different DRAM init, different kernel. You need a sunxi/H3 image: Armbian, Orange Pi Debian, or DietPi for H3.",
+    a: "No. Different boot ROM, different DRAM init, different kernel. You need a sunxi/H3 image. Armbian’s Orange Pi Lite Debian Minimal CLI is the one with a current download.",
   },
   {
     q: "Is FlyOS itself Debian?",

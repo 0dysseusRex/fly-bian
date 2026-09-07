@@ -31,6 +31,10 @@ That file already enables MMC0 (SD), MMC1 (SDIO Wi-Fi), EHCI/OHCI 1 and 2, HDMI,
 
 Dump those from the official H3 FlyOS image with `scripts/extract-flyos.sh`.
 
+- Debian image: https://www.armbian.com/orange-pi-lite/
+- Trixie Minimal CLI: https://dl.armbian.com/orangepilite/Trixie_current_minimal
+- FlyOS Lite2 / 2.1: https://mellow.klipper.cn/en/docs/ResDownload/system-img/fly-lite2/
+
 ## Power and antennas
 
 - Fit the IPEX antenna before judging Wi-Fi.

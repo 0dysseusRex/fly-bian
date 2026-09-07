@@ -6,7 +6,14 @@ The Lite 2.1 is an Allwinner H3 host (512 MB, SD boot, onboard 2.4 GHz Wi-Fi, tw
 
 ## Recommended first image
 
-**Armbian Debian 12 (Bookworm) CLI for Orange Pi Lite.** Same SoC class, same RAM, no Ethernet, SDIO Wi-Fi, two USB hosts. Flash it to a **second** MicroSD card. Keep official FlyOS on the original card.
+**Armbian Debian 13 (Trixie) Minimal CLI for Orange Pi Lite.** Same SoC class, same RAM, no Ethernet, SDIO Wi-Fi, two USB hosts. Flash it to a **second** MicroSD card. Keep official FlyOS on the original card.
+
+- Board page: https://www.armbian.com/orange-pi-lite/
+- Direct image (follows current trunk): https://dl.armbian.com/orangepilite/Trixie_current_minimal
+- Checksum: https://dl.armbian.com/orangepilite/Trixie_current_minimal.sha
+- Flasher: https://www.armbian.com/imager/
+
+Official FlyOS for this board (loot the DTB, do not stay on FAST): https://mellow.klipper.cn/en/docs/ResDownload/system-img/fly-lite2/
 
 Then:
 

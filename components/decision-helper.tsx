@@ -84,7 +84,7 @@ function outcome(answers: Answers) {
     return {
       tone: "go" as const,
       title: "This is the right first week",
-      body: "Armbian Debian 12 CLI for Orange Pi Lite on the spare card. Independent 5 V. Type-C serial or a USB dongle. Run scripts/first-boot-checks.sh. Treat Wi-Fi and displays as the next experiment, not the boot requirement.",
+      body: "Armbian Debian 13 Trixie Minimal CLI for Orange Pi Lite on the spare card. Independent 5 V. Type-C serial or a USB dongle. Run scripts/first-boot-checks.sh. Treat Wi-Fi and displays as the next experiment, not the boot requirement.",
     };
   }
 

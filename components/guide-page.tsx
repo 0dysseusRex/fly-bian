@@ -1,5 +1,7 @@
+import type { ReactNode } from "react";
 import {
   Cpu,
+  ExternalLink,
   HardDrive,
   MemoryStick,
   Monitor,
@@ -32,6 +34,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DecisionHelper } from "@/components/decision-helper";
 import {
+  downloads,
   extractFlow,
   faqs,
   features,
@@ -39,10 +42,12 @@ import {
   sources,
   specs,
   steps,
+  type GuideLink,
 } from "@/lib/guide";
 
 const nav = [
   { href: "#goal", label: "Goal" },
+  { href: "#downloads", label: "Downloads" },
   { href: "#board", label: "Board" },
   { href: "#image", label: "Image" },
   { href: "#bringup", label: "Bring-up" },
@@ -144,6 +149,32 @@ export function GuidePage() {
           </div>
         </section>
 
+        <section id="downloads" className="space-y-6">
+          <SectionHeading
+            kicker="02"
+            title="Downloads"
+            text="These are the pages you actually click. Image short URLs follow Armbian’s current trunk; if a filename changes, use the board page."
+          />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <DownloadGroup
+              title="Debian image (start here)"
+              links={downloads.debian}
+            />
+            <DownloadGroup
+              title="Flash tools"
+              links={downloads.tools}
+            />
+            <DownloadGroup
+              title="Official FlyOS (loot the DTB, do not stay on FAST)"
+              links={downloads.flyos}
+            />
+            <DownloadGroup
+              title="Rebuild and alternatives"
+              links={downloads.build}
+            />
+          </div>
+        </section>
+
         <section id="board" className="space-y-6">
           <SectionHeading
             kicker="02"
@@ -155,7 +186,15 @@ export function GuidePage() {
               <CardHeader>
                 <CardTitle>Fly-Pi-lite2.1</CardTitle>
                 <CardDescription>
-                  Official specs. Same generation as Orange Pi Lite / One.
+                  Official specs. Same generation as{" "}
+                  <OutLink href="https://www.armbian.com/orange-pi-lite/">
+                    Orange Pi Lite
+                  </OutLink>
+                  . Product page:{" "}
+                  <OutLink href="https://mellow.klipper.cn/en/docs/ProductDoc/SBC/fly-lite/lite2.1/">
+                    FLY Lite 2.1 docs
+                  </OutLink>
+                  .
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-3 sm:grid-cols-2">
@@ -214,36 +253,43 @@ export function GuidePage() {
             </TabsList>
             <TabsContent value="armbian">
               <PathCard
-                title="Armbian Bookworm CLI, board = orangepilite"
-                body="Closest match, mainline-ish kernel, overlays via armbian-add-overlay, and a real apt-based Debian 12. Use current or the latest supported sunxi branch. Minimal CLI, no desktop."
+                title="Armbian Debian 13 Trixie Minimal CLI, board = orangepilite"
+                body="This is the current public image: Debian userspace, current sunxi kernel, overlays via armbian-add-overlay. Skip the Ubuntu Xfce build on the same page."
                 points={[
-                  "Download the Orange Pi Lite Debian Bookworm CLI image from Armbian.",
-                  "Flash with Raspberry Pi Imager, Balena, or dd. This is a normal .img.",
+                  "Open the Orange Pi Lite board page or use the Trixie Minimal short URL below.",
+                  "Flash with Armbian Imager, Raspberry Pi Imager, Etcher, or dd. This is a normal .img.xz.",
                   "First boot on the spare card only. Independent 5 V.",
                   "Complete the Armbian first-run user. Keep that user; do not live as root.",
                 ]}
+                links={downloads.debian}
               />
             </TabsContent>
             <TabsContent value="dietpi">
               <PathCard
-                title="DietPi for Orange Pi Lite / H3"
-                body="Also Debian, lighter still. Fine if you already know DietPi. Slightly less convenient for device-tree overlays than Armbian."
+                title="DietPi does not ship an Orange Pi Lite image"
+                body="Their hardware list covers later Orange Pi boards, not this H3 Lite. If you want DietPi later, convert a working Armbian install. Do not hunt a Lite .7z that is not there."
                 points={[
-                  "Pick the Orange Pi Lite image, Bookworm.",
-                  "Disable DietPi’s unattended updates until the board is stable.",
-                  "Same hardware order: console, USB, Wi-Fi, displays.",
+                  "Flash Armbian Trixie Minimal first and prove USB plus a console.",
+                  "Only then consider converting with DietPi’s prep script.",
+                  "Overlays are easier to keep on Armbian.",
                 ]}
+                links={downloads.build.filter((link) =>
+                  link.href.includes("dietpi")
+                )}
               />
             </TabsContent>
             <TabsContent value="custom">
               <PathCard
                 title="Rebuild Armbian as fly-lite-2.1"
-                body="Worth it after the Orange Pi Lite image boots and you have a DTB diff. Copy config/boards/orangepilite.conf, rename the model, and drop in the Fly DTB. Community Fly Gemini images were built this way on a different SoC."
+                body="Worth it after the Orange Pi Lite image boots and you have a DTB diff. Copy config/boards/orangepilite.conf, rename the model, and drop in the Fly DTB."
                 points={[
                   "Do not start here. You need a known-good UART and USB path first.",
-                  "Freeze kernel and u-boot once the custom DTB works. Distro kernel upgrades will wipe it.",
-                  "Keep overlays in overlay-user/ so small pinmux fixes do not need a full rebuild.",
+                  "BOARD=orangepilite RELEASE=trixie BUILD_DESKTOP=no BUILD_MINIMAL=yes",
+                  "Freeze kernel and u-boot once the custom DTB works.",
                 ]}
+                links={downloads.build.filter(
+                  (link) => !link.href.includes("dietpi")
+                )}
               />
             </TabsContent>
             <TabsContent value="avoid">
@@ -254,7 +300,14 @@ export function GuidePage() {
                   "Raspberry Pi OS, Mainsail OS, any bcm2711 image.",
                   "Fly Gemini / Fly-Pi H5 community Armbian images.",
                   "Orange Pi PC images (Ethernet, different DRAM and USB map).",
-                  "The FlyOS-FAST image itself if the goal is Debian with apt.",
+                  "The FlyOS-FAST image itself if the goal is Debian with apt. Loot it; do not stay on it.",
+                ]}
+                links={[
+                  ...downloads.flyos.slice(0, 1),
+                  {
+                    label: "Fly Gemini community Armbian (method only, wrong SoC)",
+                    href: "https://github.com/reemo3dp/mellowfly-geminipi-armbian",
+                  },
                 ]}
               />
             </TabsContent>
@@ -353,6 +406,10 @@ nmcli dev status`}
               </div>
             ))}
           </div>
+          <DownloadGroup
+            title="Official H3 FlyOS pages"
+            links={downloads.flyos}
+          />
           <Card>
             <CardHeader>
               <CardTitle>Extractor</CardTitle>
@@ -494,9 +551,10 @@ nmcli dev status`}
                   href={source.href}
                   target="_blank"
                   rel="noreferrer"
-                  className="block rounded-lg border border-border bg-card px-3 py-3 text-sm transition-colors hover:border-primary/50"
+                  className="flex items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-3 text-sm transition-colors hover:border-primary/50"
                 >
-                  {source.label}
+                  <span>{source.label}</span>
+                  <ExternalLink className="size-3.5 shrink-0 text-primary" />
                 </a>
               </li>
             ))}
@@ -557,10 +615,12 @@ function PathCard({
   title,
   body,
   points,
+  links,
 }: {
   title: string;
   body: string;
   points: string[];
+  links?: GuideLink[];
 }) {
   return (
     <Card>
@@ -568,7 +628,7 @@ function PathCard({
         <CardTitle>{title}</CardTitle>
         <CardDescription className="leading-6">{body}</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
         <ul className="space-y-2 text-sm leading-6 text-muted-foreground">
           {points.map((point) => (
             <li key={point} className="flex gap-2">
@@ -577,7 +637,62 @@ function PathCard({
             </li>
           ))}
         </ul>
+        {links?.length ? <LinkList links={links} /> : null}
       </CardContent>
     </Card>
+  );
+}
+
+function DownloadGroup({
+  title,
+  links,
+}: {
+  title: string;
+  links: GuideLink[];
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <LinkList links={links} />
+      </CardContent>
+    </Card>
+  );
+}
+
+function LinkList({ links }: { links: GuideLink[] }) {
+  return (
+    <ul className="space-y-3">
+      {links.map((link) => (
+        <li key={link.href} className="space-y-1">
+          <OutLink href={link.href}>{link.label}</OutLink>
+          {link.note ? (
+            <p className="text-xs leading-5 text-muted-foreground">{link.note}</p>
+          ) : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function OutLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-4 hover:underline"
+    >
+      {children}
+      <ExternalLink className="size-3.5 shrink-0" />
+    </a>
   );
 }
