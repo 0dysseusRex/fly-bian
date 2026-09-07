@@ -11,12 +11,6 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
   Card,
   CardContent,
   CardDescription,
@@ -31,12 +25,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DecisionHelper } from "@/components/decision-helper";
+import { FaqList, ImageTabs } from "@/components/interactive";
 import {
   downloads,
   extractFlow,
-  faqs,
   features,
   phases,
   sources,
@@ -244,74 +237,7 @@ export function GuidePage() {
             title="Which Debian image to flash"
             text="Use a public H3 image first. A custom Armbian board config is a later refinement, not the first boot."
           />
-          <Tabs defaultValue="armbian">
-            <TabsList className="mb-4 flex h-auto w-full flex-wrap justify-start gap-1">
-              <TabsTrigger value="armbian">Armbian (recommended)</TabsTrigger>
-              <TabsTrigger value="dietpi">DietPi</TabsTrigger>
-              <TabsTrigger value="custom">Custom rebuild</TabsTrigger>
-              <TabsTrigger value="avoid">Do not flash</TabsTrigger>
-            </TabsList>
-            <TabsContent value="armbian">
-              <PathCard
-                title="Armbian Debian 13 Trixie Minimal CLI, board = orangepilite"
-                body="This is the current public image: Debian userspace, current sunxi kernel, overlays via armbian-add-overlay. Skip the Ubuntu Xfce build on the same page."
-                points={[
-                  "Open the Orange Pi Lite board page or use the Trixie Minimal short URL below.",
-                  "Flash with Armbian Imager, Raspberry Pi Imager, Etcher, or dd. This is a normal .img.xz.",
-                  "First boot on the spare card only. Independent 5 V.",
-                  "Complete the Armbian first-run user. Keep that user; do not live as root.",
-                ]}
-                links={downloads.debian}
-              />
-            </TabsContent>
-            <TabsContent value="dietpi">
-              <PathCard
-                title="DietPi does not ship an Orange Pi Lite image"
-                body="Their hardware list covers later Orange Pi boards, not this H3 Lite. If you want DietPi later, convert a working Armbian install. Do not hunt a Lite .7z that is not there."
-                points={[
-                  "Flash Armbian Trixie Minimal first and prove USB plus a console.",
-                  "Only then consider converting with DietPi’s prep script.",
-                  "Overlays are easier to keep on Armbian.",
-                ]}
-                links={downloads.build.filter((link) =>
-                  link.href.includes("dietpi")
-                )}
-              />
-            </TabsContent>
-            <TabsContent value="custom">
-              <PathCard
-                title="Rebuild Armbian as fly-lite-2.1"
-                body="Worth it after the Orange Pi Lite image boots and you have a DTB diff. Copy config/boards/orangepilite.conf, rename the model, and drop in the Fly DTB."
-                points={[
-                  "Do not start here. You need a known-good UART and USB path first.",
-                  "BOARD=orangepilite RELEASE=trixie BUILD_DESKTOP=no BUILD_MINIMAL=yes",
-                  "Freeze kernel and u-boot once the custom DTB works.",
-                ]}
-                links={downloads.build.filter(
-                  (link) => !link.href.includes("dietpi")
-                )}
-              />
-            </TabsContent>
-            <TabsContent value="avoid">
-              <PathCard
-                title="Images that will not help"
-                body="Wrong boot chain or the wrong SoC. These waste a card and can look like a dead board."
-                points={[
-                  "Raspberry Pi OS, Mainsail OS, any bcm2711 image.",
-                  "Fly Gemini / Fly-Pi H5 community Armbian images.",
-                  "Orange Pi PC images (Ethernet, different DRAM and USB map).",
-                  "The FlyOS-FAST image itself if the goal is Debian with apt. Loot it; do not stay on it.",
-                ]}
-                links={[
-                  ...downloads.flyos.slice(0, 1),
-                  {
-                    label: "Fly Gemini community Armbian (method only, wrong SoC)",
-                    href: "https://github.com/reemo3dp/mellowfly-geminipi-armbian",
-                  },
-                ]}
-              />
-            </TabsContent>
-          </Tabs>
+          <ImageTabs />
         </section>
 
         <section id="bringup" className="space-y-6">
@@ -524,16 +450,7 @@ nmcli dev status`}
           <SectionHeading kicker="09" title="FAQ" />
           <Card>
             <CardContent>
-              <Accordion>
-                {faqs.map((item) => (
-                  <AccordionItem key={item.q} value={item.q}>
-                    <AccordionTrigger>{item.q}</AccordionTrigger>
-                    <AccordionContent className="text-sm leading-6 text-muted-foreground">
-                      {item.a}
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
+              <FaqList />
             </CardContent>
           </Card>
         </section>
@@ -608,38 +525,6 @@ function Fact({
         <p className="text-sm font-medium">{value}</p>
       </div>
     </div>
-  );
-}
-
-function PathCard({
-  title,
-  body,
-  points,
-  links,
-}: {
-  title: string;
-  body: string;
-  points: string[];
-  links?: GuideLink[];
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription className="leading-6">{body}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <ul className="space-y-2 text-sm leading-6 text-muted-foreground">
-          {points.map((point) => (
-            <li key={point} className="flex gap-2">
-              <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />
-              <span>{point}</span>
-            </li>
-          ))}
-        </ul>
-        {links?.length ? <LinkList links={links} /> : null}
-      </CardContent>
-    </Card>
   );
 }
 
