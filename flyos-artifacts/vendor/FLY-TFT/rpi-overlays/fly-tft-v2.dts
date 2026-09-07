@@ -1,0 +1,188 @@
+/*
+* Device Tree overlay for Mellow fly TFT 3.5" capacitive touchscreen
+*
+*/
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "brcm,bcm2835",
+	"brcm,bcm2708",
+	"brcm,bcm2709",
+	"brcm,bcm2711",
+	"brcm,bcm2712";
+	
+	fragment@0 {
+		target = <&spi0>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+	
+	fragment@1 {
+		target = <&spidev0>;
+		__overlay__ {
+			status = "disabled";
+		};
+	};
+	
+	fragment@2 {
+		target = <&gpio>;
+		__overlay__ {
+			pitft_pins: pitft_pins {
+				brcm,pins =     <24 6 26 19 13>; /* TH-INT TH-RST DC RST BLK */
+				brcm,function = <0  1  1  1  1>; /*   in    out  out out out */
+				brcm,pull =     <2  1  0  2  2>; /* 2:up 1:down 0:none */
+			};
+		};
+	};
+	
+	fragment@3 {
+		target-path = "/soc";
+		__overlay__ {
+			backlight: backlight {
+				compatible = "gpio-backlight";
+				gpios = <&gpio 13 0>;
+				status = "okay";
+			};
+		};
+	};
+	
+	fragment@4 {
+		target = <&spi0>;
+		__overlay__ {
+			/* needed to avoid dtc warning */
+			#address-cells = <1>;
+			#size-cells = <0>;
+			
+			pitft: pitft@0 {
+				compatible = "mellow,fly-tft-v2";
+				pinctrl-names = "default";
+				pinctrl-0 = <&pitft_pins>;
+				reg = <0>;
+				
+				spi-max-frequency = <64000000>;
+				
+				rotation = <90>;
+				reset-gpios = <&gpio 19 0>;
+				dc-gpios = <&gpio 26 0>;
+				thrst-gpios = <&gpio 6 0>;
+				backlight = <&backlight>;
+				status = "okay";
+			};
+			
+			touch_res: touch@1 {
+				compatible = "ti,ads7846";
+				reg = <1>;
+				
+				spi-max-frequency = <2000000>;
+				interrupt-parent = <&gpio>;
+				interrupts = <24 2>; /* high-to-low edge triggered */
+				pendown-gpio = <&gpio 24 1>;
+				// ti,keep-vref-on = <1>;
+				ti,x-min = /bits/ 16 <3900>;
+				ti,x-max = /bits/ 16 <200>;
+				ti,y-min = /bits/ 16 <200>;
+				ti,y-max = /bits/ 16 <3900>;
+				ti,x-plate-ohms = /bits/ 16 <60>;
+				ti,pressure-max = /bits/ 16 <255>;
+				touchscreen-swapped-x-y;
+				status = "okay";
+			};
+		};
+	};
+	
+	fragment@5 {
+		target = <&i2c1>;
+		__overlay__ {
+			/* needed to avoid dtc warning */
+			#address-cells = <1>;
+			#size-cells = <0>;
+			
+			touch_14: touch@14 {
+				compatible = "goodix,gt911";
+				reg = <0x14>;
+				// interrupt-parent = <&gpio>;
+				// interrupts = <24 2>; /* high-to-low edge triggered */
+				// pendown-gpio = <&gpio 24 0>;
+				// irq-gpios = <&gpio 24 0>;
+				reset-gpios = <&gpio 6 0>;
+				touchscreen-size-x = <320>;
+				touchscreen-size-y = <480>;
+				touchscreen-inverted-x;
+				touchscreen-swapped-x-y;
+				status = "okay";
+			};
+			
+			touch_5d: touch@5d {
+				compatible = "goodix,gt911";
+				reg = <0x5d>;
+				// interrupt-parent = <&gpio>;
+				// interrupts = <24 2>; /* high-to-low edge triggered */
+				// pendown-gpio = <&gpio 24 0>;
+				// irq-gpios = <&gpio 24 0>;
+				reset-gpios = <&gpio 6 0>;
+				touchscreen-size-x = <320>;
+				touchscreen-size-y = <480>;
+				touchscreen-inverted-x;
+				touchscreen-swapped-x-y;
+				status = "okay";
+			};
+		};
+	};
+	
+	
+	__overrides__ {
+		r0 = <&pitft>,"rotation:0=0",
+		<&touch_14>,"touchscreen-inverted-x!",
+		<&touch_14>,"touchscreen-swapped-x-y!",
+		<&touch_5d>,"touchscreen-inverted-x!",
+		<&touch_5d>,"touchscreen-swapped-x-y!",
+		<&touch_res>,"touchscreen-inverted-x?",
+		<&touch_res>,"touchscreen-swapped-x-y!";
+		
+		r90 = <&pitft>,"rotation:0=90",
+		<&touch_14>,"touchscreen-inverted-x?",
+		<&touch_14>,"touchscreen-swapped-x-y?",
+		<&touch_5d>,"touchscreen-inverted-x?",
+		<&touch_5d>,"touchscreen-swapped-x-y?",
+		<&touch_res>,"touchscreen-swapped-x-y?";
+		
+		r180 = <&pitft>,"rotation:0=180",
+		<&touch_14>,"touchscreen-swapped-x-y!",
+		<&touch_14>,"touchscreen-inverted-x?",
+		<&touch_14>,"touchscreen-inverted-y?",
+		<&touch_5d>,"touchscreen-swapped-x-y!",
+		<&touch_5d>,"touchscreen-inverted-x?",
+		<&touch_5d>,"touchscreen-inverted-y?",
+		<&touch_res>,"touchscreen-inverted-y?",
+		<&touch_res>,"touchscreen-swapped-x-y!";
+		
+		r270 = <&pitft>,"rotation:0=270",
+		<&touch_14>,"touchscreen-inverted-x!",
+		<&touch_14>,"touchscreen-inverted-y?",
+		<&touch_14>,"touchscreen-swapped-x-y?",
+		<&touch_5d>,"touchscreen-inverted-x!",
+		<&touch_5d>,"touchscreen-inverted-y?",
+		<&touch_5d>,"touchscreen-swapped-x-y?",
+		<&touch_res>,"touchscreen-inverted-x?",
+		<&touch_res>,"touchscreen-inverted-y?",
+		<&touch_res>,"touchscreen-swapped-x-y?";
+		
+		speed = <&pitft>,"spi-max-frequency: 0";
+		rotation = <&pitft>, "rotation:0";
+		disable_touch = <&touch_14>, "status=disabled",
+		<&touch_5d>, "status=disabled",
+		<&touch_res>, "status=disabled";
+		invx = <&touch_14>,"touchscreen-inverted-x?",
+		<&touch_5d>,"touchscreen-inverted-x?",
+		<&touch_res>,"touchscreen-inverted-x?";
+		invy = <&touch_14>,"touchscreen-inverted-y?",
+		<&touch_5d>,"touchscreen-inverted-y?",
+		<&touch_res>,"touchscreen-inverted-y?";
+		swapxy = <&touch_14>,"touchscreen-swapped-x-y?",
+		<&touch_5d>,"touchscreen-swapped-x-y?",
+		<&touch_res>,"touchscreen-swapped-x-y?";
+	};
+};

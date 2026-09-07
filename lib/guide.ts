@@ -98,6 +98,14 @@ export const sources = [
     href: "https://mellow.klipper.cn/en/docs/ProductDoc/SBC/fly-lite/lite2.1/host/ssh",
   },
   {
+    label: "Lite 2.1 KPPM / power-loss pin",
+    href: "https://mellow.klipper.cn/en/docs/ProductDoc/SBC/fly-lite/lite2.1/advanced/kppm/",
+  },
+  {
+    label: "Lite 2.1 accelerometer limits",
+    href: "https://mellow.klipper.cn/en/docs/ProductDoc/SBC/fly-lite/lite2.1/advanced/adxl/",
+  },
+  {
     label: "Official Lite2 / Lite2.1 system image (H3 FlyOS)",
     href: "https://mellow.klipper.cn/en/docs/ResDownload/system-img/fly-lite2/",
   },

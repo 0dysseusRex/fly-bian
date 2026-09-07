@@ -43,3 +43,10 @@ next-env.d.ts
 # local agent scratch
 /agent-tools/
 /out/
+
+# FlyOS image blobs and live dumps (may contain Wi-Fi / printer secrets)
+*.img
+*.img.xz
+*.img.zip
+flyos-artifacts/live/pull-*
+flyos-artifacts/live/LATEST

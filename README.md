@@ -22,12 +22,24 @@ Then:
 3. Run `scripts/first-boot-checks.sh` on the board.
 4. If Wi-Fi or a display is missing, extract the official H3 FlyOS image with `scripts/extract-flyos.sh` and diff the DTB.
 
+If FlyOS is still running on the board (Wi-Fi or COM4 @ 115200), dump DTB/firmware/config from a machine on that LAN:
+
+```bash
+FLYOS_HOST=192.168.1.147 ./scripts/pull-live-flyos.sh
+```
+
+Klipper host pins and macros: [`docs/klipper-pins-and-macros.md`](docs/klipper-pins-and-macros.md).
+
 ## Repo layout
 
 | Path | What it is |
 | --- | --- |
 | This web guide | Phased bring-up, hardware table, first-experiment helper |
+| `docs/klipper-pins-and-macros.md` | Every host pin, sys-config key, and Klipper macro a future install needs |
+| `klipper/host-fragments/` | Official `[mcu host]`, PLR, client variables, USB LIS2DW |
+| `flyos-artifacts/` | Seeded FlyOS/vendor files + live-pull destination |
 | `board/` | Hardware notes |
+| `scripts/pull-live-flyos.sh` | SSH dump from a live FAST board (run on your LAN) |
 | `scripts/first-boot-checks.sh` | Probe MMC, USB, Wi-Fi, HDMI, serial |
 | `scripts/extract-flyos.sh` | Copy DTB, overlays, and firmware out of a FlyOS H3 image |
 | `overlays/` | Candidate device-tree overlays. TFT overlay is disabled by default. |
