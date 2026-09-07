@@ -4,201 +4,213 @@ export const sources = [
     href: "https://mellow.klipper.cn/en/docs/ProductDoc/SBC/fly-lite/lite2.1/",
   },
   {
-    label: "FlyOS-FAST system notes",
-    href: "https://mellow.klipper.cn/en/docs/ProductDoc/SBC/fly-lite/lite2/host/",
+    label: "Lite 2.1 SSH / Type-C serial",
+    href: "https://mellow.klipper.cn/en/docs/ProductDoc/SBC/fly-lite/lite2.1/host/ssh",
   },
   {
-    label: "SimpleAF for RPi",
-    href: "https://pellcorp.github.io/creality-wiki/rpi/",
+    label: "FlyOS-FAST H3 image notes (MiniPad / Lite family)",
+    href: "https://mellow.klipper.cn/en/docs/ResDownload/system-img/fly-minipad/",
   },
   {
-    label: "SimpleAF supported OS list",
-    href: "https://pellcorp.github.io/creality-wiki/rpi_supported_os/",
+    label: "linux-sunxi Orange Pi Lite (closest public H3 DTS)",
+    href: "https://linux-sunxi.org/Orange_Pi_Lite",
   },
   {
-    label: "Community Armbian for Fly Gemini / Fly-Pi",
+    label: "Mainline sun8i-h3-orangepi-lite.dts",
+    href: "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/arch/arm/boot/dts/allwinner/sun8i-h3-orangepi-lite.dts",
+  },
+  {
+    label: "Community Armbian for Fly Gemini / Fly-Pi (method reference)",
     href: "https://github.com/reemo3dp/mellowfly-geminipi-armbian",
   },
 ] as const;
 
 export const specs = [
-  { label: "SoC", value: "Allwinner H3, 4× Cortex-A7" },
+  { label: "SoC", value: "Allwinner H3, 4× Cortex-A7, 32-bit" },
   { label: "GPU", value: "Mali-400 MP2" },
   { label: "RAM", value: "512 MB DDR3" },
-  { label: "Storage", value: "MicroSD 16–128 GB, C10+" },
-  { label: "Network", value: "Onboard 2.4 GHz Wi-Fi only" },
-  { label: "USB", value: "USB 2.0 × 2, Type-C power/serial" },
+  { label: "Storage", value: "MicroSD only, 16–128 GB, C10+" },
+  { label: "Network", value: "Onboard 2.4 GHz Wi-Fi, IPEX1 antenna" },
+  { label: "USB", value: "USB-A 2.0 × 2, Type-C power + serial" },
   { label: "Display", value: "FPC-HDMI + FPC-TFT" },
-  { label: "Power", value: "Independent 5 V, not from the printer MCU" },
+  { label: "Power", value: "Independent 5 V. Do not feed from a printer MCU." },
 ] as const;
 
-export const verdicts = [
+export const phases = [
   {
-    tone: "go" as const,
-    title: "Custom Debian is possible",
-    body: "The Lite V2.1 is a Linux single-board computer, not a microcontroller. It boots from a MicroSD card, so replacing FlyOS with another ARM Debian image is the normal install method.",
+    id: "boot",
+    title: "Boot Debian",
+    likelihood: "High",
+    summary:
+      "The Lite boots from MicroSD. Armbian Bookworm CLI for Orange Pi Lite is the closest public H3 image: same SoC, 512 MB, no Ethernet, SDIO Wi-Fi, two USB hosts.",
   },
   {
-    tone: "stop" as const,
-    title: "Stock FlyOS-FAST cannot run SimpleAF",
-    body: "FlyOS-FAST is root-only, mostly read-only, and ships without a normal package manager. SimpleAF’s installer needs apt, git, a non-root sudo user, and a clean host with no existing Klipper stack.",
+    id: "console",
+    title: "Get a console",
+    likelihood: "High",
+    summary:
+      "Mellow’s Type-C port shows up as USB serial on FlyOS. On Debian that is either a hardware UART-USB bridge (best case) or a USB gadget that needs musb in peripheral mode.",
   },
   {
-    tone: "caution" as const,
-    title: "Full board functionality is the hard part",
-    body: "USB to the printer MCU is realistic. Onboard Wi-Fi, the FPC screen ports, Type-C serial, and Mellow power-loss extras depend on Fly’s device tree and userspace. 512 MB RAM also forces a lean SimpleAF install.",
-  },
-];
-
-export const flyosBlockers = [
-  {
-    fly: "Only the root user exists",
-    simple: "Installer must be run as a normal user (pi, orangepi, dietpi). Root is rejected.",
+    id: "usb",
+    title: "USB-A hosts",
+    likelihood: "High",
+    summary:
+      "H3 EHCI/OHCI ports 1 and 2 are enabled on the Orange Pi Lite DTB. A keyboard, Ethernet dongle, or printer MCU should enumerate without Fly-specific work.",
   },
   {
-    fly: "Traditional package managers were removed",
-    simple: "First steps are sudo apt-get update and apt-get install git.",
+    id: "wifi",
+    title: "Onboard 2.4 GHz Wi-Fi",
+    likelihood: "Medium-high",
+    summary:
+      "H3 lite boards almost always put an RTL8189-class chip on MMC1/SDIO. If Mellow did the same, the Orange Pi Lite image may bring wlan0 up. If not, extract the FlyOS DTB and firmware.",
   },
   {
-    fly: "Root filesystem is read-only except /etc and /data",
-    simple: "The stack lives in a normal home directory and system service paths.",
+    id: "hdmi",
+    title: "FPC-HDMI",
+    likelihood: "Medium",
+    summary:
+      "HDMI lives in the H3, not in a Fly ASIC. If the FPC is just a compact connector on the same TMDS pins, enabling &hdmi is enough. The “HDMI + USB one-cable” accessory is a separate mux problem.",
   },
   {
-    fly: "Klipper, Moonraker, Fluidd, Mainsail, KlipperScreen, and Crowsnest are preinstalled",
-    simple: "Do not install onto Mainsail OS, KIAUH, or any existing Klipper host.",
-  },
-  {
-    fly: "Official docs say FAST does not support updating Klipper-style plugins",
-    simple: "SimpleAF replaces Klipper/Kalico and related services on purpose.",
+    id: "tft",
+    title: "FPC-TFT",
+    likelihood: "Low until Fly DTB",
+    summary:
+      "SPI panel plus reset/DC/backlight GPIOs. Pinmux is board-specific. Do this after Wi-Fi and USB work, using overlays extracted from the official H3 FlyOS image.",
   },
 ];
 
 export const features = [
   {
-    name: "Boot from MicroSD",
-    flyos: "Works",
-    generic: "Works",
-    flyDtb: "Works",
-    note: "This is how the board is meant to be installed. Keep a second card with FlyOS so you can revert.",
+    name: "MicroSD boot",
+    status: "Expected",
+    how: "Flash Armbian to a second card. Keep official FlyOS on the first card as rollback.",
   },
   {
-    name: "USB host to printer MCU",
-    flyos: "Works",
-    generic: "Likely",
-    flyDtb: "Likely",
-    note: "Standard H3 USB host. This is the path SimpleAF actually needs.",
+    name: "CPU, RAM, timers, thermal",
+    status: "Expected",
+    how: "sun8i-h3 is mainline. Expect DVFS and throttling from the Orange Pi Lite thermal tables.",
   },
   {
-    name: "Onboard 2.4 GHz Wi-Fi",
-    flyos: "Works",
-    generic: "Uncertain",
-    flyDtb: "Plausible",
-    note: "SDIO Wi-Fi, usually an RTL8189-class chip on H3 lite boards. Needs the right device tree and firmware. No 5 GHz, ever.",
+    name: "USB-A host × 2",
+    status: "Expected",
+    how: "ehci1/ehci2 + ohci1/ohci2 are on in sun8i-h3-orangepi-lite.dts.",
   },
   {
-    name: "USB Ethernet or USB Wi-Fi dongle",
-    flyos: "Works",
-    generic: "Likely",
-    flyDtb: "Likely",
-    note: "The reliable fallback. Bring a dongle so a missing onboard driver does not brick the project.",
+    name: "Type-C 5 V power",
+    status: "Hardware",
+    how: "Independent of the OS. Use a data-capable cable only when you also want serial.",
   },
   {
     name: "Type-C serial console",
-    flyos: "Works",
-    generic: "Uncertain",
-    flyDtb: "Plausible",
-    note: "Use a data-capable Type-C cable. If the PC never sees a USB serial device, you need Fly gadget/UART enablement or a 3.3 V UART adapter.",
+    status: "Likely",
+    how: "If the PC sees a serial port during U-Boot, it is a UART bridge and just works. If it appears only after Linux, enable musb gadget (overlay in this repo).",
   },
   {
-    name: "FPC-TFT / KlipperScreen",
-    flyos: "Works",
-    generic: "Unlikely",
-    flyDtb: "Extra work",
-    note: "Fly-specific SPI pinmux and overlays. Community DTS work exists for other Fly H3 boards, not a drop-in for Lite 2.1.",
+    name: "Onboard 2.4 GHz Wi-Fi",
+    status: "First experiment",
+    how: "Look for MMC1 and an RTL8189/8723/8821 SDIO function. Copy firmware from FlyOS if the chip probes but firmware is missing.",
   },
   {
     name: "FPC-HDMI",
-    flyos: "Works",
-    generic: "Unlikely",
-    flyDtb: "Extra work",
-    note: "Custom FPC pinout, not a stock Orange Pi HDMI connector.",
+    status: "Plausible",
+    how: "Enable the H3 HDMI block. Test with a known-good HDMI panel on Mellow’s FPC cable, one display at a time.",
   },
   {
-    name: "KPPM power-loss resume",
-    flyos: "Works",
-    generic: "No",
-    flyDtb: "No",
-    note: "Hardware module plus FlyOS userspace. Leave it off unless you port Mellow’s scripts.",
+    name: "FPC-TFT / touch",
+    status: "Extract from FlyOS",
+    how: "Need the official DTB fragments for SPI, reset, DC, backlight, and the touch controller (ADS7846 or GT911 on other Fly screens).",
   },
   {
-    name: "Auto MCU flash on boot",
-    flyos: "Works",
-    generic: "No",
-    flyDtb: "DIY",
-    note: "A FlyOS convenience. SimpleAF does not need it; you flash the printer board once over USB.",
+    name: "LED activity",
+    status: "May differ",
+    how: "Orange Pi Lite LED GPIOs are probably wrong. Harmless. Fix after you have a console.",
+  },
+  {
+    name: "KPPM power-loss module",
+    status: "FlyOS userspace",
+    how: "Hardware can sit unused. Porting Mellow’s shutdown/resume scripts is optional and last.",
   },
 ];
 
-export const ramBudget = [
-  { item: "Debian Bookworm CLI, idle", size: "~80–120 MB" },
-  { item: "Klipper host + MCU serial", size: "~40–80 MB" },
-  { item: "Moonraker", size: "~50–90 MB" },
-  { item: "Nginx + one web UI", size: "~30–60 MB" },
-  { item: "Second web UI (Fluidd + Mainsail)", size: "extra idle cost" },
-  { item: "Crowsnest / webcam", size: "100 MB+ and CPU", warn: true },
-  { item: "KlipperScreen + GPU/framebuffer", size: "too much on 512 MB", warn: true },
+export const steps = [
+  {
+    title: "Keep a FlyOS recovery card",
+    body: "The Lite has no eMMC. Two MicroSD cards is a full rollback. Do not overwrite the only card that already boots FlyOS.",
+  },
+  {
+    title: "Flash Armbian Debian 12 CLI for Orange Pi Lite",
+    body: "Use the Bookworm / current / minimal CLI image from Armbian. Not a desktop image, not Raspberry Pi OS. H3 is 32-bit ARM (armhf).",
+  },
+  {
+    title: "First boot with nothing but power and console",
+    body: "Independent 5 V. Fit the IPEX antenna. Unplug the printer MCU, TFT, and HDMI. Watch the activity LED. Open Type-C serial at 115200 8N1 if a port appears.",
+  },
+  {
+    title: "Create a normal sudo user and add swap",
+    body: "512 MB needs zram plus a 1 GB swap file before you compile anything. Armbian’s first-run wizard will ask for a user. Keep it.",
+  },
+  {
+    title: "Prove USB host",
+    body: "Plug a USB Ethernet dongle or a flash drive. lsusb should list it. This is your network lifeline if onboard Wi-Fi is dark.",
+  },
+  {
+    title: "Identify the Wi-Fi chip",
+    body: "Run the first-boot script in this repo. If MMC1 shows an SDIO vendor, you are one firmware file away from wlan0. If MMC1 is empty, dump the FlyOS DTB next.",
+  },
+  {
+    title: "Extract FlyOS when a peripheral is missing",
+    body: "scripts/extract-flyos.sh against the official H3 image copies DTB, overlays, and /lib/firmware. That is how community Fly Gemini Armbian images were made. Same method, this board.",
+  },
+  {
+    title: "Enable displays last",
+    body: "HDMI first (SoC block). TFT only after you have the Fly pinmux. Never connect TFT and HDMI at the same time while testing.",
+  },
 ];
 
-export const planSteps = [
+export const extractFlow = [
   {
-    title: "Keep a recovery card",
-    body: "Flash official FlyOS-FAST on one MicroSD and leave it alone. Use a second card for Debian. The Lite has no eMMC, so swapping cards is a full rollback.",
+    title: "Get the official H3 FlyOS image",
+    body: "Mellow’s download pages group Lite2 and MiniPad under the H3 FlyOS-FAST image. Unzip it. Do not flash the .xz.",
   },
   {
-    title: "Start from Armbian Bookworm CLI",
-    body: "The closest public boards are Orange Pi Lite and Orange Pi One: same H3, 512 MB, SD boot. Use a minimal Debian 12 image, not a desktop build. H3 is 32-bit ARM; SimpleAF supports that.",
+    title: "Run the extractor on a Linux PC",
+    body: "scripts/extract-flyos.sh FlyOS_h3_*.img writes dtb/, overlays/, firmware/, and a report into out/flyos-extract/.",
   },
   {
-    title: "Get a console before you care about Wi-Fi",
-    body: "First boot over Type-C serial if it enumerates, otherwise a USB Ethernet dongle. Create a non-root sudo user. SimpleAF will refuse to run as root.",
+    title: "Compare DTB against Orange Pi Lite",
+    body: "dtc -I dtb -O dts on both files. Diff mmc1, usb, hdmi, spi, and uart nodes. Those diffs are the Lite 2.1 board support.",
   },
   {
-    title: "Make 512 MB survivable",
-    body: "Enable zram and a 1 GB swap file. Do not install a desktop. Plan to skip Crowsnest and KlipperScreen. One web interface is enough even if SimpleAF installs both.",
-  },
-  {
-    title: "Install SimpleAF on a clean host",
-    body: "apt-get install git, clone pellcorp/creality, then run installer.sh as that normal user with --printer and --probe. Point --printer at a single printer.cfg for your actual motion board, not the Lite.",
-  },
-  {
-    title: "Treat Fly extras as a second project",
-    body: "If onboard Wi-Fi or the FPC screen still matter, extract the device tree and firmware from the official H3 FlyOS image and layer them on Armbian. That is how the Fly Gemini community images were built. It is not required for SimpleAF.",
+    title: "Copy firmware, then overlays",
+    body: "If the chip already probes, firmware alone may be enough. If the bus is off, compile the Fly fragments with armbian-add-overlay or rebuild the DTB.",
   },
 ];
 
 export const faqs = [
   {
-    q: "Is the Fly Lite V2.1 a Raspberry Pi?",
-    a: "No. It is an Allwinner H3 board sold as a Pi replacement for Klipper hosting. Same job, different SoC, different boot firmware, 512 MB RAM, and no Ethernet jack.",
+    q: "Why Orange Pi Lite and not Orange Pi One or PC?",
+    a: "Lite matches the product: H3, 512 MB, no Ethernet jack, SDIO Wi-Fi, two USB hosts. One has no Wi-Fi. PC has Ethernet and more RAM. Start from Lite; you can still turn unused nodes off.",
   },
   {
-    q: "Can I install SimpleAF on top of the image Mellow already ships?",
-    a: "Not the current FlyOS-FAST image. It is intentionally locked down. You replace the SD card image with a real Debian-based system first.",
+    q: "Will Raspberry Pi OS boot?",
+    a: "No. Different boot ROM, different DRAM init, different kernel. You need a sunxi/H3 image: Armbian, Orange Pi Debian, or DietPi for H3.",
   },
   {
-    q: "Does SimpleAF support this board by name?",
-    a: "No. The RPi variant targets Debian 11–13 on Pi-like SBCs: Raspberry Pi, Orange Pi, DietPi, Armbian, BTT CB/CM boards. The Lite qualifies only after you put a normal Debian userspace on it.",
+    q: "Is FlyOS itself Debian?",
+    a: "FAST is a locked, read-only appliance built on Linux. It is not a usable Debian userspace. Older Mellow hosts had a fuller Armbian image; current Lite 2.1 docs point at FAST.",
   },
   {
-    q: "What is the printer MCU in this setup?",
-    a: "The Lite is the host. Your Ender, Voron, or other control board is still the MCU. SimpleAF needs a single printer.cfg with that board’s pins. The Lite does not replace the motion controller.",
+    q: "What if Type-C serial never appears?",
+    a: "Try another data-capable cable. If U-Boot never shows a port, the Type-C path is probably USB gadget and the foreign image has not loaded g_serial. Use a USB Ethernet dongle on a USB-A port, or a 3.3 V UART adapter on UART0 pads if you can identify them.",
   },
   {
-    q: "Will Armbian for Orange Pi Lite just boot?",
-    a: "Often yes for basic CPU, SD, and USB. Onboard Wi-Fi, FPC displays, and Type-C gadget serial are the parts that may need Fly’s device tree. Always have a USB network dongle before you wipe the FlyOS card you are using now.",
+    q: "Can I just boot the Gemini community Armbian image?",
+    a: "No. Fly Gemini / Fly-Pi community images target H5-class Fly hosts with different DRAM and pinmux. Use them as a method reference, not as a Lite 2.1 image.",
   },
   {
-    q: "Is there an official Mellow Debian I can use instead?",
-    a: "Older Fly hosts had a fuller Armbian image with apt. Current Lite 2.1 docs point at FlyOS-FAST. Community Armbian patches exist for Fly Gemini / Fly-Pi; they are the right reference, not a guaranteed Lite 2.1 image.",
+    q: "Do I need to rebuild Armbian from source?",
+    a: "Not for the first boot. Flash a stock Orange Pi Lite image. Rebuild only if you want a named fly-lite-2.1 board config, a custom kernel, or a DTB compiled in. Extraction plus overlays is faster.",
   },
 ];

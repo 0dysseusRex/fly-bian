@@ -13,35 +13,29 @@ import {
 
 const questions = [
   {
-    id: "keepBoard",
-    prompt: "Must the Fly Lite V2.1 stay the Klipper host?",
+    id: "spareCard",
+    prompt: "Do you have a second MicroSD card so FlyOS stays intact?",
     options: [
-      { id: "yes", label: "Yes, this is the host" },
-      { id: "no", label: "I can use another SBC" },
+      { id: "yes", label: "Yes, spare card" },
+      { id: "no", label: "Only one card" },
     ],
   },
   {
-    id: "screen",
-    prompt: "Do you need the official FPC-TFT or FPC-HDMI screen?",
+    id: "console",
+    prompt: "How will you talk to the board on the first boot?",
     options: [
-      { id: "yes", label: "Yes, the Fly screen has to work" },
-      { id: "no", label: "Web UI is enough" },
+      { id: "serial", label: "Type-C serial" },
+      { id: "dongle", label: "USB Ethernet / USB Wi-Fi" },
+      { id: "hope", label: "Onboard Wi-Fi only" },
     ],
   },
   {
-    id: "dongle",
-    prompt: "Can you use a USB Ethernet or USB Wi-Fi dongle?",
+    id: "display",
+    prompt: "Which display has to work in the first week?",
     options: [
-      { id: "yes", label: "Yes" },
-      { id: "no", label: "Only the onboard 2.4 GHz chip" },
-    ],
-  },
-  {
-    id: "camera",
-    prompt: "Will you run a webcam stack (Crowsnest)?",
-    options: [
-      { id: "yes", label: "Yes" },
-      { id: "no", label: "No camera" },
+      { id: "none", label: "None, SSH is enough" },
+      { id: "hdmi", label: "FPC-HDMI" },
+      { id: "tft", label: "Official FPC-TFT" },
     ],
   },
 ] as const;
@@ -50,55 +44,54 @@ type AnswerId = (typeof questions)[number]["id"];
 type Answers = Partial<Record<AnswerId, string>>;
 
 function outcome(answers: Answers) {
-  if (answers.keepBoard === "no") {
-    return {
-      tone: "go" as const,
-      title: "Use a real Pi-class host for SimpleAF",
-      body: "SimpleAF is tested on Pi 3/4/5 and Debian Orange Pi images. A board with 1 GB or more RAM, Ethernet, and a supported image will take less time than teaching the Lite new device trees. Keep the Lite as a spare FlyOS host if you want.",
-    };
-  }
-
-  if (answers.camera === "yes") {
+  if (answers.spareCard === "no") {
     return {
       tone: "stop" as const,
-      title: "512 MB plus a webcam is a bad fit",
-      body: "SimpleAF’s RPi stack already includes Klipper, Moonraker, Nginx, and two web UIs. Crowsnest on 512 MB DDR3 will swap and stall. Drop the camera, or move the host.",
+      title: "Buy another card before you flash anything",
+      body: "The Lite has no eMMC. One card is one OS. Image a spare, leave the working FlyOS card on the shelf, then continue.",
     };
   }
 
-  if (answers.screen === "yes") {
+  if (answers.console === "hope") {
     return {
       tone: "caution" as const,
-      title: "Possible, but this is a device-tree project",
-      body: "SimpleAF itself does not need the FPC screen. Getting that panel working means extracting Fly overlays from the official H3 image and fighting SPI pinmux. Do that after a lean Debian + USB-network install already prints.",
+      title: "Do not make onboard Wi-Fi your only login path",
+      body: "It might come up on the Orange Pi Lite image. If it does not, you have a silent board. Get Type-C serial or a USB network dongle working first, then chase MMC1.",
     };
   }
 
-  if (answers.dongle === "no") {
+  if (answers.display === "tft") {
     return {
       tone: "caution" as const,
-      title: "Onboard Wi-Fi is the first thing that may fail",
-      body: "A generic Orange Pi Lite Armbian image may or may not talk to Mellow’s SDIO chip. Without a USB dongle you can lose the board after the first reboot. Get a console path working first, then chase the Fly Wi-Fi firmware.",
+      title: "Boot Debian headless, then steal the TFT from FlyOS",
+      body: "Flash Armbian Orange Pi Lite CLI. Prove USB and a console. Extract the official H3 DTB and look at SPI plus GPIO fragments before you write a TFT overlay. A guessed pinmux can hold reset or backlight in a bad state.",
+    };
+  }
+
+  if (answers.display === "hdmi") {
+    return {
+      tone: "go" as const,
+      title: "Orange Pi Lite image, then turn HDMI on",
+      body: "The H3 HDMI block is already described in the Lite DTS. After you have a console, connect only the FPC-HDMI cable and check /sys/class/drm. If the connector stays disconnected, the FPC pinout differs and you need the Fly DTB.",
     };
   }
 
   if (
-    answers.keepBoard === "yes" &&
-    answers.screen === "no" &&
-    answers.dongle === "yes" &&
-    answers.camera === "no"
+    answers.spareCard === "yes" &&
+    (answers.console === "serial" || answers.console === "dongle") &&
+    answers.display === "none"
   ) {
     return {
       tone: "go" as const,
-      title: "This is the realistic SimpleAF path on the Lite",
-      body: "Flash Armbian Debian 12 CLI on a second SD card, boot with a USB network dongle, create a non-root sudo user, add swap, and install SimpleAF against your printer MCU config. Skip KlipperScreen and the camera. Treat onboard Wi-Fi and the FPC ports as optional later work.",
+      title: "This is the right first week",
+      body: "Armbian Debian 12 CLI for Orange Pi Lite on the spare card. Independent 5 V. Type-C serial or a USB dongle. Run scripts/first-boot-checks.sh. Treat Wi-Fi and displays as the next experiment, not the boot requirement.",
     };
   }
 
   return {
     tone: "caution" as const,
-    title: "Answer the rest to pin this down",
-    body: "The Lite can run Debian. Whether SimpleAF is pleasant depends on RAM, network, and how much Fly hardware you insist on keeping.",
+    title: "Answer the rest",
+    body: "The board can run Debian. The order you enable hardware decides whether you get a login or a paperweight.",
   };
 }
 
@@ -116,10 +109,10 @@ export function DecisionHelper() {
   return (
     <Card className="border-primary/20">
       <CardHeader>
-        <CardTitle className="text-xl">Decision helper</CardTitle>
+        <CardTitle className="text-xl">Where to start</CardTitle>
         <CardDescription>
-          Four questions. This is the same tradeoff as the rest of the guide,
-          compressed.
+          Three questions. This picks the first image and the first test, not
+          the final desktop.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -134,7 +127,7 @@ export function DecisionHelper() {
                     key={option.id}
                     type="button"
                     variant={active ? "default" : "outline"}
-                    className="justify-start sm:flex-1"
+                    className="h-auto min-h-8 justify-start whitespace-normal sm:flex-1"
                     onClick={() =>
                       setAnswers((current) => ({
                         ...current,
@@ -151,7 +144,7 @@ export function DecisionHelper() {
         ))}
 
         <div className={`rounded-xl border px-4 py-4 ${toneClass[result.tone]}`}>
-          <div className="mb-2 flex items-center gap-2">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
             <Badge variant="outline" className="border-current text-current">
               {answered}/{questions.length} answered
             </Badge>

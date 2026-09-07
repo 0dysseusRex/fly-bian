@@ -1,0 +1,32 @@
+/dts-v1/;
+/plugin/;
+
+/*
+ * Candidate overlay: turn on H3 MMC1/SDIO Wi-Fi the way Orange Pi Lite does.
+ *
+ * Apply only after first-boot-checks.sh shows MMC1 missing or disabled.
+ * If MMC1 already probes a different vendor, do not use this file — copy
+ * firmware from the FlyOS extract instead.
+ *
+ * Armbian:
+ *   sudo armbian-add-overlay overlays/sdio-wifi-rtl8189.dts
+ */
+
+/ {
+	compatible = "allwinner,sun8i-h3";
+
+	fragment@0 {
+		target = <&mmc1>;
+		__overlay__ {
+			status = "okay";
+			bus-width = <4>;
+			non-removable;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			sdio_wifi@1 {
+				reg = <1>;
+			};
+		};
+	};
+};

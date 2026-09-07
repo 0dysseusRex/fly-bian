@@ -1,0 +1,43 @@
+/dts-v1/;
+/plugin/;
+
+/*
+ * CANDIDATE ONLY. Do not apply until you have compared these GPIOs
+ * against a decompiled FlyOS H3 DTB for the Lite 2.1.
+ *
+ * This pin set comes from community Fly-Pi / H3 SPI TFT experiments
+ * (ILI9341-class panel on SPI1: CS PA13, RESET PG6, DC PG7, LED PA0).
+ * The Lite 2.1 FPC-TFT may use ST7796 and a different pinmux. Wrong
+ * GPIOs can hold reset or backlight in a bad state.
+ *
+ * After the official DTB confirms the pins, compile with:
+ *   sudo armbian-add-overlay overlays/fly-tft-spi-candidate.dts
+ */
+
+/ {
+	compatible = "allwinner,sun8i-h3";
+
+	fragment@0 {
+		target = <&spi1>;
+		__overlay__ {
+			status = "okay";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			cs-gpios = <&pio 0 13 0>; /* PA13 — confirm */
+
+			panel@0 {
+				compatible = "ilitek,ili9341";
+				reg = <0>;
+				spi-max-frequency = <40000000>;
+				rotate = <90>;
+				bgr;
+				fps = <30>;
+				buswidth = <8>;
+				reset-gpios = <&pio 6 6 1>; /* PG6 — confirm */
+				dc-gpios = <&pio 6 7 0>;    /* PG7 — confirm */
+				led-gpios = <&pio 0 0 0>;   /* PA0 — confirm */
+				status = "disabled";
+			};
+		};
+	};
+};

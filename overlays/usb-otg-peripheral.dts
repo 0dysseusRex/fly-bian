@@ -1,0 +1,35 @@
+/dts-v1/;
+/plugin/;
+
+/*
+ * Candidate overlay: put the H3 musb OTG port in peripheral mode.
+ *
+ * Use this only if Type-C serial appears on FlyOS but never on Debian,
+ * and you already have another login path (USB-A Ethernet or UART adapter).
+ *
+ * After reboot:
+ *   sudo modprobe g_serial
+ *   sudo systemctl enable --now serial-getty@ttyGS0.service
+ *
+ * If the Type-C port is a hardware UART-USB bridge, this overlay is wrong.
+ * Evidence: a serial device on the PC during U-Boot, before Linux starts.
+ */
+
+/ {
+	compatible = "allwinner,sun8i-h3";
+
+	fragment@0 {
+		target = <&usb_otg>;
+		__overlay__ {
+			dr_mode = "peripheral";
+			status = "okay";
+		};
+	};
+
+	fragment@1 {
+		target = <&usbphy>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+};

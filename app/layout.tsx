@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Fly Lite V2.1 + SimpleAF",
+  title: "Debian on Fly Lite 2.1",
   description:
-    "Feasibility guide for running a custom Debian-based distro and SimpleAF on a Mellow Fly Lite V2.1.",
+    "Bring-up guide for a real Debian userspace on the Mellow Fly Lite 2.1, with as much board hardware enabled as possible.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

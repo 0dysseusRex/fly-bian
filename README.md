@@ -1,16 +1,31 @@
-# Fly Lite V2.1 + SimpleAF
+# Debian on the Mellow Fly Lite 2.1
 
-A feasibility guide for running a custom Debian-based distro on a **Mellow Fly Lite V2.1** so you can install [SimpleAF for RPi](https://pellcorp.github.io/creality-wiki/rpi/).
+Bring-up notes and tools for running a real Debian userspace on the Fly Lite 2.1, with as much of the board enabled as the public H3 support plus the official FlyOS DTB will allow.
 
-## Verdict
+The Lite 2.1 is an Allwinner H3 host (512 MB, SD boot, onboard 2.4 GHz Wi-Fi, two USB-A ports, Type-C, FPC-HDMI, FPC-TFT). It is not a Raspberry Pi and it is not a printer MCU.
 
-The Lite V2.1 is an Allwinner H3 Linux host, not a microcontroller. It boots from a MicroSD card, so a custom Debian image is possible.
+## Recommended first image
 
-Stock **FlyOS-FAST cannot host SimpleAF**. FAST is root-only, mostly read-only, and ships without a normal package manager. SimpleAF needs Debian 11–13, `apt`, git, a non-root sudo user, and a clean host.
+**Armbian Debian 12 (Bookworm) CLI for Orange Pi Lite.** Same SoC class, same RAM, no Ethernet, SDIO Wi-Fi, two USB hosts. Flash it to a **second** MicroSD card. Keep official FlyOS on the original card.
 
-**Full Fly hardware support is the hard part.** USB to the printer MCU is realistic. Onboard 2.4 GHz Wi-Fi, the FPC-TFT/HDMI ports, and Mellow extras depend on Fly’s device tree. 512 MB RAM also forces a lean install: no webcam stack, no KlipperScreen.
+Then:
 
-## Run locally
+1. Independent 5 V power. Fit the IPEX antenna. Leave TFT/HDMI unplugged.
+2. Console over Type-C serial (115200) or a USB Ethernet dongle on a USB-A port.
+3. Run `scripts/first-boot-checks.sh` on the board.
+4. If Wi-Fi or a display is missing, extract the official H3 FlyOS image with `scripts/extract-flyos.sh` and diff the DTB.
+
+## Repo layout
+
+| Path | What it is |
+| --- | --- |
+| This web guide | Phased bring-up, hardware table, first-experiment helper |
+| `board/` | Hardware notes |
+| `scripts/first-boot-checks.sh` | Probe MMC, USB, Wi-Fi, HDMI, serial |
+| `scripts/extract-flyos.sh` | Copy DTB, overlays, and firmware out of a FlyOS H3 image |
+| `overlays/` | Candidate device-tree overlays. TFT overlay is disabled by default. |
+
+## Run the guide locally
 
 ```bash
 npm install
@@ -18,7 +33,3 @@ npm run dev
 ```
 
 Open [http://127.0.0.1:43187](http://127.0.0.1:43187).
-
-## What this is not
-
-This is not an OS image and not a SimpleAF installer. It is a reading of public Mellow and SimpleAF docs so you can decide whether to keep the Lite as the host or move SimpleAF to a Pi-class board.

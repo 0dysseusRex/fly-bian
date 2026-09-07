@@ -1,20 +1,18 @@
 import {
-  Cable,
   Cpu,
   HardDrive,
   MemoryStick,
   Monitor,
-  Router,
-  ShieldAlert,
+  PlugZap,
   Usb,
   Wifi,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Accordion,
+  AccordionContent,
   AccordionItem,
   AccordionTrigger,
-  AccordionContent,
 } from "@/components/ui/accordion";
 import {
   Card,
@@ -34,40 +32,38 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DecisionHelper } from "@/components/decision-helper";
 import {
+  extractFlow,
   faqs,
   features,
-  flyosBlockers,
-  planSteps,
-  ramBudget,
+  phases,
   sources,
   specs,
-  verdicts,
+  steps,
 } from "@/lib/guide";
 
 const nav = [
-  { href: "#verdict", label: "Verdict" },
+  { href: "#goal", label: "Goal" },
   { href: "#board", label: "Board" },
-  { href: "#simpleaf", label: "SimpleAF" },
+  { href: "#image", label: "Image" },
+  { href: "#bringup", label: "Bring-up" },
+  { href: "#extract", label: "FlyOS extract" },
   { href: "#features", label: "Hardware" },
-  { href: "#path", label: "Path" },
   { href: "#faq", label: "FAQ" },
 ];
 
-const toneStyles = {
-  go: "border-emerald-500/30 bg-emerald-950/40",
-  caution: "border-amber-400/30 bg-amber-950/35",
-  stop: "border-red-400/30 bg-red-950/35",
-};
-
-const statusStyles: Record<string, string> = {
-  Works: "text-emerald-300",
+const likelihoodStyle: Record<string, string> = {
+  High: "text-emerald-300",
   Likely: "text-emerald-200",
+  "Medium-high": "text-amber-100",
+  Medium: "text-amber-200",
+  "Low until Fly DTB": "text-red-300",
+  Expected: "text-emerald-300",
+  Hardware: "text-emerald-200",
+  "First experiment": "text-amber-100",
   Plausible: "text-amber-200",
-  Uncertain: "text-amber-200",
-  "Extra work": "text-amber-200",
-  Unlikely: "text-red-300",
-  DIY: "text-amber-200",
-  No: "text-red-300",
+  "Extract from FlyOS": "text-amber-200",
+  "May differ": "text-muted-foreground",
+  "FlyOS userspace": "text-red-300",
 };
 
 export function GuidePage() {
@@ -80,15 +76,15 @@ export function GuidePage() {
         <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-3">
             <p className="font-mono text-xs tracking-[0.24em] text-primary uppercase">
-              Host feasibility
+              Debian on H3
             </p>
             <h1 className="max-w-2xl text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-              Custom Debian and SimpleAF on a Mellow Fly Lite V2.1
+              Fly Lite 2.1, as much of the board as Debian will take
             </h1>
             <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-              Short answer: the board can run Debian. SimpleAF can run on that
-              Debian. Stock FlyOS-FAST cannot host SimpleAF, and “every Fly
-              connector still works” is a separate, harder job than printing.
+              Goal: a real Debian userspace with apt, and every connector that
+              can be enabled without Mellow’s locked FlyOS-FAST image. Start
+              from Orange Pi Lite. Steal the rest from the official H3 DTB.
             </p>
           </div>
           <nav className="flex flex-wrap gap-2 text-sm">
@@ -106,46 +102,60 @@ export function GuidePage() {
       </header>
 
       <main className="relative mx-auto flex max-w-6xl flex-col gap-16 px-4 py-10 sm:px-6 sm:py-14">
-        <section id="verdict" className="space-y-6">
+        <section id="goal" className="space-y-6">
           <SectionHeading
             kicker="01"
-            title="Verdict"
-            text="Three facts decide this. Everything else is implementation detail."
+            title="What is actually possible"
+            text="The Lite 2.1 is an Allwinner H3 computer. Debian is not a hack. Full FlyOS appliance behaviour is not the target. Working USB, Wi-Fi, console, and then the display ports is."
           />
-          <div className="grid gap-4 lg:grid-cols-3">
-            {verdicts.map((item) => (
-              <Card key={item.title} className={toneStyles[item.tone]}>
-                <CardHeader>
-                  <Badge variant="outline" className="w-fit capitalize">
-                    {item.tone === "go"
-                      ? "Possible"
-                      : item.tone === "stop"
-                        ? "Blocked"
-                        : "Qualified"}
-                  </Badge>
-                  <CardTitle className="text-lg">{item.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="leading-6 text-muted-foreground">{item.body}</p>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card className="border-emerald-500/30 bg-emerald-950/40">
+              <CardHeader>
+                <Badge variant="outline">Do this</Badge>
+                <CardTitle className="text-lg">Debian 12 on the SD card</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm leading-6 text-muted-foreground">
+                Armbian Bookworm CLI. Normal users, apt, sshd, NetworkManager.
+                This is a usable Linux host, not FlyOS with the locks picked.
+              </CardContent>
+            </Card>
+            <Card className="border-amber-400/30 bg-amber-950/35">
+              <CardHeader>
+                <Badge variant="outline">Then this</Badge>
+                <CardTitle className="text-lg">Enable hardware in order</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm leading-6 text-muted-foreground">
+                Console, USB, Wi-Fi, HDMI, TFT. Each step has a probe command.
+                Stop guessing pinmux until the official DTB says what Mellow
+                wired.
+              </CardContent>
+            </Card>
+            <Card className="border-red-400/30 bg-red-950/35">
+              <CardHeader>
+                <Badge variant="outline">Not the goal</Badge>
+                <CardTitle className="text-lg">Clone FlyOS-FAST</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm leading-6 text-muted-foreground">
+                OTA, KPPM scripts, auto MCU flash, and the read-only root are
+                Mellow product. You can port pieces later. They are not required
+                for Debian to own the board.
+              </CardContent>
+            </Card>
           </div>
         </section>
 
         <section id="board" className="space-y-6">
           <SectionHeading
             kicker="02"
-            title="What this board actually is"
-            text="The Fly Lite V2.1 is a Klipper host. It is not the printer motion controller, and it is not a Raspberry Pi."
+            title="The board, without the marketing"
+            text="Mellow sells this as a Pi replacement. Electrically it is a compact Orange Pi Lite cousin with Fly connectors."
           />
           <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
             <Card>
               <CardHeader>
                 <CardTitle>Fly-Pi-lite2.1</CardTitle>
                 <CardDescription>
-                  Official Mellow specs. Same silicon generation as Orange Pi
-                  Lite / One, with Fly’s own power, display, and Wi-Fi wiring.
+                  Official specs. Same generation as Orange Pi Lite / One.
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-3 sm:grid-cols-2">
@@ -164,271 +174,120 @@ export function GuidePage() {
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle>What it is not</CardTitle>
+                <CardTitle>Why Orange Pi Lite is the starting DTB</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4 text-sm leading-6 text-muted-foreground">
+              <CardContent className="space-y-3 text-sm leading-6 text-muted-foreground">
                 <p>
-                  It is not an STM32 printer board. Steppers, heaters, and endstops
-                  still live on a separate MCU that you flash with Klipper and
-                  plug in over USB.
+                  Mainline <code className="font-mono text-xs">sun8i-h3-orangepi-lite.dts</code> already
+                  describes an H3, 512 MB, SD boot, two USB hosts, HDMI, UART0,
+                  and an RTL8189-class SDIO Wi-Fi on MMC1. That is the Lite 2.1
+                  feature list with different silk screen.
                 </p>
                 <p>
-                  It is not Pi-compatible at the image level. Raspberry Pi OS
-                  will not boot. You need an Allwinner H3 / sunxi userspace:
-                  Armbian, Orange Pi Debian, or DietPi for H3.
-                </p>
-                <p>
-                  It has no Ethernet jack and only 512 MB of RAM. Those two
-                  limits shape every realistic SimpleAF install more than the
-                  Debian question does.
+                  What Fly changed is the Type-C serial path, the FPC display
+                  connectors, LED GPIOs, and maybe the Wi-Fi power/reset GPIO.
+                  Those are overlays or a DTB diff, not a new SoC port.
                 </p>
               </CardContent>
             </Card>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Fact icon={Cpu} label="SoC family" value="sun8i-H3, 32-bit" />
-            <Fact icon={MemoryStick} label="RAM ceiling" value="512 MB DDR3" />
-            <Fact icon={Wifi} label="Onboard radio" value="2.4 GHz only" />
-            <Fact icon={HardDrive} label="Install media" value="MicroSD swap" />
+            <Fact icon={Cpu} label="SoC" value="sun8i-H3, armhf" />
+            <Fact icon={MemoryStick} label="RAM" value="512 MB DDR3" />
+            <Fact icon={Wifi} label="Radio" value="2.4 GHz SDIO" />
+            <Fact icon={HardDrive} label="Install" value="MicroSD only" />
           </div>
         </section>
 
-        <section id="simpleaf" className="space-y-6">
+        <section id="image" className="space-y-6">
           <SectionHeading
             kicker="03"
-            title="Why FlyOS-FAST and SimpleAF fight"
-            text="SimpleAF for RPi wants a boring Debian box. FlyOS-FAST is a locked appliance image built so beginners never touch apt."
+            title="Which Debian image to flash"
+            text="Use a public H3 image first. A custom Armbian board config is a later refinement, not the first boot."
           />
-          <Card>
-            <CardContent className="px-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="pl-4">FlyOS-FAST</TableHead>
-                    <TableHead className="pr-4">SimpleAF for RPi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {flyosBlockers.map((row) => (
-                    <TableRow key={row.fly}>
-                      <TableCell className="pl-4 align-top text-muted-foreground">
-                        {row.fly}
-                      </TableCell>
-                      <TableCell className="pr-4 align-top">
-                        {row.simple}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card className="border-red-400/25">
-              <CardHeader className="flex-row items-start gap-3">
-                <ShieldAlert className="mt-0.5 size-5 text-red-300" />
-                <div>
-                  <CardTitle>Do not install on the current image</CardTitle>
-                  <CardDescription className="mt-2 leading-6">
-                    Pellcorp’s docs also ban Mainsail OS and any host already
-                    set up with KIAUH. FlyOS-FAST fails for both reasons: it is
-                    not a normal Debian userspace, and it already has the
-                    Klipper stack.
-                  </CardDescription>
-                </div>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>What SimpleAF will accept</CardTitle>
-                <CardDescription className="leading-6">
-                  Debian 11, 12, or 13 on a Pi-like SBC: Raspberry Pi OS Lite,
-                  Orange Pi Debian, DietPi, and Armbian are in scope. Ubuntu
-                  might work. You must log in as a normal user with sudo, not
-                  root.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </div>
-        </section>
-
-        <section id="ram" className="space-y-6">
-          <SectionHeading
-            kicker="04"
-            title="512 MB is the real limiter"
-            text="SimpleAF is tested on Pi 3 and up. A Pi 3 has 1 GB. The Lite has half of that and a slower Cortex-A7."
-          />
-          <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-            <Card>
-              <CardHeader>
-                <CardTitle>What to run</CardTitle>
-                <CardDescription>
-                  A lean host can print. A full SimpleAF extras list will swap
-                  itself to death.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm leading-6">
-                <p>
-                  Keep Debian CLI-only. Add zram plus a 1 GB swap file. Skip
-                  Crowsnest. Skip KlipperScreen. Let Fluidd or Mainsail be the
-                  UI and ignore the second one.
-                </p>
-                <p className="text-muted-foreground">
-                  Input shaper and NumPy will still fit if you are not also
-                  encoding a camera. Resonance measurements should be done, then
-                  the accelerometer unplugged.
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="px-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="pl-4">Process</TableHead>
-                      <TableHead className="pr-4">Budget</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {ramBudget.map((row) => (
-                      <TableRow key={row.item}>
-                        <TableCell
-                          className={`pl-4 ${row.warn ? "text-amber-200" : ""}`}
-                        >
-                          {row.item}
-                        </TableCell>
-                        <TableCell
-                          className={`pr-4 font-mono text-xs ${row.warn ? "text-amber-200" : "text-muted-foreground"}`}
-                        >
-                          {row.size}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
-
-        <section id="features" className="space-y-6">
-          <SectionHeading
-            kicker="05"
-            title="Full functionality, feature by feature"
-            text="“Debian boots” and “every Fly connector works” are different projects. SimpleAF only needs USB to the MCU, a network path, and enough RAM."
-          />
-          <div className="overflow-x-auto rounded-xl ring-1 ring-foreground/10">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="min-w-44 pl-4">Feature</TableHead>
-                  <TableHead>FlyOS-FAST</TableHead>
-                  <TableHead>Generic H3 Armbian</TableHead>
-                  <TableHead>Armbian + Fly DTB</TableHead>
-                  <TableHead className="min-w-72 pr-4">Notes</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {features.map((row) => (
-                  <TableRow key={row.name}>
-                    <TableCell className="pl-4 font-medium">{row.name}</TableCell>
-                    <TableCell className={statusStyles[row.flyos]}>
-                      {row.flyos}
-                    </TableCell>
-                    <TableCell className={statusStyles[row.generic]}>
-                      {row.generic}
-                    </TableCell>
-                    <TableCell className={statusStyles[row.flyDtb]}>
-                      {row.flyDtb}
-                    </TableCell>
-                    <TableCell className="pr-4 text-muted-foreground">
-                      {row.note}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Fact icon={Usb} label="Needed for SimpleAF" value="USB MCU + network" />
-            <Fact icon={Router} label="Reliable network" value="USB dongle first" />
-            <Fact icon={Monitor} label="Fly screens" value="Optional later work" />
-          </div>
-        </section>
-
-        <section id="path" className="space-y-6">
-          <SectionHeading
-            kicker="06"
-            title="Pick a path"
-            text="There is a clean SimpleAF path, a hardware-fidelity path, and a path you should skip."
-          />
-          <Tabs defaultValue="realistic">
+          <Tabs defaultValue="armbian">
             <TabsList className="mb-4 flex h-auto w-full flex-wrap justify-start gap-1">
-              <TabsTrigger value="realistic">Realistic SimpleAF</TabsTrigger>
-              <TabsTrigger value="fidelity">Full Fly hardware</TabsTrigger>
-              <TabsTrigger value="skip">Do not do this</TabsTrigger>
-              <TabsTrigger value="other">Different host</TabsTrigger>
+              <TabsTrigger value="armbian">Armbian (recommended)</TabsTrigger>
+              <TabsTrigger value="dietpi">DietPi</TabsTrigger>
+              <TabsTrigger value="custom">Custom rebuild</TabsTrigger>
+              <TabsTrigger value="avoid">Do not flash</TabsTrigger>
             </TabsList>
-            <TabsContent value="realistic">
+            <TabsContent value="armbian">
               <PathCard
-                title="Second SD card, Armbian Bookworm, USB network"
-                body="This is the only path that matches SimpleAF’s documented OS list without fighting FlyOS. You accept that the FPC screen and maybe onboard Wi-Fi wait until after the printer prints."
+                title="Armbian Bookworm CLI, board = orangepilite"
+                body="Closest match, mainline-ish kernel, overlays via armbian-add-overlay, and a real apt-based Debian 12. Use current or the latest supported sunxi branch. Minimal CLI, no desktop."
                 points={[
-                  "Flash Armbian Debian 12 CLI for Orange Pi Lite or Orange Pi One.",
-                  "First login over Type-C serial or a USB Ethernet adapter.",
-                  "Create user fly or pi with passwordless sudo.",
-                  "Install SimpleAF against your motion-board printer.cfg.",
-                  "Leave Crowsnest and KlipperScreen off.",
+                  "Download the Orange Pi Lite Debian Bookworm CLI image from Armbian.",
+                  "Flash with Raspberry Pi Imager, Balena, or dd. This is a normal .img.",
+                  "First boot on the spare card only. Independent 5 V.",
+                  "Complete the Armbian first-run user. Keep that user; do not live as root.",
                 ]}
               />
             </TabsContent>
-            <TabsContent value="fidelity">
+            <TabsContent value="dietpi">
               <PathCard
-                title="Bring Fly’s device tree onto Armbian"
-                body="This is how people made stock-feeling Armbian images for Fly Gemini and Fly-Pi. It is the right approach if you insist on onboard Wi-Fi and the official TFT. It is not required for SimpleAF."
+                title="DietPi for Orange Pi Lite / H3"
+                body="Also Debian, lighter still. Fine if you already know DietPi. Slightly less convenient for device-tree overlays than Armbian."
                 points={[
-                  "Dump the official H3 FlyOS image and copy DTB, overlays, and Wi-Fi firmware.",
-                  "Start from Mellow’s older flypi Armbian fork or the Gemini community patches as a reference, not a drop-in.",
-                  "Freeze kernel and u-boot once Wi-Fi and USB work. Updating those packages can undo the board support.",
-                  "Only then create a non-root user and run SimpleAF.",
+                  "Pick the Orange Pi Lite image, Bookworm.",
+                  "Disable DietPi’s unattended updates until the board is stable.",
+                  "Same hardware order: console, USB, Wi-Fi, displays.",
                 ]}
               />
             </TabsContent>
-            <TabsContent value="skip">
+            <TabsContent value="custom">
               <PathCard
-                title="SimpleAF on FlyOS-FAST, or KIAUH on FAST, or Pi OS"
-                body="These fail for structural reasons, not because you missed a flag."
+                title="Rebuild Armbian as fly-lite-2.1"
+                body="Worth it after the Orange Pi Lite image boots and you have a DTB diff. Copy config/boards/orangepilite.conf, rename the model, and drop in the Fly DTB. Community Fly Gemini images were built this way on a different SoC."
                 points={[
-                  "FlyOS-FAST has no apt and only root. The installer will not run.",
-                  "KIAUH plus SimpleAF is explicitly unsupported even on a normal Pi.",
-                  "Raspberry Pi OS cannot boot an H3.",
-                  "Do not power the Lite from the printer MCU. Mellow says that can damage the board, OS aside.",
+                  "Do not start here. You need a known-good UART and USB path first.",
+                  "Freeze kernel and u-boot once the custom DTB works. Distro kernel upgrades will wipe it.",
+                  "Keep overlays in overlay-user/ so small pinmux fixes do not need a full rebuild.",
                 ]}
               />
             </TabsContent>
-            <TabsContent value="other">
+            <TabsContent value="avoid">
               <PathCard
-                title="Keep SimpleAF, change the host"
-                body="If the goal is SimpleAF rather than “this exact $25 board must survive,” a Pi 4, Pi 3B+, or 1 GB Orange Pi is the low-friction answer. The Lite stays a working FlyOS spare."
+                title="Images that will not help"
+                body="Wrong boot chain or the wrong SoC. These waste a card and can look like a dead board."
                 points={[
-                  "SimpleAF is tested on Pi 3, 4, and 5, 32- or 64-bit Lite images.",
-                  "Orange Pi Debian and DietPi Bookworm are also documented.",
-                  "Your printer MCU config moves with you. The host is interchangeable.",
-                  "Use the Lite later if you want FlyOS and KlipperScreen without SimpleAF.",
+                  "Raspberry Pi OS, Mainsail OS, any bcm2711 image.",
+                  "Fly Gemini / Fly-Pi H5 community Armbian images.",
+                  "Orange Pi PC images (Ethernet, different DRAM and USB map).",
+                  "The FlyOS-FAST image itself if the goal is Debian with apt.",
                 ]}
               />
             </TabsContent>
           </Tabs>
         </section>
 
-        <section id="plan" className="space-y-6">
+        <section id="bringup" className="space-y-6">
           <SectionHeading
-            kicker="07"
-            title="Lean install plan"
-            text="High-level order of operations if you stay on the Lite. Use a spare card. Do not flash over the only working FlyOS install you have."
+            kicker="04"
+            title="Bring-up order"
+            text="Likelihood is for a stock Orange Pi Lite Armbian image on this PCB, before any Fly DTB work."
           />
+          <div className="grid gap-3 md:grid-cols-2">
+            {phases.map((phase) => (
+              <Card key={phase.id}>
+                <CardHeader>
+                  <div className="flex items-center justify-between gap-2">
+                    <CardTitle className="text-base">{phase.title}</CardTitle>
+                    <span
+                      className={`font-mono text-xs ${likelihoodStyle[phase.likelihood] ?? ""}`}
+                    >
+                      {phase.likelihood}
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent className="text-sm leading-6 text-muted-foreground">
+                  {phase.summary}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
           <ol className="grid gap-3">
-            {planSteps.map((step, index) => (
+            {steps.map((step, index) => (
               <li
                 key={step.title}
                 className="grid gap-3 rounded-xl border border-border bg-card/80 p-4 sm:grid-cols-[auto_1fr] sm:items-start"
@@ -448,39 +307,158 @@ export function GuidePage() {
           <Card className="border-primary/25">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Cable className="size-4 text-primary" />
-                Installer shape
+                <PlugZap className="size-4 text-primary" />
+                Probe commands on the board
               </CardTitle>
+              <CardDescription>
+                Also shipped as <code>scripts/first-boot-checks.sh</code>.
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent>
               <pre className="overflow-x-auto rounded-lg bg-black/40 p-4 font-mono text-xs leading-6 text-amber-100">
-                {`sudo apt-get update
-sudo apt-get install -y git
-git clone https://github.com/pellcorp/creality.git ~/pellcorp
-~/pellcorp/installer.sh --install --printer ~/my-printer.cfg --probe <probe>`}
+                {`uname -a
+cat /proc/device-tree/model
+dmesg | egrep -i 'mmc|sdio|wlan|rtl|usb|hdmi|spi|uart|musb|gadget'
+ls /sys/bus/mmc/devices
+lsusb
+ip -br link
+ls /dev/fb* /dev/dri/card* 2>/dev/null
+nmcli dev status`}
               </pre>
-              <p className="text-sm leading-6 text-muted-foreground">
-                Run that as the non-root user.{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
-                  my-printer.cfg
-                </code>{" "}
-                is the motion board, in one file: mcu, steppers, extruder, bed,
-                fans. No probe section; SimpleAF adds that from{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
-                  --probe
-                </code>
-                . There is no Fly Lite printer definition because the Lite is
-                not a printer board.
-              </p>
             </CardContent>
           </Card>
+        </section>
+
+        <section id="extract" className="space-y-6">
+          <SectionHeading
+            kicker="05"
+            title="When the public DTB is not enough"
+            text="Fly’s official H3 image is the only complete description of this PCB. You do not run FAST. You loot it."
+          />
+          <div className="grid gap-3">
+            {extractFlow.map((item, index) => (
+              <div
+                key={item.title}
+                className="grid gap-3 rounded-xl border border-border bg-card/80 p-4 sm:grid-cols-[auto_1fr]"
+              >
+                <span className="font-mono text-sm text-primary">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <div>
+                  <p className="font-medium">{item.title}</p>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    {item.body}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Extractor</CardTitle>
+              <CardDescription>
+                Run on a Linux PC with the official image. Needs sudo to mount
+                partitions.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <pre className="overflow-x-auto rounded-lg bg-black/40 p-4 font-mono text-xs leading-6 text-amber-100">
+                {`./scripts/extract-flyos.sh ~/Downloads/FlyOS_h3_*.img
+# writes out/flyos-extract/{dtb,overlays,firmware,REPORT.md}`}
+              </pre>
+            </CardContent>
+          </Card>
+        </section>
+
+        <section id="features" className="space-y-6">
+          <SectionHeading
+            kicker="06"
+            title="Connector by connector"
+            text="Expected means the Orange Pi Lite DTB already describes it. Everything else is a measured experiment."
+          />
+          <div className="overflow-x-auto rounded-xl ring-1 ring-foreground/10">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-44 pl-4">Function</TableHead>
+                  <TableHead>On stock OPi Lite Debian</TableHead>
+                  <TableHead className="min-w-80 pr-4">What to do</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {features.map((row) => (
+                  <TableRow key={row.name}>
+                    <TableCell className="pl-4 font-medium">{row.name}</TableCell>
+                    <TableCell className={likelihoodStyle[row.status]}>
+                      {row.status}
+                    </TableCell>
+                    <TableCell className="pr-4 text-muted-foreground">
+                      {row.how}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Fact icon={Usb} label="First proof" value="USB-A host" />
+            <Fact icon={Wifi} label="Second proof" value="MMC1 / wlan0" />
+            <Fact icon={Monitor} label="Last" value="FPC-HDMI, then TFT" />
+          </div>
+        </section>
+
+        <section id="repo" className="space-y-6">
+          <SectionHeading
+            kicker="07"
+            title="What is in this repo"
+            text="Scripts and overlays you can take to a workbench. Overlays that touch TFT pins are candidates, not a claim that this PCB was probed here."
+          />
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>scripts/</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm leading-6 text-muted-foreground">
+                <p>
+                  <code className="font-mono text-xs">extract-flyos.sh</code> —
+                  mount a FlyOS H3 image and copy DTB, overlays, firmware, and
+                  Wi-Fi modules into a report folder.
+                </p>
+                <p>
+                  <code className="font-mono text-xs">first-boot-checks.sh</code>{" "}
+                  — run on the Lite after Debian boots. Prints the evidence you
+                  need before changing pinmux.
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>overlays/</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm leading-6 text-muted-foreground">
+                <p>
+                  <code className="font-mono text-xs">sdio-wifi-rtl8189.dts</code>{" "}
+                  — force MMC1 on if a generic image left SDIO Wi-Fi disabled.
+                </p>
+                <p>
+                  <code className="font-mono text-xs">usb-otg-peripheral.dts</code>{" "}
+                  — musb in peripheral mode for Type-C gadget serial.
+                </p>
+                <p>
+                  <code className="font-mono text-xs">fly-tft-spi-candidate.dts</code>{" "}
+                  — community H3 SPI TFT starting point. Do not apply until the
+                  FlyOS DTB confirms the pins.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
         </section>
 
         <section id="decide" className="space-y-6">
           <SectionHeading
             kicker="08"
-            title="Should you do it?"
-            text="Use this if you want a recommendation instead of reading the tables again."
+            title="Pick the first experiment"
+            text="If you only do one thing this week: spare card, Orange Pi Lite Armbian, console or USB dongle, no displays."
           />
           <DecisionHelper />
         </section>
@@ -507,7 +485,7 @@ git clone https://github.com/pellcorp/creality.git ~/pellcorp
           <SectionHeading
             kicker="10"
             title="Sources"
-            text="This guide is a reading of public docs, not a Mellow or SimpleAF endorsement that the Lite is a supported SimpleAF target."
+            text="Public Mellow docs and mainline sunxi board files. This is not an official Mellow Debian port."
           />
           <ul className="grid gap-2 sm:grid-cols-2">
             {sources.map((source) => (
