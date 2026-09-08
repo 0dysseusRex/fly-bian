@@ -14,7 +14,7 @@ Full-card image dumps (bench PC, not in git): **`C:\Users\udrdr\fly-lite-armbian
 
 ## Current live state
 
-The **cpu-affinity** image is the current snapshot (MicroSD was imaged from the USB3 reader after a serial halt). Put that card back in the Lite to boot.
+The **cpu-affinity** image is on the Lite and booting. After the USB3 reader dump it was written back to the same MicroSD; first boot came up and **SSH is reachable**.
 
 - Hostname `orangepilite`
 - Armbian Trixie, kernel `6.18.49-current-sunxi`

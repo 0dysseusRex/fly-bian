@@ -144,7 +144,7 @@ export const sources = [
 ] as const;
 
 export const project = {
-  now: "Fly Lite 2.1 — cpu-affinity dump: Debian + Fly DTB + systemd CPUAffinity so later Klipper installs land on 1–3",
+  now: "Fly Lite 2.1 — cpu-affinity dump is on the board, booted, SSH up. Later Klipper installs land on CPUs 1–3",
   next: "Simple-AF as user fly; visual TFT when the panel arrives",
   later: "Named images per SoC family. One file for Wi-Fi before first boot; serial and HDMI+USB stay as setup paths.",
 } as const;
@@ -447,7 +447,7 @@ export const imageDumps = {
       name: "fly-lite-v2.1-armbian-cpu-affinity.img.gz",
       sha256:
         "adaae2ccc1e81bb72b66937d45a09c768e76265fb511afbf7d04b0b7437b378d",
-      what: "Current. led-tft plus isolcpus layout and Klipper CPUAffinity drop-ins. USB3 reader after shutdown.",
+      what: "Current, verified: written back to the Lite, boots, SSH reachable. led-tft plus isolcpus and Klipper CPUAffinity drop-ins. USB3 reader after shutdown.",
     },
   ],
 } as const;

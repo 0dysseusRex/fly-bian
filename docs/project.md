@@ -4,7 +4,7 @@ Debian-based images you can flash to a MicroSD card (and later to eMMC on boards
 
 ## Order of work
 
-1. **Fly Lite 2.1 now** — Debian is on the **cpu-affinity** dump. Next is Simple-AF as user `fly` (optional).
+1. **Fly Lite 2.1 now** — **cpu-affinity** dump is on the board, booted, SSH up. Next is Simple-AF as user `fly` (optional).
 2. **Keep the Lite 2.1 images** — dumps on the bench PC (`C:\Users\udrdr\fly-lite-armbian-image`). Do not apt-upgrade kernel/DTB/U-Boot until PF6 + Fly DTB are in a rebuild.
 3. **Fly Pi V3 next** — different SoC (H618), Ethernet, optional M2WE eMMC. New board file, not a Lite respin.
 4. **Other Fly hosts** — blurbs and a likely public base image only, until we pick one up.
