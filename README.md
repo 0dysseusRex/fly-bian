@@ -16,7 +16,7 @@ The Lite is an Allwinner H3 host (512 MB, **MicroSD only**, onboard 2.4 GHz Wi-F
 
 8189fs is not SMP-safe: boot `maxcpus=1`, then online isolated CPUs 1–3. Do not boot all four cores from t=0. Keep the image Klipper-free; install `klipper/cpu-affinity/` so KIAUH or Simple-AF later lands on CPUs 1–3.
 
-1. Flash: https://dl.armbian.com/orangepilite/Trixie_current_minimal
+1. Flash from the board page (HTML, not the binary short URL): https://www.armbian.com/orange-pi-lite/ — Debian 13 Trixie Minimal CLI.
 2. This Trixie image is **one ext4 partition** (no FAT `armbi_boot`), so skip `fly-net.txt` until Linux is up. Use Type-C serial.
 3. Independent 5 V. IPEX antenna. Leave TFT unplugged.
 4. At U-Boot: `gpio clear PF6`, `mmc dev 0`, then the `ext4load` / `bootz` block in the bring-up doc. On Windows see [`first-boot/windows.md`](first-boot/windows.md) — this workspace cannot open COM4.

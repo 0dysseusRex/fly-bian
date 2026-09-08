@@ -9,16 +9,7 @@ export const downloads = {
     {
       label: "Armbian Orange Pi Lite board page",
       href: "https://www.armbian.com/orange-pi-lite/",
-      note: "Pick the latest Debian Minimal (CLI) image. Do not take the Ubuntu Xfce desktop build.",
-    },
-    {
-      label: "Debian 13 Trixie Minimal CLI (current redirect)",
-      href: "https://dl.armbian.com/orangepilite/Trixie_current_minimal",
-      note: "Stable Armbian short URL. Follows whatever trunk they published most recently.",
-    },
-    {
-      label: "SHA-256 for that image",
-      href: "https://dl.armbian.com/orangepilite/Trixie_current_minimal.sha",
+      note: "Pick Debian 13 Trixie Minimal CLI from this HTML page. Do not use Armbian’s Trixie_current_minimal short URL — it 302s to the .img.xz and chat clients will try to download it.",
     },
     {
       label: "Armbian Imager",
@@ -122,10 +113,6 @@ export const sources = [
     href: "https://www.armbian.com/orange-pi-lite/",
   },
   {
-    label: "Debian 13 Trixie Minimal CLI redirect",
-    href: "https://dl.armbian.com/orangepilite/Trixie_current_minimal",
-  },
-  {
     label: "Armbian Imager",
     href: "https://www.armbian.com/imager/",
   },
@@ -168,7 +155,7 @@ export const boards = [
     network: "Onboard 2.4 GHz Wi-Fi (IPEX1). No Ethernet.",
     display: "FPC-HDMI + FPC-TFT (16P). Type-C serial.",
     image:
-      "Full-card dumps on the bench PC at C:\\Users\\udrdr\\fly-lite-armbian-image (not in git). Current dump is cpu-affinity.",
+      "Full-card dumps on the bench PC at C:\\Users\\udrdr\\fly-lite-armbian-image (not in git). Current dump is cpu-affinity; card is in the Lite and SSH is up.",
     note: "Live: sun8i-h3-fly-lite.dtb, mmc-broken-cd, 8189fs on CPU0 (maxcpus=1 then isolcpus). Keep FlyOS on a second card.",
   },
   {

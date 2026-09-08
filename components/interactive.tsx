@@ -16,7 +16,7 @@ const imageTabs = [
     title: "Armbian Debian 13 Trixie Minimal CLI, board = orangepilite",
     body: "This is the current public image: Debian userspace, current sunxi kernel, overlays via armbian-add-overlay. Skip the Ubuntu Xfce build on the same page.",
     points: [
-      "Open the Orange Pi Lite board page or use the Trixie Minimal short URL below.",
+      "Open the Orange Pi Lite board page and take Debian 13 Trixie Minimal CLI. Do not use the Trixie_current_minimal short URL (it is a file download).",
       "Flash with Armbian Imager, Raspberry Pi Imager, Etcher, or dd. This is a normal .img.xz.",
       "Remount the FAT boot partition. Edit first-boot/fly-net.txt and run scripts/prepare-sd.sh.",
       "First boot on the spare card only. Independent 5 V. This image has no FAT boot partition — serial past U-Boot is the login. See docs/lite21-bringup.md.",
