@@ -1,5 +1,7 @@
 # Lite 2.1 Armbian image dumps
 
+**Named image (goal):** a small `.img.xz` from Armbian build, not a 32 GB `dd`. See [`build-named-image.md`](build-named-image.md). Until that exists, these full-card dumps are the lab snapshots.
+
 Full-card images (≥32 GB MicroSD). Flash the whole `.img` (after gunzip). Do not copy files onto a formatted card.
 
 **On the bench Windows PC (not in this git repo):**

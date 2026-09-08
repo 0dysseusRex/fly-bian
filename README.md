@@ -1,52 +1,88 @@
 # Fly Debian
 
-Debian-based images for Mellow Fly hosts. **Fly Lite 2.1 first**: boot a real Debian userspace, enable as much original hardware as possible, then bake a flashable image. **Fly Pi V3** is next. Other boards get blurbs until we pick one up.
+Armbian (Debian) images for [Mellow Fly](https://mellow.klipper.cn/en/docs/ProductDoc/SBC/) single-board hosts. Not FlyOS-FAST. Normal apt, a normal user, and the board’s hardware.
 
-The later image will flash to MicroSD, and to eMMC on boards that have it (Lite 2.1 does not). Every image keeps an easy text file for Wi-Fi before first boot, plus serial and HDMI+USB as setup paths.
+**Fly Lite 2.1 is first.** Fly Pi V3 is next. Other Fly hosts get a blurb until we pick one up.
 
-Project plan: [`docs/project.md`](docs/project.md).
+This repository is the contract and the patches. Flashable `.img` files are **not** in git (they are large and may contain Wi-Fi secrets). Bench dumps live at `C:\Users\udrdr\fly-lite-armbian-image` — see [`docs/images.md`](docs/images.md).
 
-## Right now — Lite 2.1
+## What you flash
 
-The Lite is an Allwinner H3 host (512 MB, **MicroSD only**, onboard 2.4 GHz Wi-Fi, two USB-A, Type-C, FPC-HDMI, FPC-TFT). Not a Raspberry Pi. Not a printer MCU.
+| Image | Who it is for |
+| --- | --- |
+| **Named Fly Lite 2.1 Armbian image** (the goal) | New users. Flash like any Armbian card. FAT setup volume + Debian that grows on first boot. First-run wizard still runs. |
+| Current lab dump `fly-lite-v2.1-armbian-cpu-affinity.img.gz` | Already-working card (full-size `dd`). Use only until the named image exists. |
+| Stock Orange Pi Lite Trixie from [armbian.com/orange-pi-lite](https://www.armbian.com/orange-pi-lite/) | Recovery / comparison. Single ext4, no Fly DTB, U-Boot card-detect is wrong on this PCB. |
 
-**Armbian Debian 13 Trixie Minimal CLI for Orange Pi Lite** on a **second** MicroSD. Keep FlyOS on the original card.
+Do **not** flash Raspberry Pi OS, Mainsail OS, or Fly Gemini / Fly-Pi H5 community images onto the Lite.
 
-**Live status (cpu-affinity image):** Card is back in the Lite. Debian boots, SSH is reachable. Fly DTB `sun8i-h3-fly-lite.dtb`, heartbeat LED, `wlan0` (8189fs on CPU0), TFT DRM bound (panel not here yet). User `fly`. Klipper is not installed; systemd drop-ins pin a later stack to CPUs 1–3. Image dumps: `C:\Users\udrdr\fly-lite-armbian-image` — [`docs/images.md`](docs/images.md). Board notes: [`docs/fly-lite-armbian-notes.md`](docs/fly-lite-armbian-notes.md).
+## Fly Lite 2.1 in one page
 
-8189fs is not SMP-safe: boot `maxcpus=1`, then online isolated CPUs 1–3. Do not boot all four cores from t=0. Keep the image Klipper-free; install `klipper/cpu-affinity/` so KIAUH or Simple-AF later lands on CPUs 1–3.
+Compact Allwinner **H3** host (512 MB, **MicroSD only**, no eMMC). Onboard 2.4 GHz Wi-Fi (IPEX), two USB-A, Type-C power + UART, FPC-HDMI, FPC-TFT. Independent **5 V**. Do not power it from a printer MCU.
 
-1. Flash from the board page (HTML, not the binary short URL): https://www.armbian.com/orange-pi-lite/ — Debian 13 Trixie Minimal CLI.
-2. This Trixie image is **one ext4 partition** (no FAT `armbi_boot`), so skip `fly-net.txt` until Linux is up. Use Type-C serial.
-3. Independent 5 V. IPEX antenna. Leave TFT unplugged.
-4. At U-Boot: `gpio clear PF6`, `mmc dev 0`, then the `ext4load` / `bootz` block in the bring-up doc. On Windows see [`first-boot/windows.md`](first-boot/windows.md) — this workspace cannot open COM4.
-5. On the board: `scripts/first-boot-checks.sh`
-6. If Wi-Fi or a display is missing, loot the official H3 FlyOS DTB (`scripts/extract-flyos.sh` or `scripts/pull-live-flyos.sh`)
+The working lab image uses Fly’s `sun8i-h3-fly-lite.dtb`, heartbeat LED, `wlan0` (8189fs on **CPU0**), TFT DRM bound (panel may still be in the mail). Klipper is **not** preinstalled. systemd drop-ins pin a later KIAUH or Simple-AF stack to CPUs **1–3**.
 
-Klipper host pins: [`docs/klipper-pins-and-macros.md`](docs/klipper-pins-and-macros.md).
+## First boot (named image)
 
-## Repo layout
+After flashing, **eject, unplug, and replug** the card so the small FAT volume appears. Windows, macOS, and Linux can all read it. Label is `FLY-SETUP`.
+
+On that volume you will find:
+
+- `fly-net.txt` — edit this for headless Wi-Fi
+- `README.txt` — the same three setup paths, written for a first-time user
+
+Then put the card in the Lite, fit the IPEX antenna, and apply 5 V. First boot **expands the Debian partition** to fill the card and runs Armbian’s first-run wizard (locale, root password, a normal user). That can take several minutes. Do not skip the wizard: this image is meant for a new user, not a pre-made `fly` account.
+
+### 1. Wi-Fi file (headless)
+
+1. Open `fly-net.txt` on `FLY-SETUP`.
+2. Set `WIFI_SSID`, `WIFI_PSK`, `WIFI_COUNTRY`. Leave `USE_STATIC=0` unless you need a static IPv4.
+3. Eject the volume. Card back in the Lite. Power on.
+4. When the wizard has finished, SSH as the user you created.
+
+2.4 GHz only on the onboard radio. The password sits in plaintext on the FAT volume.
+
+### 2. Serial
+
+Type-C to the PC, **115200 8N1**, no flow control. Data-capable cable. On Windows this is often **COM4**. Do **not** pulse DTR/RTS (it does not reset this board; it can drop you into U-Boot). Finish the wizard on the serial console.
+
+### 3. Keyboard and screen
+
+FPC-HDMI (or a USB-A HDMI adapter is not a thing — use the FPC) plus a USB keyboard. Leave the FPC-TFT unplugged for first boot. Complete the wizard on that console.
+
+`reboot` on this hardware often hangs. Use a **5 V power cycle**.
+
+## After first login
+
+```bash
+sudo apt update
+# Do not apt-upgrade kernel, DTB, or U-Boot until those are in a named rebuild.
+```
+
+Klipper is optional. Install Simple-AF or KIAUH later as your normal user. CPU affinity for those units is already on the image (`klipper/cpu-affinity/`).
+
+## Other Fly boards
+
+| Board | Status | Notes |
+| --- | --- | --- |
+| Fly Lite 2.1 | Now | This README. H3, MicroSD only. |
+| Fly Pi V3 | Next | H618, Ethernet, optional FLY M2WE eMMC. New board file, not a Lite respin. |
+| Fly Pi V2, MiniPad, Gemini | Later | Different SoCs. Same first-boot idea, different images. |
+
+## This repo
 
 | Path | What it is |
 | --- | --- |
-| This web guide | Project, board family, first-boot, Lite 2.1 bring-up |
-| `docs/project.md` | Roadmap and image contract |
-| `docs/fly-lite-armbian-notes.md` | Live board: DTB, Wi-Fi CPU pin, LEDs, TFT bind |
-| `docs/images.md` | Full-card `.img.gz` dumps (bench path + SHA256) |
-| `docs/lite21-bringup.md` | Early U-Boot paste (stock OPi Lite image) |
-| `first-boot/fly-net.txt` | Edit SSID/password; copy to the FAT boot partition |
-| `scripts/prepare-sd.sh` | Writes Armbian `armbian_first_run.txt` from that file |
-| `docs/klipper-pins-and-macros.md` | Host pins, sys-config keys, PLR / client macros |
-| `klipper/cpu-affinity/` | systemd `CPUAffinity=1-3` for whatever Klipper installer the user picks |
-| `klipper/host-fragments/` | `[mcu host]`, PLR, USB LIS2DW |
-| `flyos-artifacts/` | Seeded FlyOS/vendor files + live-pull destination |
-| `overlays/` | Candidate DTB overlays. TFT stays disabled. |
+| `first-boot/` | `fly-net.txt` + `README.txt` that belong on `FLY-SETUP` |
+| `scripts/prepare-sd.sh` | Copy those files onto a mounted FAT volume |
+| `docs/build-named-image.md` | How to **build** the named Lite 2.1 image (Armbian userpatches) |
+| `armbian/userpatches/` | Board file, customize hook, overlay for that build |
+| `docs/fly-lite-armbian-notes.md` | Lab log (working cpu-affinity card) |
+| `docs/lite21-bringup.md` | U-Boot paste if a stock Orange Pi Lite image will not autoboot |
+| `docs/images.md` | Bench `.img.gz` dumps and SHA256 |
+| `overlays/` | Device-tree overlays |
+| `klipper/` | CPU affinity + host-side Klipper fragments (not a Klipper tree) |
 
-## Run the guide locally
+## Building an image
 
-```bash
-npm install
-npm run dev
-```
-
-Open [http://127.0.0.1:43187](http://127.0.0.1:43187).
+A named image is produced with the [Armbian build framework](https://github.com/armbian/build), not by `dd` of a 32 GB card. Follow [`docs/build-named-image.md`](docs/build-named-image.md). That build needs a Linux host with Docker or a native Armbian build tree, and the Lite on the bench to verify autoboot, Wi-Fi, serial, and resize.

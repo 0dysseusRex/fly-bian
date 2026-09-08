@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
-# Copy first-boot/fly-net.txt onto a mounted Armbian boot partition and
-# emit armbian_first_run.txt so stock Armbian applies Wi-Fi on first boot.
+# Copy fly-net.txt + README.txt onto a mounted FAT volume (FLY-SETUP).
+# Also writes armbian_first_run.txt for stock Armbian images that still
+# look for that name.
 set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: prepare-sd.sh <mounted-boot-partition> [fly-net.txt]
+Usage: prepare-sd.sh <mounted-FAT-volume> [fly-net.txt]
 
-Example after flashing Armbian and re-plugging the card:
+Example after flashing and re-plugging the reader:
 
-  ./scripts/prepare-sd.sh /media/$USER/armbi_boot
+  ./scripts/prepare-sd.sh /media/$USER/FLY-SETUP
 
-The boot partition is usually labeled armbi_boot or BOOT.
+Volume label is FLY-SETUP on the named Fly image (armbi_boot or BOOT on
+some stock Armbian cards).
 EOF
 }
 
@@ -22,12 +24,13 @@ fi
 
 boot=$1
 if [[ ! -d $boot ]]; then
-  echo "boot partition not mounted: $boot" >&2
+  echo "FAT volume not mounted: $boot" >&2
   exit 1
 fi
 
 root=$(cd "$(dirname "$0")/.." && pwd)
 src=${2:-$root/first-boot/fly-net.txt}
+readme=$root/first-boot/README.txt
 if [[ ! -f $src ]]; then
   echo "fly-net.txt not found: $src" >&2
   exit 1
@@ -59,15 +62,20 @@ static_mask=$(get STATIC_MASK "")
 static_gateway=$(get STATIC_GATEWAY "")
 static_dns=$(get STATIC_DNS "")
 
+skip_first_run=0
 if [[ $wifi_enabled == 1 && ( -z $ssid || $ssid == YourNetwork ) ]]; then
-  echo "edit WIFI_SSID and WIFI_PSK in $src before copying" >&2
-  exit 1
+  echo "WIFI_SSID is still a placeholder — copying fly-net.txt only (no armbian_first_run Wi-Fi join)"
+  skip_first_run=1
 fi
 
-cat >"$boot/armbian_first_run.txt" <<EOF
-# Generated from fly-net.txt by prepare-sd.sh
-# See first-boot/README.md
+cp "$src" "$boot/fly-net.txt"
+if [[ -f $readme ]]; then
+  cp "$readme" "$boot/README.txt"
+fi
 
+if [[ $skip_first_run -eq 0 ]]; then
+  cat >"$boot/armbian_first_run.txt" <<EOF
+# Generated from fly-net.txt by prepare-sd.sh
 FR_general_delete_this_file_after_completion=1
 FR_net_change_defaults=1
 FR_net_ethernet_enabled=0
@@ -81,9 +89,10 @@ FR_net_static_mask='${static_mask}'
 FR_net_static_gateway='${static_gateway}'
 FR_net_static_dns='${static_dns}'
 EOF
+  echo "wrote $boot/armbian_first_run.txt"
+fi
 
-cp "$src" "$boot/fly-net.txt"
-
-echo "wrote $boot/armbian_first_run.txt"
 echo "wrote $boot/fly-net.txt"
-echo "unmount the card, fit the IPEX antenna, boot with independent 5 V"
+[[ -f $boot/README.txt ]] && echo "wrote $boot/README.txt"
+echo "eject the volume, fit the IPEX antenna, boot with independent 5 V"
+echo "first boot grows the Debian partition and runs the first-run wizard"

@@ -1,38 +1,12 @@
-# First-boot Wi-Fi and console
+# Files that go on `FLY-SETUP`
 
-The Lite 2.1 has no Ethernet jack. Get a login with one of these before you chase TFT overlays.
+The named Fly Lite image exposes a small **FAT32** partition labelled `FLY-SETUP`. Windows, macOS, and Linux can read it after flash (replug the reader if the imager ejected the card).
 
-## 1. Edit `fly-net.txt` on the card (headless)
+| File | Role |
+| --- | --- |
+| [`fly-net.txt`](fly-net.txt) | Headless Wi-Fi. Placeholder SSID is ignored until edited. |
+| [`README.txt`](README.txt) | Plain-text setup for a new user (Wi-Fi file, serial, HDMI+keyboard). |
 
-1. Flash Armbian Debian 13 Trixie Minimal CLI for Orange Pi Lite to a **spare** MicroSD.
-2. Re-plug the card so the FAT boot partition mounts (`armbi_boot`, `BOOT`, or similar).
-3. Edit `first-boot/fly-net.txt` in this repo (SSID, password, country).
-4. Run:
+`scripts/prepare-sd.sh` copies both onto a mounted FAT volume and, for stock Armbian, also writes `armbian_first_run.txt`.
 
-```bash
-./scripts/prepare-sd.sh /media/$USER/armbi_boot
-```
-
-Or copy by hand: the script writes `armbian_first_run.txt` (Armbian’s official first-run file) plus `fly-net.txt` onto that partition.
-
-5. Fit the IPEX antenna. Independent 5 V. First boot can take a few minutes while the card expands.
-6. Find the DHCP lease and SSH in as the user you create at first login (`ssh <user>@<ip>`). Root is not the daily account on Armbian.
-
-Wi-Fi still needs the radio to probe. If MMC1 never appears, the file cannot help — use serial or a USB Ethernet dongle, then extract the FlyOS DTB.
-
-## 2. Serial
-
-- Lite 2.1 Type-C to the PC, **115200 8N1**.
-- Data-capable cable. On FlyOS this is COM4; on Debian it is the same UART (U-Boot prints on it).
-- Stock Armbian autoboot does **not** see the SD card. Paste [`docs/lite21-bringup.md`](../docs/lite21-bringup.md) at `=>`.
-- Armbian first-login wizard runs on `ttyS0` after `bootz`.
-
-## 3. HDMI + USB keyboard
-
-- FPC-HDMI (Lite 2.1) or Micro-HDMI (Pi V3) and a USB keyboard on a USB-A port.
-- Leave the FPC-TFT unplugged for the first boot.
-- If the HDMI connector stays disconnected in `/sys/class/drm`, the public DTB is not enough — loot FlyOS next.
-
-Do not rely on onboard Wi-Fi alone for the first login.
-
-Windows users (COM4, Disk Management, why the FAT boot volume is missing): [`windows.md`](windows.md).
+Serial notes for Windows (COM4, DTR): [`windows.md`](windows.md).

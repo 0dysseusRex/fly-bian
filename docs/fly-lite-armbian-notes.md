@@ -54,7 +54,7 @@ All are full-card images (≥32 GB SD). Write the whole card; do not copy files.
 | --- | --- | --- |
 | pre-led | `fly-lite-v2.1-armbian-pre-led.img.gz` | Fly DTB + Wi-Fi + KIAUH + `maxcpus=1`. LED overlay still broken. No TFT. |
 | led-tft | `fly-lite-v2.1-armbian-led-tft.img.gz` | LED fix + TFT software bind. Live `dd` of a running rootfs. Also `/mnt/imgbackup/` on FlyOS USB. |
-| **cpu-affinity (current)** | `fly-lite-v2.1-armbian-cpu-affinity.img.gz` | led-tft plus affinity drop-ins. USB3 reader after `shutdown -h now`. |
+| **cpu-affinity (current)** | `fly-lite-v2.1-armbian-cpu-affinity.img.gz` | led-tft plus affinity drop-ins. USB3 reader after `shutdown -h now`. Written back: boots, SSH up. |
 
 ---
 
@@ -139,7 +139,8 @@ sudo ./scripts/install-klipper-cpu-affinity.sh
 
 ## Not done yet
 
-- Simple-AF install (`~/pellcorp/installer.sh` as user `fly`, not on the KIAUH tree)
+- **Named small Armbian image** (`docs/build-named-image.md`): FAT `FLY-SETUP`, grow-on-first-boot, first-run wizard. Lab `cpu-affinity` dump is a 32 GB `dd`, not that product.
+- Simple-AF install (`~/pellcorp/installer.sh` as the wizard user, not on the KIAUH tree)
 - Printer cfg / probe on this host
 - Visual TFT test when the panel arrives
 - Klipper/Moonraker/Mainsail (intentionally skipped — image stays installer-agnostic)

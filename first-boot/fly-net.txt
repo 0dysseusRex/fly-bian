@@ -1,15 +1,13 @@
-# Fly Debian — first-boot network
+# Fly Debian — first-boot Wi-Fi
 #
-# Edit this file on your PC, then copy it to the FAT boot partition
-# of the flashed card (or eMMC) BEFORE the first power-on.
+# Copy this file onto the FAT volume labelled FLY-SETUP (next to README.txt)
+# BEFORE the first power-on. Or run:
 #
-#   ./scripts/prepare-sd.sh /media/you/armbi_boot
+#   ./scripts/prepare-sd.sh /media/you/FLY-SETUP
 #
-# On stock Armbian that writes /boot/armbian_first_run.txt.
-# The later Fly Debian image will read this file as-is.
-#
-# 2.4 GHz only on the Lite 2.1 onboard radio. No Chinese SSID.
-# Password is stored in plaintext on the boot partition.
+# 2.4 GHz only on the Lite 2.1 onboard radio.
+# Password is stored in plaintext on this volume.
+# Leave WIFI_SSID=YourNetwork to skip auto-join and still run first-run setup.
 
 WIFI_ENABLED=1
 WIFI_SSID=YourNetwork
