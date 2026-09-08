@@ -35,6 +35,7 @@ expect_pin klipper-mcu.service yes
 expect_pin moonraker.service yes
 expect_pin moonraker-telegram-bot.service yes
 expect_pin klipperscreen.service yes
+expect_pin KlipperScreen.service yes
 expect_pin grumpyscreen.service yes
 expect_pin crowsnest.service yes
 expect_pin webcamd.service yes
@@ -76,6 +77,10 @@ if [[ ! -x $stage/etc/systemd/system-generators/fly-klipper-cpu-affinity ]]; the
 fi
 if [[ ! -f $stage/etc/systemd/system/klipper.service.d/50-fly-cpu-affinity.conf ]]; then
   echo "FAIL seeded klipper drop-in missing" >&2
+  fail=1
+fi
+if [[ ! -f $stage/etc/systemd/system/KlipperScreen.service.d/50-fly-cpu-affinity.conf ]]; then
+  echo "FAIL seeded KlipperScreen drop-in missing" >&2
   fail=1
 fi
 

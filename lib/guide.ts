@@ -144,8 +144,8 @@ export const sources = [
 ] as const;
 
 export const project = {
-  now: "Fly Lite 2.1 — Debian + Fly DTB on the led-tft image; CPU affinity drop-ins so later Klipper installs land on 1–3",
-  next: "Install the affinity files on the live card and re-dump. Then Simple-AF as user fly; visual TFT when the panel arrives",
+  now: "Fly Lite 2.1 — cpu-affinity dump: Debian + Fly DTB + systemd CPUAffinity so later Klipper installs land on 1–3",
+  next: "Simple-AF as user fly; visual TFT when the panel arrives",
   later: "Named images per SoC family. One file for Wi-Fi before first boot; serial and HDMI+USB stay as setup paths.",
 } as const;
 
@@ -168,7 +168,7 @@ export const boards = [
     network: "Onboard 2.4 GHz Wi-Fi (IPEX1). No Ethernet.",
     display: "FPC-HDMI + FPC-TFT (16P). Type-C serial.",
     image:
-      "Full-card dumps on the bench PC at C:\\Users\\udrdr\\fly-lite-armbian-image (not in git). Current card is led-tft.",
+      "Full-card dumps on the bench PC at C:\\Users\\udrdr\\fly-lite-armbian-image (not in git). Current dump is cpu-affinity.",
     note: "Live: sun8i-h3-fly-lite.dtb, mmc-broken-cd, 8189fs on CPU0 (maxcpus=1 then isolcpus). Keep FlyOS on a second card.",
   },
   {
@@ -428,8 +428,8 @@ bootz \${kernel_addr_r} \${ramdisk_addr_r} \${fdt_addr_r}`;
 
 export const imageDumps = {
   path: String.raw`C:\Users\udrdr\fly-lite-armbian-image`,
-  also: "/mnt/imgbackup/ on the FlyOS USB (led-tft snapshot)",
-  note: "Not in git. Flash the whole .img after gunzip. led-tft was a live dd of a running rootfs — first boot may need e2fsck from initramfs, then exit.",
+  also: "/mnt/imgbackup/ on the FlyOS USB (led-tft only)",
+  note: "Not in git. Flash the whole .img after gunzip. Dump from a USB reader after shutdown — do not live-dd mmcblk0 over wlan0. led-tft was a live dd (may need e2fsck). cpu-affinity was halted then read from USB3.",
   files: [
     {
       name: "fly-lite-v2.1-armbian-pre-led.img.gz",
@@ -441,7 +441,13 @@ export const imageDumps = {
       name: "fly-lite-v2.1-armbian-led-tft.img.gz",
       sha256:
         "375cc629f3acb8716f4b8263c5fcd6ee10aa86266e6e9c186304ff2222b9bafb",
-      what: "Same base plus LED fix and TFT software bind. Current card.",
+      what: "LED fix and TFT software bind. Live dd of a running rootfs.",
+    },
+    {
+      name: "fly-lite-v2.1-armbian-cpu-affinity.img.gz",
+      sha256:
+        "adaae2ccc1e81bb72b66937d45a09c768e76265fb511afbf7d04b0b7437b378d",
+      what: "Current. led-tft plus isolcpus layout and Klipper CPUAffinity drop-ins. USB3 reader after shutdown.",
     },
   ],
 } as const;
@@ -457,11 +463,11 @@ export const faqs = [
   },
   {
     q: "How do we pin Klipper to CPUs 1–3 if users pick their own installer?",
-    a: "Do not wrap KIAUH or Simple-AF. isolcpus=1-3 already keeps unpinned processes on CPU0 with 8189fs. Seed systemd drop-ins (CPUAffinity=1-3) plus a generator that matches klipper*, moonraker*, klipperscreen*, grumpyscreen*, crowsnest*, webcamd*. Installers rewrite the unit file; a .d/ drop-in survives. sudo ./scripts/install-klipper-cpu-affinity.sh, then let people install Klipper later. nginx and wpa_supplicant stay on CPU0.",
+    a: "Do not wrap KIAUH or Simple-AF. isolcpus=1-3 already keeps unpinned processes on CPU0 with 8189fs. The cpu-affinity dump already has systemd drop-ins (CPUAffinity=1-3) plus a generator for klipper*, moonraker*, klipperscreen*, grumpyscreen*, crowsnest*, webcamd*. Installers rewrite the unit file; a .d/ drop-in survives. nginx and wpa_supplicant stay on CPU0.",
   },
   {
     q: "Where are the Lite 2.1 Armbian dumps?",
-    a: "On the bench Windows PC at C:\\Users\\udrdr\\fly-lite-armbian-image — not in this git repo. Current card is fly-lite-v2.1-armbian-led-tft.img.gz. SHA256s are in docs/images.md. Also copied to the FlyOS USB at /mnt/imgbackup/.",
+    a: "On the bench Windows PC at C:\\Users\\udrdr\\fly-lite-armbian-image — not in this git repo. Current dump is fly-lite-v2.1-armbian-cpu-affinity.img.gz. SHA256s are in docs/images.md. The older led-tft snapshot is also on the FlyOS USB at /mnt/imgbackup/.",
   },
   {
     q: "When do we write a custom image?",

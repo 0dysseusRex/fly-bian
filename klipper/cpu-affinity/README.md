@@ -32,7 +32,7 @@ awk '/Cpus_allowed_list:/ {print $2}' /proc/$pid/status
 ./scripts/check-klipper-cpu-affinity.sh
 ```
 
-Re-dump the card after this install if you want the next `.img.gz` to include it. The current led-tft dump does not, until that step is done.
+Already on the **cpu-affinity** dump (`fly-lite-v2.1-armbian-cpu-affinity.img.gz`). Re-run this script only if you rebuild a card from an older snapshot.
 
 ## Do not
 

@@ -5,6 +5,7 @@ klipper.service
 klipper-mcu.service
 moonraker.service
 klipperscreen.service
+KlipperScreen.service
 grumpyscreen.service
 crowsnest.service
 webcamd.service

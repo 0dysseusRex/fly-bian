@@ -6,15 +6,15 @@
 
 Simple-AF must be installed later as a normal sudo user (`fly`), not root. Do not put Klipper/Moonraker/Mainsail on via KIAUH.
 
-Local worker run: [Fly lite debian functions](https://cursor.com/agents/bc-fc6e5f12-d6ec-459c-8f5c-9a5c913531b2) (`cursor-agent-worker-1d4299c7ee`). This cloud session cannot fetch that transcript; these notes were copied from it.
+Local worker run: [Fly lite debian functions](https://cursor.com/agents/bc-fc6e5f12-d6ec-459c-8f5c-9a5c913531b2). This cloud session cannot fetch that transcript; these notes were copied from it.
 
-Full-card image dumps (this PC, not in git): **`C:\Users\udrdr\fly-lite-armbian-image`**. See [`images.md`](images.md).
+Full-card image dumps (bench PC, not in git): **`C:\Users\udrdr\fly-lite-armbian-image`**. See [`images.md`](images.md).
 
 ---
 
 ## Current live state
 
-The **led-tft** image is on the SD card and booting.
+The **cpu-affinity** image is the current snapshot (MicroSD was imaged from the USB3 reader after a serial halt). Put that card back in the Lite to boot.
 
 - Hostname `orangepilite`
 - Armbian Trixie, kernel `6.18.49-current-sunxi`
@@ -23,6 +23,7 @@ The **led-tft** image is on the SD card and booting.
 - Users `root` and `fly` (sudo)
 - Serial: Windows **COM4**, CH340, 115200 8-N-1. Do **not** pulse DTR/RTS (it does not reset this board).
 - `reboot` often hangs; use a **5V power cycle**
+- Klipper is **not** installed. systemd drop-ins + generator pin future Klipper-family units to CPUs **1–3**.
 
 `/boot/armbianEnv.txt`:
 
@@ -40,8 +41,20 @@ CPU layout that holds Wi-Fi:
 - Boot **one CPU** (`maxcpus=1`) so 8189fs can start.
 - `isolcpus=1-3` and `irqaffinity=0` keep the scheduler and IRQs on CPU0.
 - After 8189fs: `fly-online-isolated-cpus.service` onlines CPU1–3 as isolated cores.
-- 8189fs / SDIO / `wpa_supplicant` stay on CPU0. The Klipper stack (whatever installer the user picks) must be systemd-`CPUAffinity`’d to CPUs **1–3** — see `klipper/cpu-affinity/`.
+- 8189fs / SDIO / `wpa_supplicant` stay on CPU0. Later Klipper units use systemd `CPUAffinity=1-3` (drop-ins + generator). Do **not** wrap `ExecStart` with `taskset` (KIAUH/Simple-AF rewrite the unit).
 - **Do not** boot all four cores from t=0.
+
+---
+
+## Images
+
+All are full-card images (≥32 GB SD). Write the whole card; do not copy files. Do not commit `.img` / `.img.gz` or passwords into git. SHA256s: [`images.md`](images.md).
+
+| Snapshot | File | Notes |
+| --- | --- | --- |
+| pre-led | `fly-lite-v2.1-armbian-pre-led.img.gz` | Fly DTB + Wi-Fi + KIAUH + `maxcpus=1`. LED overlay still broken. No TFT. |
+| led-tft | `fly-lite-v2.1-armbian-led-tft.img.gz` | LED fix + TFT software bind. Live `dd` of a running rootfs. Also `/mnt/imgbackup/` on FlyOS USB. |
+| **cpu-affinity (current)** | `fly-lite-v2.1-armbian-cpu-affinity.img.gz` | led-tft plus affinity drop-ins. USB3 reader after `shutdown -h now`. |
 
 ---
 
@@ -104,15 +117,31 @@ Persisted: `/usr/local/sbin/fly-online-isolated-cpus.sh` and `fly-online-isolate
 - Two Windows `serial-mcp` processes can steal COM4 after USB re-enum.
 - `gpio-regulator vdd-cpux-regulator` probe fails `-ENOMEM` (`-12`); board still runs.
 - Do not enable 4 CPUs at boot.
+- Do not stream a full-card `dd` of `mmcblk0` over `wlan0`.
+
+---
+
+## Klipper CPU affinity (on disk, Klipper not installed)
+
+Already applied on the **cpu-affinity** image. On the board the tree was `/home/fly/fly-lite-debian`:
+
+```
+sudo ./scripts/install-klipper-cpu-affinity.sh
+./scripts/check-klipper-cpu-affinity.sh
+```
+
+- `/etc/systemd/system-generators/fly-klipper-cpu-affinity` mode **0755**
+- Drop-in `50-fly-cpu-affinity.conf` with `CPUAffinity=1-3` for:
+  `klipper`, `moonraker`, `klipper-mcu`, `klipperscreen`, `KlipperScreen`, `grumpyscreen`, `crowsnest`, `webcamd`
+- `systemctl daemon-reload` ran at install. Klipper was not started.
 
 ---
 
 ## Not done yet
 
-- Run `sudo ./scripts/install-klipper-cpu-affinity.sh` on the live card and re-dump so the shareable image already pins later Klipper installs
 - Simple-AF install (`~/pellcorp/installer.sh` as user `fly`, not on the KIAUH tree)
 - Printer cfg / probe on this host
 - Visual TFT test when the panel arrives
 - Klipper/Moonraker/Mainsail (intentionally skipped — image stays installer-agnostic)
 
-KIAUH is on the image for later use only if Simple-AF is abandoned. Simple-AF docs say not to install on a KIAUH Klipper environment. The CPU affinity drop-ins are meant to cover both.
+KIAUH is on the image for later use only if Simple-AF is abandoned. Simple-AF docs say not to install on a KIAUH Klipper environment. The CPU affinity drop-ins cover both.

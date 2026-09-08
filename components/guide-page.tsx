@@ -521,9 +521,11 @@ systemctl show -p CPUAffinity --value klipper`}
                 . A generator also matches later{" "}
                 <code className="font-mono text-xs">klipper-2.service</code> and{" "}
                 <code className="font-mono text-xs">klipper@.service</code>.
-                Re-dump the card after installing this so the next{" "}
-                <code className="font-mono text-xs">.img.gz</code> already has
-                it. Details:{" "}
+                Already on{" "}
+                <code className="font-mono text-xs">
+                  fly-lite-v2.1-armbian-cpu-affinity.img.gz
+                </code>
+                . Details:{" "}
                 <code className="font-mono text-xs">
                   klipper/cpu-affinity/README.md
                 </code>

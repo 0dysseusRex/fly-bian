@@ -12,7 +12,7 @@ The Lite is an Allwinner H3 host (512 MB, **MicroSD only**, onboard 2.4 GHz Wi-F
 
 **Armbian Debian 13 Trixie Minimal CLI for Orange Pi Lite** on a **second** MicroSD. Keep FlyOS on the original card.
 
-**Live status (led-tft image):** Debian boots with Fly DTB `sun8i-h3-fly-lite.dtb`, heartbeat LED, `wlan0` (8189fs on CPU0), TFT DRM bound (panel not here yet). User `fly`. Image dumps: `C:\Users\udrdr\fly-lite-armbian-image` — [`docs/images.md`](docs/images.md). Board notes: [`docs/fly-lite-armbian-notes.md`](docs/fly-lite-armbian-notes.md).
+**Live status (cpu-affinity image):** Debian boots with Fly DTB `sun8i-h3-fly-lite.dtb`, heartbeat LED, `wlan0` (8189fs on CPU0), TFT DRM bound (panel not here yet). User `fly`. Klipper is not installed; systemd drop-ins pin a later stack to CPUs 1–3. Image dumps: `C:\Users\udrdr\fly-lite-armbian-image` — [`docs/images.md`](docs/images.md). Board notes: [`docs/fly-lite-armbian-notes.md`](docs/fly-lite-armbian-notes.md).
 
 8189fs is not SMP-safe: boot `maxcpus=1`, then online isolated CPUs 1–3. Do not boot all four cores from t=0. Keep the image Klipper-free; install `klipper/cpu-affinity/` so KIAUH or Simple-AF later lands on CPUs 1–3.
 

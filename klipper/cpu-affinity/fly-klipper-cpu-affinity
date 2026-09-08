@@ -14,6 +14,7 @@ fly_klipper_cpu_affinity_pin_unit() {
   esac
   _name=${_name%.service}
   _base=${_name%%@*}
+  _base=$(printf '%s' "$_base" | tr '[:upper:]' '[:lower:]')
   case $_base in
     klipper|klipper-*|moonraker|moonraker-*|klipperscreen|klipperscreen-*|grumpyscreen|grumpyscreen-*|crowsnest|crowsnest-*|webcamd|webcamd-*)
       return 0
@@ -48,7 +49,7 @@ else
   unset IFS
 
   # Always seed the common names so the first installer enable picks them up.
-  for seed in klipper.service klipper-mcu.service moonraker.service klipperscreen.service grumpyscreen.service crowsnest.service webcamd.service; do
+  for seed in klipper.service klipper-mcu.service moonraker.service klipperscreen.service KlipperScreen.service grumpyscreen.service crowsnest.service webcamd.service; do
     fly_klipper_cpu_affinity_write "$normal_dir" "$seed"
   done
 
