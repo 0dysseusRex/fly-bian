@@ -29,6 +29,7 @@ import { DecisionHelper } from "@/components/decision-helper";
 import { FaqList, ImageTabs } from "@/components/interactive";
 import {
   boards,
+  cpuPin,
   downloads,
   extractFlow,
   features,
@@ -51,6 +52,7 @@ const nav = [
   { href: "#board", label: "Lite 2.1" },
   { href: "#image", label: "Image" },
   { href: "#bringup", label: "Bring-up" },
+  { href: "#cpu", label: "CPU pin" },
   { href: "#features", label: "Hardware" },
   { href: "#faq", label: "FAQ" },
 ];
@@ -465,9 +467,75 @@ nmcli dev status`}
           </Card>
         </section>
 
-        <section id="extract" className="space-y-6">
+        <section id="cpu" className="space-y-6">
           <SectionHeading
             kicker="08"
+            title="Pin Klipper to CPUs 1–3 without shipping Klipper"
+            text="Leave the image installer-agnostic. 8189fs stays on CPU0. Whatever stack the user installs later must not join it there."
+          />
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card className="border-amber-400/30 bg-amber-950/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Cpu className="size-4 text-primary" />
+                  Why
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm leading-6 text-muted-foreground">
+                {cpuPin.why}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">On CPUs 1–3</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm leading-6 text-muted-foreground">
+                {cpuPin.pin}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Stay on CPU0</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm leading-6 text-muted-foreground">
+                {cpuPin.stay}
+              </CardContent>
+            </Card>
+          </div>
+          <Card className="border-emerald-500/35 bg-emerald-950/25">
+            <CardHeader>
+              <CardTitle>systemd drop-ins, not an installer wrapper</CardTitle>
+              <CardDescription>{cpuPin.how}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm leading-6 text-muted-foreground">
+              <pre className="overflow-x-auto rounded-lg bg-black/40 p-4 font-mono text-xs leading-6 text-amber-100 whitespace-pre">
+                {`${cpuPin.install}
+${cpuPin.check}
+systemctl show -p CPUAffinity --value klipper`}
+              </pre>
+              <p>
+                Seeded names live in{" "}
+                <code className="font-mono text-xs">
+                  /etc/systemd/system/klipper.service.d/
+                </code>
+                . A generator also matches later{" "}
+                <code className="font-mono text-xs">klipper-2.service</code> and{" "}
+                <code className="font-mono text-xs">klipper@.service</code>.
+                Re-dump the card after installing this so the next{" "}
+                <code className="font-mono text-xs">.img.gz</code> already has
+                it. Details:{" "}
+                <code className="font-mono text-xs">
+                  klipper/cpu-affinity/README.md
+                </code>
+                .
+              </p>
+            </CardContent>
+          </Card>
+        </section>
+
+        <section id="extract" className="space-y-6">
+          <SectionHeading
+            kicker="09"
             title="When the public DTB is not enough"
             text="Fly’s official H3 image is the only complete description of this PCB. You do not run FAST. You loot it."
           />
@@ -512,7 +580,7 @@ nmcli dev status`}
 
         <section id="features" className="space-y-6">
           <SectionHeading
-            kicker="09"
+            kicker="10"
             title="Connector by connector"
             text="Expected means the Orange Pi Lite DTB already describes it. Everything else is a measured experiment."
           />
@@ -549,7 +617,7 @@ nmcli dev status`}
 
         <section id="repo" className="space-y-6">
           <SectionHeading
-            kicker="10"
+            kicker="11"
             title="What is in this repo"
             text="Scripts and overlays you can take to a workbench. Overlays that touch TFT pins are candidates, not a claim that this PCB was probed here."
           />
@@ -569,6 +637,14 @@ nmcli dev status`}
                   <code className="font-mono text-xs">extract-flyos.sh</code> —
                   mount a FlyOS H3 image and copy DTB, overlays, firmware, and
                   Wi-Fi modules into a report folder.
+                </p>
+                <p>
+                  <code className="font-mono text-xs">
+                    install-klipper-cpu-affinity.sh
+                  </code>{" "}
+                  — write systemd <code>CPUAffinity=1-3</code> drop-ins so a
+                  later KIAUH or Simple-AF install does not share CPU0 with
+                  8189fs.
                 </p>
                 <p>
                   <code className="font-mono text-xs">first-boot-checks.sh</code>{" "}
@@ -602,7 +678,7 @@ nmcli dev status`}
 
         <section id="decide" className="space-y-6">
           <SectionHeading
-            kicker="11"
+            kicker="12"
             title="Pick the first experiment"
             text="If you only do one thing this week: spare card, Orange Pi Lite Armbian, console or USB dongle, no displays."
           />
@@ -610,7 +686,7 @@ nmcli dev status`}
         </section>
 
         <section id="faq" className="space-y-6">
-          <SectionHeading kicker="12" title="FAQ" />
+          <SectionHeading kicker="13" title="FAQ" />
           <Card>
             <CardContent>
               <FaqList />
@@ -620,7 +696,7 @@ nmcli dev status`}
 
         <section id="sources" className="space-y-4 pb-8">
           <SectionHeading
-            kicker="13"
+            kicker="14"
             title="Sources"
             text="Public Mellow docs and mainline sunxi board files. This is not an official Mellow Debian port."
           />

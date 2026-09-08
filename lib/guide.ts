@@ -144,9 +144,18 @@ export const sources = [
 ] as const;
 
 export const project = {
-  now: "Fly Lite 2.1 — Debian + Fly DTB on the led-tft image; Simple-AF next as user fly",
-  next: "Install Simple-AF (not KIAUH Klipper), pin Klipper to CPUs 1–3, visual TFT when the panel arrives",
+  now: "Fly Lite 2.1 — Debian + Fly DTB on the led-tft image; CPU affinity drop-ins so later Klipper installs land on 1–3",
+  next: "Install the affinity files on the live card and re-dump. Then Simple-AF as user fly; visual TFT when the panel arrives",
   later: "Named images per SoC family. One file for Wi-Fi before first boot; serial and HDMI+USB stay as setup paths.",
+} as const;
+
+export const cpuPin = {
+  why: "8189fs is not SMP-safe. Boot maxcpus=1, then online isolated CPUs 1–3. Unpinned work stays on CPU0. Klipper on CPU0 shares that core with the Wi-Fi driver and can lock SDIO.",
+  pin: "klipper, moonraker, klipper-mcu, KlipperScreen / GrumpyScreen, crowsnest, webcamd — including KIAUH names like klipper-2.service",
+  stay: "8189fs, wpa_supplicant, NetworkManager, ssh, nginx. Do not taskset those onto 1–3.",
+  how: "systemd CPUAffinity=1-3 via seeded drop-ins plus a generator. Survives KIAUH and Simple-AF because they rewrite the unit file, not the .d/ drop-in. Do not wrap ExecStart with taskset.",
+  install: "sudo ./scripts/install-klipper-cpu-affinity.sh",
+  check: "./scripts/check-klipper-cpu-affinity.sh",
 } as const;
 
 export const boards = [
@@ -314,7 +323,7 @@ export const features = [
   {
     name: "Onboard 2.4 GHz Wi-Fi",
     status: "SDIO probed",
-    how: "mmc1 is a high-speed SDIO card on 6.18.49. After Debian mounts, ip link / nmcli. Copy rtl8189 firmware from FlyOS only if the function is there and wlan0 is not.",
+    how: "8189fs on mmc2, IRQ 152. Must stay on CPU0 (maxcpus=1 then isolcpus). Copy rtl8189 firmware from FlyOS only if the SDIO function is there and wlan0 is not.",
   },
   {
     name: "FPC-HDMI",
@@ -370,6 +379,10 @@ export const steps = [
   {
     title: "Extract FlyOS when a peripheral is missing",
     body: "scripts/extract-flyos.sh against the official H3 image copies DTB, overlays, and /lib/firmware. That is how community Fly Gemini Armbian images were made. Same method, this board.",
+  },
+  {
+    title: "Install CPU affinity before any Klipper stack",
+    body: "sudo ./scripts/install-klipper-cpu-affinity.sh writes CPUAffinity=1-3 drop-ins and a systemd generator. Users can then install KIAUH or Simple-AF; the stack is pinned without wrapping those installers. Wi-Fi stays on CPU0.",
   },
   {
     title: "Enable displays last",
@@ -441,6 +454,10 @@ export const faqs = [
   {
     q: "Why MMC: no card present after SPL already booted from the card?",
     a: "Orange Pi Lite’s DTB uses PF6 as SD card-detect, active-low. On the Fly Lite 2.1 PF6 is high, so U-Boot skips mmc0. gpio clear PF6 then mmc dev 0. Autoboot needs the same change in U-Boot’s DTB; a Linux overlay is not enough.",
+  },
+  {
+    q: "How do we pin Klipper to CPUs 1–3 if users pick their own installer?",
+    a: "Do not wrap KIAUH or Simple-AF. isolcpus=1-3 already keeps unpinned processes on CPU0 with 8189fs. Seed systemd drop-ins (CPUAffinity=1-3) plus a generator that matches klipper*, moonraker*, klipperscreen*, grumpyscreen*, crowsnest*, webcamd*. Installers rewrite the unit file; a .d/ drop-in survives. sudo ./scripts/install-klipper-cpu-affinity.sh, then let people install Klipper later. nginx and wpa_supplicant stay on CPU0.",
   },
   {
     q: "Where are the Lite 2.1 Armbian dumps?",

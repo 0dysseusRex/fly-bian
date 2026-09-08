@@ -4,7 +4,7 @@ Debian-based images you can flash to a MicroSD card (and later to eMMC on boards
 
 ## Order of work
 
-1. **Fly Lite 2.1 now** — Debian is on the board (led-tft dump). Next is Simple-AF as user `fly`.
+1. **Fly Lite 2.1 now** — Debian is on the board (led-tft dump). Bake CPU affinity into the image, then Simple-AF as user `fly` is optional.
 2. **Keep the Lite 2.1 images** — dumps on the bench PC (`C:\Users\udrdr\fly-lite-armbian-image`). Do not apt-upgrade kernel/DTB/U-Boot until PF6 + Fly DTB are in a rebuild.
 3. **Fly Pi V3 next** — different SoC (H618), Ethernet, optional M2WE eMMC. New board file, not a Lite respin.
 4. **Other Fly hosts** — blurbs and a likely public base image only, until we pick one up.
@@ -33,4 +33,4 @@ The editable file is `first-boot/fly-net.txt`. `scripts/prepare-sd.sh` writes Ar
 - Publishing the `.img.gz` in git (they live on the bench PC; see `docs/images.md`).
 - Cloning FlyOS-FAST (OTA, read-only root, root-only login).
 - One image that boots every Fly board. SoCs differ (H3, H5, H618).
-- Simple-AF / Klipper on this host (install as `fly`, not via KIAUH).
+- Shipping a Klipper tree in the image (users install KIAUH or Simple-AF later; CPU affinity drop-ins must already be on the card — `klipper/cpu-affinity/`).

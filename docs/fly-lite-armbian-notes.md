@@ -40,7 +40,7 @@ CPU layout that holds Wi-Fi:
 - Boot **one CPU** (`maxcpus=1`) so 8189fs can start.
 - `isolcpus=1-3` and `irqaffinity=0` keep the scheduler and IRQs on CPU0.
 - After 8189fs: `fly-online-isolated-cpus.service` onlines CPU1–3 as isolated cores.
-- 8189fs / SDIO / `wpa_supplicant` stay on CPU0. Compute (later Klipper) should be `taskset` to CPUs **1–3**.
+- 8189fs / SDIO / `wpa_supplicant` stay on CPU0. The Klipper stack (whatever installer the user picks) must be systemd-`CPUAffinity`’d to CPUs **1–3** — see `klipper/cpu-affinity/`.
 - **Do not** boot all four cores from t=0.
 
 ---
@@ -109,10 +109,10 @@ Persisted: `/usr/local/sbin/fly-online-isolated-cpus.sh` and `fly-online-isolate
 
 ## Not done yet
 
+- Run `sudo ./scripts/install-klipper-cpu-affinity.sh` on the live card and re-dump so the shareable image already pins later Klipper installs
 - Simple-AF install (`~/pellcorp/installer.sh` as user `fly`, not on the KIAUH tree)
 - Printer cfg / probe on this host
-- Pin Klipper to CPUs 1–3
 - Visual TFT test when the panel arrives
-- Klipper/Moonraker/Mainsail (intentionally skipped)
+- Klipper/Moonraker/Mainsail (intentionally skipped — image stays installer-agnostic)
 
-KIAUH is on the image for later use only if Simple-AF is abandoned. Simple-AF docs say not to install on a KIAUH Klipper environment.
+KIAUH is on the image for later use only if Simple-AF is abandoned. Simple-AF docs say not to install on a KIAUH Klipper environment. The CPU affinity drop-ins are meant to cover both.

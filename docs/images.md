@@ -15,4 +15,6 @@ This cloud workspace cannot read that path. `*.img` / `*.img.gz` are gitignored.
 | `fly-lite-v2.1-armbian-pre-led.img.gz` | `6845e087e9dc59c910becac5ddc3d59cc006f4633967ae52d2fd72d0117f0758` | Armbian + Fly DTB + UART1/SPI/I2C2/USB hosts + Wi-Fi + KIAUH + `maxcpus=1`. GPIO LED overlay still broken. No TFT. |
 | `fly-lite-v2.1-armbian-led-tft.img.gz` | `375cc629f3acb8716f4b8263c5fcd6ee10aa86266e6e9c186304ff2222b9bafb` | Same base plus LED fix and TFT software bind. **Live `dd` of a running rootfs** — first boot may need `e2fsck -y /dev/mmcblk0p1` from initramfs, then `exit`. |
 
-Current card is **led-tft**. Live board notes: [`fly-lite-armbian-notes.md`](fly-lite-armbian-notes.md). Early U-Boot recovery (stock Orange Pi Lite image): [`lite21-bringup.md`](lite21-bringup.md).
+Current card is **led-tft**. It does **not** yet include the Klipper CPU-affinity drop-ins. After `sudo ./scripts/install-klipper-cpu-affinity.sh` on the live board, re-dump so later users keep installer choice (KIAUH or Simple-AF) and still land on CPUs 1–3. See [`klipper/cpu-affinity/README.md`](../klipper/cpu-affinity/README.md).
+
+Live board notes: [`fly-lite-armbian-notes.md`](fly-lite-armbian-notes.md). Early U-Boot recovery (stock Orange Pi Lite image): [`lite21-bringup.md`](lite21-bringup.md).

@@ -51,6 +51,15 @@ ls /dev/ttyS* /dev/ttyGS* /dev/ttyUSB* 2>/dev/null || true
 section "kernel clues"
 dmesg | egrep -i 'mmc|sdio|wlan|rtl|8189|8723|usb|hdmi|spi|uart|musb|gadget|brcm' | tail -n 80 || true
 
+section "cpu isolation"
+echo "cmdline: $(tr ' ' '\n' </proc/cmdline | egrep 'isolcpus|maxcpus|irqaffinity' | xargs echo)"
+if [[ -x /etc/systemd/system-generators/fly-klipper-cpu-affinity ]]; then
+  echo "klipper cpu-affinity generator: present"
+else
+  echo "klipper cpu-affinity generator: missing — sudo ./scripts/install-klipper-cpu-affinity.sh"
+fi
+ls /etc/systemd/system/klipper.service.d/50-fly-cpu-affinity.conf 2>/dev/null || echo "klipper drop-in: not installed yet"
+
 section "next"
 cat <<'EOF'
 Lite 2.1 live: MMC1 already probed as SDIO. If wlan0 is missing, copy rtl8189 firmware from the official H3 FlyOS extract.
