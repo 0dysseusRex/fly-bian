@@ -144,8 +144,8 @@ export const sources = [
 ] as const;
 
 export const project = {
-  now: "Fly Lite 2.1 — boot Debian, then enable every connector that works",
-  next: "Bake a Lite 2.1 image, then port the same first-boot contract to Fly Pi V3",
+  now: "Fly Lite 2.1 — Debian + Fly DTB on the led-tft image; Simple-AF next as user fly",
+  next: "Install Simple-AF (not KIAUH Klipper), pin Klipper to CPUs 1–3, visual TFT when the panel arrives",
   later: "Named images per SoC family. One file for Wi-Fi before first boot; serial and HDMI+USB stay as setup paths.",
 } as const;
 
@@ -158,8 +158,9 @@ export const boards = [
     storage: "MicroSD only. No eMMC.",
     network: "Onboard 2.4 GHz Wi-Fi (IPEX1). No Ethernet.",
     display: "FPC-HDMI + FPC-TFT (16P). Type-C serial.",
-    image: "Armbian Debian 13 Trixie Minimal CLI, board = Orange Pi Lite",
-    note: "Current work. Closest public DTB. Keep FlyOS on a second card. Live U-Boot: gpio clear PF6, then load the flat orangepi-lite.dtb — not allwinner/.",
+    image:
+      "Full-card dumps on the bench PC at C:\\Users\\udrdr\\fly-lite-armbian-image (not in git). Current card is led-tft.",
+    note: "Live: sun8i-h3-fly-lite.dtb, mmc-broken-cd, 8189fs on CPU0 (maxcpus=1 then isolcpus). Keep FlyOS on a second card.",
   },
   {
     id: "piv3",
@@ -412,6 +413,26 @@ fdt set /soc/mmc@1c0f000 non-removable
 setenv bootargs console=ttyS0,115200 root=/dev/mmcblk0p1 rootwait rootfstype=ext4 rw init=/bin/bash nohz=off clocksource=timer cma=16M bpf_jit_enable=0
 bootz \${kernel_addr_r} \${ramdisk_addr_r} \${fdt_addr_r}`;
 
+export const imageDumps = {
+  path: String.raw`C:\Users\udrdr\fly-lite-armbian-image`,
+  also: "/mnt/imgbackup/ on the FlyOS USB (led-tft snapshot)",
+  note: "Not in git. Flash the whole .img after gunzip. led-tft was a live dd of a running rootfs — first boot may need e2fsck from initramfs, then exit.",
+  files: [
+    {
+      name: "fly-lite-v2.1-armbian-pre-led.img.gz",
+      sha256:
+        "6845e087e9dc59c910becac5ddc3d59cc006f4633967ae52d2fd72d0117f0758",
+      what: "Armbian + Fly DTB + UART1/SPI/I2C2/USB hosts + Wi-Fi + KIAUH + maxcpus=1. GPIO LED overlay still broken. No TFT.",
+    },
+    {
+      name: "fly-lite-v2.1-armbian-led-tft.img.gz",
+      sha256:
+        "375cc629f3acb8716f4b8263c5fcd6ee10aa86266e6e9c186304ff2222b9bafb",
+      what: "Same base plus LED fix and TFT software bind. Current card.",
+    },
+  ],
+} as const;
+
 export const faqs = [
   {
     q: "U-Boot says Failed to load …/allwinner/sun8i-h3-orangepi-lite.dtb",
@@ -422,8 +443,12 @@ export const faqs = [
     a: "Orange Pi Lite’s DTB uses PF6 as SD card-detect, active-low. On the Fly Lite 2.1 PF6 is high, so U-Boot skips mmc0. gpio clear PF6 then mmc dev 0. Autoboot needs the same change in U-Boot’s DTB; a Linux overlay is not enough.",
   },
   {
+    q: "Where are the Lite 2.1 Armbian dumps?",
+    a: "On the bench Windows PC at C:\\Users\\udrdr\\fly-lite-armbian-image — not in this git repo. Current card is fly-lite-v2.1-armbian-led-tft.img.gz. SHA256s are in docs/images.md. Also copied to the FlyOS USB at /mnt/imgbackup/.",
+  },
+  {
     q: "When do we write a custom image?",
-    a: "After Debian boots on the Lite 2.1 and USB, Wi-Fi, serial, and HDMI are characterized. Baking an .img before that freezes the wrong DTB. The first-boot Wi-Fi file is already the contract that image will keep.",
+    a: "After Debian boots on the Lite 2.1 and USB, Wi-Fi, serial, and HDMI are characterized. Baking an .img before that freezes the wrong DTB. The first-boot Wi-Fi file is already the contract that image will keep. Meanwhile keep the full-card dumps on the bench PC.",
   },
   {
     q: "Can I flash this to eMMC?",

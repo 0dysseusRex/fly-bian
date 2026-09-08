@@ -12,7 +12,9 @@ The Lite is an Allwinner H3 host (512 MB, **MicroSD only**, onboard 2.4 GHz Wi-F
 
 **Armbian Debian 13 Trixie Minimal CLI for Orange Pi Lite** on a **second** MicroSD. Keep FlyOS on the original card.
 
-**Live status:** Root shell works. Image was never expanded (~1.3 GiB full on a 29 GiB card). Grow `mmcblk0p1` + `resize2fs` before more files. Then systemd without `init=/bin/bash`: [`docs/lite21-bringup.md`](docs/lite21-bringup.md).
+**Live status (led-tft image):** Debian boots with Fly DTB `sun8i-h3-fly-lite.dtb`, heartbeat LED, `wlan0` (8189fs on CPU0), TFT DRM bound (panel not here yet). User `fly`. Image dumps: `C:\Users\udrdr\fly-lite-armbian-image` — [`docs/images.md`](docs/images.md). Board notes: [`docs/fly-lite-armbian-notes.md`](docs/fly-lite-armbian-notes.md).
+
+8189fs is not SMP-safe: boot `maxcpus=1`, then online isolated CPUs 1–3. Do not boot all four cores from t=0. Next: Simple-AF as `fly`, not KIAUH Klipper.
 
 1. Flash: https://dl.armbian.com/orangepilite/Trixie_current_minimal
 2. This Trixie image is **one ext4 partition** (no FAT `armbi_boot`), so skip `fly-net.txt` until Linux is up. Use Type-C serial.
@@ -29,7 +31,9 @@ Klipper host pins: [`docs/klipper-pins-and-macros.md`](docs/klipper-pins-and-mac
 | --- | --- |
 | This web guide | Project, board family, first-boot, Lite 2.1 bring-up |
 | `docs/project.md` | Roadmap and image contract |
-| `docs/lite21-bringup.md` | Live U-Boot paste (PF6 CD + flat DTB path) |
+| `docs/fly-lite-armbian-notes.md` | Live board: DTB, Wi-Fi CPU pin, LEDs, TFT bind |
+| `docs/images.md` | Full-card `.img.gz` dumps (bench path + SHA256) |
+| `docs/lite21-bringup.md` | Early U-Boot paste (stock OPi Lite image) |
 | `first-boot/fly-net.txt` | Edit SSID/password; copy to the FAT boot partition |
 | `scripts/prepare-sd.sh` | Writes Armbian `armbian_first_run.txt` from that file |
 | `docs/klipper-pins-and-macros.md` | Host pins, sys-config keys, PLR / client macros |

@@ -32,6 +32,7 @@ import {
   downloads,
   extractFlow,
   features,
+  imageDumps,
   phases,
   project,
   setupPaths,
@@ -337,8 +338,43 @@ WIFI_COUNTRY=US
           <SectionHeading
             kicker="06"
             title="Which Debian image to flash"
-            text="Use a public H3 image first. A custom Armbian board config is a later refinement, not the first boot."
+            text="Use a public H3 image first. A custom Armbian board config is a later refinement, not the first boot. Working Lite dumps stay on the bench PC — they are not in git."
           />
+          <Card className="border-emerald-500/35 bg-emerald-950/25">
+            <CardHeader>
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="text-lg">Bench dumps</CardTitle>
+                <Badge variant="outline">Not in git</Badge>
+              </div>
+              <CardDescription>
+                Full-card images (≥32 GB MicroSD). Flash the whole file after
+                gunzip. Also on the FlyOS USB at{" "}
+                <code className="font-mono text-xs">{imageDumps.also}</code>.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 text-sm leading-6 text-muted-foreground">
+              <p className="flex items-start gap-2">
+                <HardDrive className="mt-0.5 size-4 shrink-0 text-primary" />
+                <code className="font-mono text-xs break-all text-foreground">
+                  {imageDumps.path}
+                </code>
+              </p>
+              <ul className="space-y-3">
+                {imageDumps.files.map((file) => (
+                  <li key={file.name} className="space-y-1">
+                    <p className="font-mono text-xs text-foreground">
+                      {file.name}
+                    </p>
+                    <p>{file.what}</p>
+                    <p className="font-mono text-[11px] break-all text-muted-foreground">
+                      SHA256 {file.sha256}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+              <p>{imageDumps.note}</p>
+            </CardContent>
+          </Card>
           <ImageTabs />
         </section>
 

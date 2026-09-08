@@ -49,6 +49,7 @@ first-boot/fly-net.local.txt
 
 # FlyOS image blobs and live dumps (may contain Wi-Fi / printer secrets)
 *.img
+*.img.gz
 *.img.xz
 *.img.zip
 flyos-artifacts/live/pull-*
