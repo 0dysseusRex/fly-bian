@@ -1,0 +1,22 @@
+
+
+4) After first login — this is a KIAUH image
+--------------------------------------------
+KIAUH and the usual component git trees / venvs are already on the card
+under /opt/fly-kiauh and are copied into your home on the first boot that
+has a real user.
+
+Do not install Simple-AF (pellcorp) on this card.
+
+SSH in as the user you created, then:
+
+  ~/kiauh/kiauh.sh
+
+Use KIAUH to write printer.cfg and enable services. Clones and most pip
+work should already be done. Skip Moonraker "speedups" / uvloop compile
+on this 512 MB board.
+
+If you install KlipperScreen:
+
+  sudo systemctl disable --now greetd
+  sudo systemctl set-default multi-user.target

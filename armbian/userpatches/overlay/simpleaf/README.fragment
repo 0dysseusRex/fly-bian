@@ -1,0 +1,28 @@
+
+
+4) After first login — this is a Simple-AF image
+------------------------------------------------
+Git trees and Python venvs are already on the card under /opt/fly-simple-af
+and are copied into your home on the first boot that has a real user.
+
+Do not install KIAUH on this card.
+
+SSH in as the user you created, then finish printer/probe only:
+
+  ~/pellcorp/installer.sh --install --printer <printer> --probe <probe> [--mount <mount>]
+
+Example: --printer creality-k1m-2023 --probe bltouch --mount Default
+
+Software clones and pip (Moonraker, Klipper, Fluidd, Mainsail, Crowsnest)
+should be skipped. If a step still runs apt, it should be short. Do not
+compile uvloop / moonraker-speedups on this 512 MB board.
+
+A USB camera uses Crowsnest. After the installer, edit
+~/printer_data/config/crowsnest.conf (device path) and:
+
+  sudo systemctl enable --now crowsnest
+
+If you later install KlipperScreen / GrumpyScreen:
+
+  sudo systemctl disable --now greetd
+  sudo systemctl set-default multi-user.target

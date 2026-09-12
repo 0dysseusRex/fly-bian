@@ -1,0 +1,13 @@
+[Unit]
+Description=Bind pre-baked Fly Klipper stack into the first user home
+After=fly-apply-fly-net.service fly-swapfile.service local-fs.target
+Wants=fly-swapfile.service
+ConditionPathExists=!/var/lib/fly-stack-bound
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/fly-bind-klipper-stack
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

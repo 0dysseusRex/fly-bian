@@ -55,13 +55,13 @@ Clone from the working **cpu-affinity** card, not from stock Orange Pi Lite auto
 | --- | --- |
 | DTB | `sun8i-h3-fly-lite.dtb` as `fdtfile` |
 | SD card-detect | PF6 is **not** CD on this PCB. Patch **U-Boot and Linux** (`broken-cd` / `mmc-broken-cd`). Autoboot must see `mmc0` without `gpio clear PF6`. |
-| Overlays | `uart1 usbhost0 usbhost2 usbhost3` plus user `mmc-broken-cd fly-lite-io fly-lite-tft` (or compiled into the DTB). Do **not** load `fly-lite-leds` (duplicates Fly LED nodes → `-EBUSY`). |
+| Overlays | `uart1 usbhost0 usbhost2 usbhost3` plus user `mmc-broken-cd fly-lite-io fly-lite-tft fly-lite-hdmi` (or compiled into the DTB). `fly-lite-hdmi` sets `&hdmi` okay — Fly’s DTB ships HDMI disabled, so Linux otherwise drops the HDMI5 after U-Boot. `disp_mode=800x480p60`. Do **not** load `fly-lite-leds` (duplicates Fly LED nodes → `-EBUSY`). |
 | Wi-Fi | RTL8189FTV / `8189fs` on SDIO. Boot **`maxcpus=1`**, then online isolated CPUs 1–3 **after** 8189fs (`isolcpus=1-3 irqaffinity=0`). Same pattern as `fly-online-isolated-cpus.service`. Do not boot four cores from t=0. |
 | CPU affinity | Install `klipper/cpu-affinity/` so a later Klipper stack is `CPUAffinity=1-3`. Do not wrap installers. Do not install Klipper. |
 | Kernel cmdline extras | `nohz=off clocksource=timer cma=16M` plus the isolcpus set. `console=serial` (or serial+display if HDMI wizard needs it — wizard must work on Type-C UART at 115200). |
 | Packages | Freeze kernel, DTB, and U-Boot (`armbian-hold` / apt-mark) so a casual `apt upgrade` does not lose PF6 + Fly DTB. |
 | Swap | 2 GiB `/swapfile` on first boot **after** rootfs grow (`fly-swapfile.service`). Do not `fallocate` it at image-build time (that bloats the `.img` by 2 GiB). Stock zram (~226 Mi) is not enough for Moonraker `uvloop` / clang on 512 MB. |
-| Displays | TFT software bind is OK (`panel-mipi-dbi`, `/lib/firmware/ST7796S.bin`). HDMI should work for the wizard. |
+| Displays | TFT software bind is OK (`panel-mipi-dbi`, `/lib/firmware/ST7796S.bin`). HDMI5 / FPC-HDMI: `fly-lite-hdmi` + `disp_mode=800x480p60` so the wizard has a DRM connector, not only U-Boot simplefb. |
 
 Type-C is a real UART (CH340 on Windows). Do not treat it as USB gadget-only. Do not pulse DTR/RTS in tests.
 
@@ -70,13 +70,19 @@ Type-C is a real UART (CH340 on Windows). Do not treat it as USB gadget-only. Do
 Use https://github.com/armbian/build on a Linux host (Docker is fine).
 
 ```text
-BOARD=fly-lite-21
+BOARD=fly-lite-21                 # hardware only (installer-agnostic)
+BOARD=fly-lite-21-simpleaf        # same hardware + Simple-AF (pellcorp) pre-bake
+BOARD=fly-lite-21-kiauh           # same hardware + KIAUH pre-bake
 BRANCH=current
 RELEASE=trixie
 BUILD_MINIMAL=yes
 BUILD_DESKTOP=no
 KERNEL_CONFIGURE=no
 ```
+
+From WSL: `scripts/run-armbian-compile.sh base|simpleaf|kiauh`.
+
+Simple-AF / KIAUH images install the apt toolchain, clone the usual git trees into `/opt/fly-simple-af` or `/opt/fly-kiauh`, and create `moonraker-env` / `klippy-env` **without** `moonraker-speedups` / uvloop source builds. After the first-run user exists, `fly-bind-klipper-stack` copies that tree into `$HOME`. Do **not** bake a `fly` account or a printer.cfg. Do **not** mix Simple-AF and KIAUH on one card.
 
 Start from `orangepilite` (`orangepi_lite_defconfig`, family `sun8i`), then apply Fly DTB + CD patch + overlays. Userpatches live in [`armbian/userpatches/`](../armbian/userpatches/).
 
@@ -94,4 +100,4 @@ Do not point documentation at Armbian’s `Trixie_current_minimal` **short URL**
 8. `systemctl cat klipper.service.d/50-fly-cpu-affinity.conf` exists even though Klipper is not installed.
 9. After first boot + resize: `swapon --show` lists `/swapfile` at 2 GiB.
 
-Copy the artifact to `C:\Users\udrdr\fly-lite-armbian-image`, `sha256sum` the `.img.xz`, and record it in [`images.md`](images.md). Do not commit the image or passwords.
+Copy the artifact into `C:\Users\udrdr\fly-lite-armbian-image\Releases\<version>\<board>\` (Lite images under `Fly Lite 2.1`, V3 under `Fly Pi V3`; Simple-AF and KIAUH of the same version share the Lite folder), `sha256sum` the `.img.xz`, add a line to `Releases/RELEASES.txt`, and record it in [`images.md`](images.md). Do not commit the image or passwords.

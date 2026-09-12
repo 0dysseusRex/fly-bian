@@ -1,0 +1,14 @@
+[Unit]
+Description=Apply FLY-SETUP fly-net.txt (Wi-Fi and optional first-run accounts)
+After=armbian-firstrun.service armbian-resize-filesystem.service systemd-networkd.service load-8189fs.service
+Wants=systemd-networkd.service load-8189fs.service
+Before=getty.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/fly-apply-fly-net.sh
+RemainAfterExit=yes
+TimeoutStartSec=180
+
+[Install]
+WantedBy=multi-user.target

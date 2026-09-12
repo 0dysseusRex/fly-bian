@@ -38,6 +38,7 @@ section "network"
 ip -br link
 echo
 command -v nmcli >/dev/null && nmcli -t -f DEVICE,TYPE,STATE,CONNECTION dev status || true
+command -v networkctl >/dev/null && networkctl status wlan0 --no-pager 2>/dev/null | head -n 20 || true
 iwconfig 2>/dev/null || true
 
 section "display"

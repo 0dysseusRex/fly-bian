@@ -1,0 +1,23 @@
+#!/bin/sh
+# Load onboard RTL8189FTV, then park the driver's second virtual iface.
+ko=$(find /lib/modules/"$(uname -r)" -name 8189fs.ko 2>/dev/null | head -n1)
+[ -n "$ko" ] || exit 1
+if [ -d /sys/module/8189fs ]; then
+	:
+else
+	insmod "$ko" || exit 1
+fi
+# wlan1 appears shortly after the module binds; retry a few times.
+i=0
+while [ "$i" -lt 15 ]; do
+	if [ -d /sys/class/net/wlan1 ]; then
+		/usr/local/sbin/fly-disable-wlan1.sh 2>/dev/null || {
+			ip addr flush dev wlan1 2>/dev/null || true
+			ip link set wlan1 down 2>/dev/null || true
+		}
+		break
+	fi
+	i=$((i + 1))
+	sleep 1
+done
+exit 0

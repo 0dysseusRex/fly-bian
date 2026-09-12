@@ -1,0 +1,15 @@
+[Unit]
+Description=crowsnest - Webcam Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__USER__
+WorkingDirectory=__HOME__/crowsnest
+ExecStart=__HOME__/crowsnest/crowsnest -c __HOME__/printer_data/config/crowsnest.conf
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

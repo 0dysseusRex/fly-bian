@@ -1,0 +1,18 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "allwinner,sun8i-h3";
+
+	/*
+	 * Fly Lite DTB ships &hdmi disabled. U-Boot still drives the FPC-HDMI
+	 * panel (simplefb 800x480), then Linux sun4i-drm finds no connector and
+	 * the HDMI5 goes black. Enable HDMI; connector + DE are already wired.
+	 */
+	fragment@0 {
+		target = <&hdmi>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+};

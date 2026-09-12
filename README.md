@@ -10,7 +10,9 @@ This repository is the contract and the patches. Flashable `.img` files are **no
 
 | Image | Who it is for |
 | --- | --- |
-| **Named Fly Lite 2.1 Armbian image** (the goal) | New users. Flash like any Armbian card. FAT setup volume + Debian that grows on first boot. First-run wizard still runs. |
+| **Named Fly Lite 2.1 Armbian image** (`fly-lite-21`) | Hardware + wizard only. Install Simple-AF or KIAUH yourself later. |
+| **Simple-AF image** (`fly-lite-21-simpleaf`) | Same hardware, pellcorp/Klipper stack pre-baked under `/opt`. After login: `~/pellcorp/installer.sh --install --printer …`. Do not add KIAUH. |
+| **KIAUH image** (`fly-lite-21-kiauh`) | Same hardware, KIAUH + stock Klipper/Moonraker/UIs pre-baked. After login: `~/kiauh/kiauh.sh`. Do not add Simple-AF. |
 | Current lab dump `fly-lite-v2.1-armbian-cpu-affinity.img.gz` | Already-working card (full-size `dd`). Use only until the named image exists. |
 | Stock Orange Pi Lite Trixie from [armbian.com/orange-pi-lite](https://www.armbian.com/orange-pi-lite/) | Recovery / comparison. Single ext4, no Fly DTB, U-Boot card-detect is wrong on this PCB. |
 
@@ -28,19 +30,23 @@ After flashing, **eject, unplug, and replug** the card so the small FAT volume a
 
 On that volume you will find:
 
-- `fly-net.txt` — edit this for headless Wi-Fi
+- `fly-net.txt` — Wi-Fi, locale/timezone, root, and the sudo user (headless first-run)
 - `README.txt` — the same three setup paths, written for a first-time user
 
-Then put the card in the Lite, fit the IPEX antenna, and apply 5 V. First boot **expands the Debian partition** to fill the card and runs Armbian’s first-run wizard (locale, root password, a normal user). That can take several minutes. Do not skip the wizard: this image is meant for a new user, not a pre-made `fly` account.
+Then put the card in the Lite, fit the IPEX antenna, and apply 5 V. First boot **expands the Debian partition** to fill the card and creates a 2 GB `/swapfile`. That can take several minutes.
 
-### 1. Wi-Fi file (headless)
+### 1. Text file (headless SSH)
 
-1. Open `fly-net.txt` on `FLY-SETUP`.
+Armbian’s wizard only runs on serial or HDMI, so Wi-Fi in the file by itself cannot give you SSH. Fill **Wi-Fi + root + user** (and ideally locale/timezone) **before** the first power-on. `Your…` placeholders are ignored.
+
+1. Open `fly-net.txt` on `FLY-SETUP` (Notepad is fine).
 2. Set `WIFI_SSID`, `WIFI_PSK`, `WIFI_COUNTRY`. Leave `USE_STATIC=0` unless you need a static IPv4.
-3. Eject the volume. Card back in the Lite. Power on.
-4. When the wizard has finished, SSH as the user you created.
+3. Set `LOCALE` / `TIMEZONE` (examples in the file).
+4. Set `ROOT_PASSWORD`, `USER_NAME` (lowercase login), `USER_PASSWORD`.
+5. Eject the volume. Card back in the Lite. Power on.
+6. Wait for resize + radio (often several minutes), then `ssh USER_NAME@THE.PRINTER.IP`.
 
-2.4 GHz only on the onboard radio. The password sits in plaintext on the FAT volume.
+Leave root or user as `Your…` and the on-screen wizard still runs. 2.4 GHz only. Passwords in the file are plaintext. There is no pre-made `fly` account unless you type that name yourself.
 
 ### 2. Serial
 
@@ -59,7 +65,7 @@ sudo apt update
 # Do not apt-upgrade kernel, DTB, or U-Boot until those are in a named rebuild.
 ```
 
-Klipper is optional. Install Simple-AF or KIAUH later as your normal user. CPU affinity for those units is already on the image (`klipper/cpu-affinity/`).
+On the **base** image, Klipper is optional — install Simple-AF or KIAUH later as your normal user. On the **Simple-AF** or **KIAUH** named images the git trees and venvs are already on the card; first boot copies them into your home. CPU affinity for those units is already on every flavor (`klipper/cpu-affinity/`).
 
 On this 512 MB board, several Simple-AF **and** KIAUH steps look hung but are still working: `git clone` (Moonraker especially — `Receiving objects` / `index-pack` over 8189fs), then `apt-get` of build deps. Progress is on the SSH/wizard session, not COM4. Wait if git or apt is still moving. Do not reboot. Details: [`docs/fly-lite-armbian-notes.md`](docs/fly-lite-armbian-notes.md#simple-af-and-kiauh-looks-hung-still-working).
 
@@ -87,4 +93,4 @@ On this 512 MB board, several Simple-AF **and** KIAUH steps look hung but are st
 
 ## Building an image
 
-A named image is produced with the [Armbian build framework](https://github.com/armbian/build), not by `dd` of a 32 GB card. Follow [`docs/build-named-image.md`](docs/build-named-image.md). That build needs a Linux host with Docker or a native Armbian build tree, and the Lite on the bench to verify autoboot, Wi-Fi, serial, and resize.
+A named image is produced with the [Armbian build framework](https://github.com/armbian/build), not by `dd` of a 32 GB card. Follow [`docs/build-named-image.md`](docs/build-named-image.md). From WSL: `scripts/run-armbian-compile.sh base|simpleaf|kiauh`. That build needs a Linux host with Docker or a native Armbian build tree, and the Lite on the bench to verify autoboot, Wi-Fi, serial, and resize.

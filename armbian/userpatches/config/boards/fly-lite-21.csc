@@ -15,4 +15,4 @@ BOOTFS_TYPE="fat"
 BOOTSIZE="256"
 
 DEFAULT_OVERLAYS="uart1 usbhost0 usbhost2 usbhost3"
-ENABLE_EXTENSIONS=""
+ENABLE_EXTENSIONS="wsl-docker-dns fly-windows-bootfs"
