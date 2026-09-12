@@ -1,6 +1,6 @@
 # Fly Lite v2.1 Armbian — notes so far
 
-**Date:** 2026-09-07 through 2026-09-08  
+**Date:** 2026-09-07 through 2026-09-11  
 **Board:** Mellow FLY Pi Lite v2.1 (Allwinner H3, 512 MB), treated as Orange Pi Lite  
 **Goal:** Debian-class Armbian host that matches FlyOS hardware as far as practical, then Simple-AF (pellcorp) for Klipper — **not** FlyOS, and **not** a KIAUH-installed Klipper tree.
 
@@ -137,10 +137,32 @@ sudo ./scripts/install-klipper-cpu-affinity.sh
 
 ---
 
+## Simple-AF and KIAUH (looks hung, still working)
+
+Both Simple-AF (`~/pellcorp/installer.sh` as `fly` over SSH, not root) and KIAUH do the same kind of work on this 512 MB + 8189fs board: big `git clone`s, `index-pack`, then `apt-get` / venv / pip. Those steps print little or nothing and look dead. KIAUH is not faster; it hits the same Moonraker/Klipper clones and dep installs.
+
+The **cpu-affinity** dump still has stock ~226 Mi zram swap only. The named-image recipe now creates a **2 GiB `/swapfile`** on first boot after resize (`fly-swapfile.service`). Without that, Moonraker speedups (`pip` building `uvloop` with clang) get **SIGKILL 9** (OOM). Skip `moonraker-speedups.txt` / `uvloop` on a card that still has only zram.
+
+Seen on Simple-AF, expected on KIAUH:
+
+- `git clone` of Moonraker (`https://github.com/Arksine/moonraker.git` → `~/moonraker`). Observed ~4–5 minutes with `git-remote-https` then `index-pack --stdin` while the tree sat at a few MB, then jumped to a normal 11M checkout. CR-only `Receiving objects` lines are progress, not a hang.
+- The same pattern will hit other clones (Klipper, screens, extras).
+- Right after Moonraker clone: `install-moonraker.sh -s` (Simple-AF) or KIAUH’s Moonraker/Klipper install path runs `apt-get` for `python3-virtualenv`, `python3-dev`, and related build libs. That is also quiet for a while.
+
+COM4 is a separate `root` getty. The installer lives on SSH (`pts/0`) or the TTY you launched it on. Serial silence during clone is normal.
+
+Do **not** call a slow clone a hang. Do **not** reboot (reboot hangs — 5 V cycle if you must). Do **not** pulse DTR/RTS. Do **not** `apt upgrade` kernel / DTB / U-Boot.
+
+Treat it as stuck only if: no serial *and* no git/apt progress for 3+ minutes; kernel panic / udev oops; silent SDIO/Wi-Fi death (`wlan0` gone, ping stops); unexpected reboot / hung reboot / U-Boot; disk full; OOM killer; `fatal: early EOF` / `index-pack failed`; or a prompt the user cannot see.
+
+From another shell (serial root is fine; do not type into the Simple-AF wizard or the KIAUH menu): `dmesg -T | tail`, `free -h`, `df -h`, `ip -br addr`, `journalctl -b -p err --no-pager | tail`, `ps` for `git` / `index-pack` / `apt-get`, and that 8189fs / `sunxi-mmc` IRQs stay on CPU0 (`maxcpus=1 isolcpus=1-3 irqaffinity=0`).
+
+---
+
 ## Not done yet
 
 - **Named small Armbian image** (`docs/build-named-image.md`): FAT `FLY-SETUP`, grow-on-first-boot, first-run wizard. Lab `cpu-affinity` dump is a 32 GB `dd`, not that product.
-- Simple-AF install (`~/pellcorp/installer.sh` as the wizard user, not on the KIAUH tree)
+- Simple-AF install in progress (`~/pellcorp/installer.sh` as `fly`; Moonraker clone is slow but completes — see above)
 - Printer cfg / probe on this host
 - Visual TFT test when the panel arrives
 - Klipper/Moonraker/Mainsail (intentionally skipped — image stays installer-agnostic)

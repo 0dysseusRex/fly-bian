@@ -60,6 +60,7 @@ Clone from the working **cpu-affinity** card, not from stock Orange Pi Lite auto
 | CPU affinity | Install `klipper/cpu-affinity/` so a later Klipper stack is `CPUAffinity=1-3`. Do not wrap installers. Do not install Klipper. |
 | Kernel cmdline extras | `nohz=off clocksource=timer cma=16M` plus the isolcpus set. `console=serial` (or serial+display if HDMI wizard needs it — wizard must work on Type-C UART at 115200). |
 | Packages | Freeze kernel, DTB, and U-Boot (`armbian-hold` / apt-mark) so a casual `apt upgrade` does not lose PF6 + Fly DTB. |
+| Swap | 2 GiB `/swapfile` on first boot **after** rootfs grow (`fly-swapfile.service`). Do not `fallocate` it at image-build time (that bloats the `.img` by 2 GiB). Stock zram (~226 Mi) is not enough for Moonraker `uvloop` / clang on 512 MB. |
 | Displays | TFT software bind is OK (`panel-mipi-dbi`, `/lib/firmware/ST7796S.bin`). HDMI should work for the wizard. |
 
 Type-C is a real UART (CH340 on Windows). Do not treat it as USB gadget-only. Do not pulse DTR/RTS in tests.
@@ -91,5 +92,6 @@ Do not point documentation at Armbian’s `Trixie_current_minimal` **short URL**
 6. `wlan0` stays up with load on CPUs 1–3 (`isolcpus` layout).
 7. Heartbeat LED. USB-A. Serial at 115200.
 8. `systemctl cat klipper.service.d/50-fly-cpu-affinity.conf` exists even though Klipper is not installed.
+9. After first boot + resize: `swapon --show` lists `/swapfile` at 2 GiB.
 
 Copy the artifact to `C:\Users\udrdr\fly-lite-armbian-image`, `sha256sum` the `.img.xz`, and record it in [`images.md`](images.md). Do not commit the image or passwords.

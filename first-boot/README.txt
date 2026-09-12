@@ -6,7 +6,8 @@ Linux after you flash the card and before you power the board.
 
 You need: the MicroSD in a USB reader, the IPEX Wi-Fi antenna fitted, and a
 5 V supply that is NOT the printer MCU. First boot can take several minutes
-while Debian expands to fill the card. Let it finish.
+while Debian expands to fill the card and creates a 2 GB swap file.
+Let it finish.
 
 There are three ways to get a login. Pick one.
 
@@ -60,8 +61,9 @@ needed.
 
 If it looks stuck
 -----------------
-Wait for the partition to grow. Then finish the first-run wizard — this
-image is supposed to ask you for a user. A reboot that never comes back
-usually needs a 5 V power cycle, not another software reboot.
+Wait for the partition to grow and for the 2 GB swap file to appear
+(/swapfile). Then finish the first-run wizard — this image is supposed
+to ask you for a user. A reboot that never comes back usually needs a
+5 V power cycle, not another software reboot.
 
 More detail is in the Fly Debian git repository (README.md, first-boot/).

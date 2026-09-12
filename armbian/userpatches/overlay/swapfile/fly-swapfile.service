@@ -1,0 +1,14 @@
+[Unit]
+Description=Fly Lite 2 GiB /swapfile (after first-boot resize)
+Documentation=file:///usr/share/fly-debian/first-boot/README.txt
+After=local-fs.target armbian-resize-filesystem.service
+RequiresMountsFor=/
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/fly-swapfile.sh
+
+[Install]
+WantedBy=multi-user.target

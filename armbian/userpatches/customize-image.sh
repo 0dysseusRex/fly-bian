@@ -3,7 +3,7 @@
 # Do not delete /root/.not_logged_in_yet — new users must get the wizard.
 set -euo pipefail
 
-echo "Fly Lite 2.1 customize-image: affinity, first-boot files, hold kernel"
+echo "Fly Lite 2.1 customize-image: affinity, first-boot files, 2G swapfile, hold kernel"
 
 OVERLAY="${OVERLAY:-/tmp/overlay}"
 
@@ -30,6 +30,20 @@ if [[ -f $OVERLAY/first-boot/fly-net.txt ]]; then
 fi
 if [[ -f $OVERLAY/first-boot/README.txt ]]; then
   install -m 0644 "$OVERLAY/first-boot/README.txt" /usr/share/fly-debian/first-boot/README.txt
+fi
+
+# 2 GiB /swapfile is created on first boot after armbian-resize-filesystem.
+# Do not fallocate it here — that would bloat the named image by 2 GiB.
+if [[ -f $OVERLAY/swapfile/fly-swapfile.sh && -f $OVERLAY/swapfile/fly-swapfile.service ]]; then
+  install -m 0755 "$OVERLAY/swapfile/fly-swapfile.sh" /usr/local/sbin/fly-swapfile.sh
+  install -m 0644 "$OVERLAY/swapfile/fly-swapfile.service" /etc/systemd/system/fly-swapfile.service
+  if command -v systemctl >/dev/null; then
+    systemctl enable fly-swapfile.service
+  else
+    install -d /etc/systemd/system/multi-user.target.wants
+    ln -sf /etc/systemd/system/fly-swapfile.service \
+      /etc/systemd/system/multi-user.target.wants/fly-swapfile.service
+  fi
 fi
 
 if [[ -f /boot/armbianEnv.txt ]]; then

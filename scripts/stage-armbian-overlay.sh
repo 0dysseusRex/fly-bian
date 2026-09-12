@@ -8,4 +8,5 @@ dest=${1:-$root/armbian/userpatches/overlay}
 mkdir -p "$dest/cpu-affinity" "$dest/first-boot"
 cp -a "$root/klipper/cpu-affinity/." "$dest/cpu-affinity/"
 cp -a "$root/first-boot/fly-net.txt" "$root/first-boot/README.txt" "$dest/first-boot/"
+# swapfile/ lives in userpatches already; do not overwrite it from repo root.
 echo "staged overlay -> $dest"

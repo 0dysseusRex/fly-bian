@@ -61,6 +61,8 @@ sudo apt update
 
 Klipper is optional. Install Simple-AF or KIAUH later as your normal user. CPU affinity for those units is already on the image (`klipper/cpu-affinity/`).
 
+On this 512 MB board, several Simple-AF **and** KIAUH steps look hung but are still working: `git clone` (Moonraker especially — `Receiving objects` / `index-pack` over 8189fs), then `apt-get` of build deps. Progress is on the SSH/wizard session, not COM4. Wait if git or apt is still moving. Do not reboot. Details: [`docs/fly-lite-armbian-notes.md`](docs/fly-lite-armbian-notes.md#simple-af-and-kiauh-looks-hung-still-working).
+
 ## Other Fly boards
 
 | Board | Status | Notes |
