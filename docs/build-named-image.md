@@ -100,4 +100,4 @@ Do not point documentation at Armbian’s `Trixie_current_minimal` **short URL**
 8. `systemctl cat klipper.service.d/50-fly-cpu-affinity.conf` exists even though Klipper is not installed.
 9. After first boot + resize: `swapon --show` lists `/swapfile` at 2 GiB.
 
-Copy the artifact into `C:\Users\udrdr\fly-lite-armbian-image\Releases\<version>\<board>\` (Lite images under `Fly Lite 2.1`, V3 under `Fly Pi V3`; Simple-AF and KIAUH of the same version share the Lite folder), `sha256sum` the `.img.xz`, add a line to `Releases/RELEASES.txt`, and record it in [`images.md`](images.md). Do not commit the image or passwords.
+Copy the artifact into `C:\Users\udrdr\fly-lite-armbian-image\Releases\<version>\Fly Lite 2.1\<base|simpleaf|kiauh>\` (V3 under `Fly Pi V3`), `sha256sum` the `.img.xz`, add a line to `Releases/RELEASES.txt`, and record it in [`images.md`](images.md). Do not commit the image or passwords.

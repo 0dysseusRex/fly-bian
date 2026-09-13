@@ -1,6 +1,8 @@
+# Absolute path required: _greetd's PATH may not include /usr/bin
+# (bare "agreety" → "agreety not found" crash-loop on HDMI).
 [terminal]
 vt = 1
 
 [default_session]
-command = "agreety --cmd /bin/bash"
+command = "/usr/bin/agreety --cmd /bin/bash"
 user = "_greetd"

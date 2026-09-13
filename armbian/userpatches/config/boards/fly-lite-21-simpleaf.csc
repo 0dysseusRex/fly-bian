@@ -7,6 +7,7 @@ BOOTCONFIG="orangepi_lite_defconfig"
 KERNEL_TARGET="current,edge"
 KERNEL_TEST_TARGET="current"
 FULL_DESKTOP="no"
+# Simple-AF HDMI boot splash (Armbian desktop logo → boot.bmp). Keep enabled.
 BOOT_LOGO="desktop"
 
 BOOTFS_TYPE="fat"

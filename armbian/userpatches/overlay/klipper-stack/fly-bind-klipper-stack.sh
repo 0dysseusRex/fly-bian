@@ -62,6 +62,39 @@ install_unit() {
 	sed -e "s|__USER__|$user|g" -e "s|__HOME__|$home|g" "$src" >"$dest"
 }
 
+# Apply pellcorp nginx sites (Mainsail :4409, Fluidd :80/:4408). Marked
+# "nginx" in pellcorp.done so the installer skips this; bind does it once.
+apply_simpleaf_nginx() {
+	local ng=/usr/share/fly-debian/simpleaf/nginx
+	[[ -d $ng ]] || return 0
+	chmod o+rx "$home" 2>/dev/null || true
+	install -d /etc/nginx/conf.d /etc/nginx/sites-enabled
+	[[ -f $ng/upstreams.conf ]] && cp "$ng/upstreams.conf" /etc/nginx/conf.d/
+	[[ -f $ng/common_vars.conf ]] && cp "$ng/common_vars.conf" /etc/nginx/conf.d/
+	if [[ -f $ng/fluidd ]]; then
+		cp "$ng/fluidd" /etc/nginx/sites-enabled/fluidd
+		sed -i "s|\$HOME|$home|g" /etc/nginx/sites-enabled/fluidd
+	fi
+	if [[ -f $ng/mainsail ]]; then
+		cp "$ng/mainsail" /etc/nginx/sites-enabled/mainsail
+		sed -i "s|\$HOME|$home|g" /etc/nginx/sites-enabled/mainsail
+	fi
+	rm -f /etc/nginx/sites-enabled/default
+	if command -v nginx >/dev/null && nginx -t 2>/dev/null; then
+		systemctl restart nginx 2>/dev/null || systemctl reload nginx 2>/dev/null || true
+	fi
+	log "applied Simple-AF nginx sites for $user"
+}
+
+# Moonraker machine/reboot APIs need PolKit rules for the real user.
+apply_moonraker_polkit() {
+	groupadd -f moonraker-admin 2>/dev/null || true
+	if [[ -x $home/moonraker/scripts/set-policykit-rules.sh ]]; then
+		USER=$user HOME=$home "$home/moonraker/scripts/set-policykit-rules.sh" \
+			|| log "set-policykit-rules failed (non-fatal)"
+	fi
+}
+
 case "$flavor" in
 	simpleaf)
 		bind_tree "$OPT_SAF"
@@ -81,6 +114,22 @@ case "$flavor" in
 			/etc/systemd/system/moonraker.service
 		install_unit /usr/share/fly-debian/simpleaf/crowsnest.service \
 			/etc/systemd/system/crowsnest.service
+		# GrumpyScreen is preferred on Fly Lite (512 MB): no X/Mesa, ARMv7 binary.
+		# KlipperScreen apt/X installs OOMs this board — do not enable it here.
+		if [[ -f /usr/share/fly-debian/simpleaf/grumpyscreen.service ]]; then
+			mkdir -p "$home/grumpyscreen"
+			if [[ -d /usr/share/fly-debian/simpleaf/grumpyscreen ]]; then
+				rsync -a /usr/share/fly-debian/simpleaf/grumpyscreen/ \
+					"$home/grumpyscreen/"
+			fi
+			install_unit /usr/share/fly-debian/simpleaf/grumpyscreen.service \
+				/etc/systemd/system/grumpyscreen.service
+			# Grumpy owns HDMI VT1; getty stays for the first-run wizard only.
+			systemctl disable getty@tty1.service 2>/dev/null || true
+			systemctl enable grumpyscreen.service 2>/dev/null || true
+		fi
+		apply_simpleaf_nginx
+		apply_moonraker_polkit
 		systemctl daemon-reload
 		systemctl enable klipper.service moonraker.service nginx.service 2>/dev/null || true
 		# Do not start klipper until the user runs the printer/probe installer.

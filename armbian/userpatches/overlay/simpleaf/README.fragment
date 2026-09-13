@@ -13,16 +13,33 @@ SSH in as the user you created, then finish printer/probe only:
 
 Example: --printer creality-k1m-2023 --probe bltouch --mount Default
 
-Software clones and pip (Moonraker, Klipper, Fluidd, Mainsail, Crowsnest)
-should be skipped. If a step still runs apt, it should be short. Do not
-compile uvloop / moonraker-speedups on this 512 MB board.
+Software clones and pip (Moonraker, Fluidd, Mainsail, nginx) should be
+skipped. The Klipper *config* step still runs so homing.cfg and macros
+are written for your printer — the baked git tree and venv are kept.
+Crowsnest is not marked done: the first install runs `make install`
+(ustreamer packages). Point cam device at the USB node (often
+/dev/video1; /dev/video0 may be the SoC cedrus encoder). Do not compile
+uvloop / moonraker-speedups on this 512 MB board.
 
 A USB camera uses Crowsnest. After the installer, edit
 ~/printer_data/config/crowsnest.conf (device path) and:
 
   sudo systemctl enable --now crowsnest
 
-If you later install KlipperScreen / GrumpyScreen:
+Web UIs (bound on first user):
 
-  sudo systemctl disable --now greetd
-  sudo systemctl set-default multi-user.target
+  Fluidd   http://<board-ip>/
+  Mainsail http://<board-ip>:4409
+  Camera   http://<board-ip>/webcam/?action=stream
+
+Touch UI: GrumpyScreen is preferred and enabled on first user bind
+(ARMv7 binary under ~/grumpyscreen). It owns HDMI VT1 after the wizard.
+Do not install KlipperScreen on this 512 MB board — X/Mesa apt installs
+OOM and have corrupted /boot (uInitrd) in lab runs.
+
+Official grumpyscreen-rpi is ARMv8 and SIGILLs on the H3 — do not replace
+the baked binary with that asset. Touch is auto-picked from
+/dev/input/by-id/*Fly-LCD* via fly-grumpy-evdev.sh.
+
+Armbian BOOT_LOGO=desktop is kept for the Simple-AF HDMI boot splash
+before multi-user / GrumpyScreen.

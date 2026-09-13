@@ -2,20 +2,26 @@
 
 **Named images** (Armbian `.img.xz`, not a 32 GB `dd`). See [`build-named-image.md`](build-named-image.md).
 
-Bench tree is one folder per Armbian/kernel version. Simple-AF and KIAUH for the same version live together:
+Bench tree is one folder per Armbian/kernel version. Flavors are separate
+subfolders under `Fly Lite 2.1`:
 
 ```
 C:\Users\udrdr\fly-lite-armbian-image\Releases\
   RELEASES.txt
-  <version>\Fly Lite 2.1\         Lite images + UPDATE-NOTES.txt
+  <version>\Fly Lite 2.1\
+    UPDATE-NOTES.txt
+    base\          installer-agnostic
+    simpleaf\      Simple-AF pre-bake
+    kiauh\         KIAUH pre-bake
   <version>\Fly Pi V3\            empty until a V3 image exists
 ```
 
 | File | SHA256 | What it is |
 | --- | --- | --- |
-| `Releases/26.11.0-trunk_trixie_6.18.51/Fly Lite 2.1/Armbian-unofficial_26.11.0-trunk_Fly-lite-21-simpleaf_trixie_current_6.18.51_minimal.img.xz` | `407b89ff858754a9bd79d4d551f19bf9493e5b829ff231ca782bc472740ef083` | **Simple-AF named image.** Trixie minimal, kernel 6.18.51, Fly-bian splash, pellcorp stack under `/opt/fly-simple-af`, Debian numpy/matplotlib/scipy. FAT `FLY-SETUP`. Built 2026-09-12 (~21 min Armbian runtime). |
-| `Releases/26.11.0-trunk_trixie_6.18.51/Fly Lite 2.1/Armbian-unofficial_26.11.0-trunk_Fly-lite-21-kiauh_trixie_current_6.18.51_minimal.img.xz` | `c634fa467453cafea0437f7cc0acb529748066d119d52046548c71982543a0c0` | **KIAUH named image.** Same hardware/splash; KIAUH + stock Klipper/Moonraker/web UIs under `/opt/fly-kiauh`. FAT `FLY-SETUP`. Built 2026-09-12 (~15 min Armbian runtime). |
-| `Releases/26.11.0-trunk_trixie_6.18.50/Fly Lite 2.1/Armbian-unofficial_26.11.0-trunk_Fly-lite-21_trixie_current_6.18.50_minimal.img.xz` | `f2f0fdab516d19b7a9d829e69c9067a16eda1d0d164d62c763a839fb0e7c5b4b` | Earlier **base** named image (no Simple-AF/KIAUH bake). Kernel 6.18.50. |
+| `Releases/26.11.0-trunk_trixie_6.18.51/Fly Lite 2.1/simpleaf/Armbian-unofficial_26.11.0-trunk_Fly-lite-21-simpleaf_trixie_current_6.18.51_minimal.img.xz` | `bf2e571c74b735dc31a401c8941728ba52856a4fddf9d8a6b7af98e8c23cbe19` | **Simple-AF named image (rebuild 2026-09-13).** Trixie minimal, kernel 6.18.51. GrumpyScreen preferred/enabled on first-user bind; `BOOT_LOGO=desktop` splash; getty+fly-ip-announce (no greetd); host-MCU skip patch; nginx/polkitd/wlan1/swap. FAT `FLY-SETUP`. |
+| `Releases/26.11.0-trunk_trixie_6.18.51/Fly Lite 2.1/kiauh/Armbian-unofficial_26.11.0-trunk_Fly-lite-21-kiauh_trixie_current_6.18.51_minimal.img.xz` | `924228f69da11ae22b31c298744832fc0f0f156a84fe645d875ca1574e67981a` | **KIAUH named image (rebuild 2026-09-13).** Same hardware/splash; KIAUH stack under `/opt/fly-kiauh`. Shared boot fixes (polkitd, wlan1, getty, swap, SSH keys). |
+| `Releases/26.11.0-trunk_trixie_6.18.51/Fly Lite 2.1/base/Armbian-unofficial_26.11.0-trunk_Fly-lite-21_trixie_current_6.18.51_minimal.img.xz` | `b7c549e88bbbe2a11c7934699e0299aeeaef30cdd27baf68ba5a1e3f552a0272` | **Base named image (rebuild 2026-09-13).** No Simple-AF/KIAUH bake. Kernel 6.18.51. Same hardware/boot fixes. |
+| `Releases/26.11.0-trunk_trixie_6.18.50/Fly Lite 2.1/base/Armbian-unofficial_26.11.0-trunk_Fly-lite-21_trixie_current_6.18.50_minimal.img.xz` | `f2f0fdab516d19b7a9d829e69c9067a16eda1d0d164d62c763a839fb0e7c5b4b` | Earlier **base** named image. Kernel 6.18.50. |
 
 Full-card dumps below are the earlier lab snapshots.
 

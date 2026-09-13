@@ -23,6 +23,15 @@ fly_web_release https://github.com/mainsail-crew/mainsail/releases/latest/downlo
 fly_git_clone https://github.com/mainsail-crew/moonraker-timelapse.git "$STACK/moonraker-timelapse"
 fly_git_clone https://github.com/Frix-x/klippain-shaketune.git "$STACK/klippain_shaketune"
 
+# Do not mark "klipper" in pellcorp.done — install-klipper.sh must still stage
+# homing.cfg / macros for the chosen printer. Keep trees when that runs.
+install -d /etc/fly-debian
+: >/etc/fly-debian/prebaked-simpleaf
+if [[ -f $OVERLAY/simpleaf/patch-install-klipper.sh ]]; then
+	bash "$OVERLAY/simpleaf/patch-install-klipper.sh" \
+		"$STACK/pellcorp/rpi/install-klipper.sh"
+fi
+
 echo "fly-bake: moonraker-env (no speedups / uvloop compile)"
 fly_venv "$STACK/moonraker-env"
 fly_pip_reqs "$STACK/moonraker-env" \
@@ -36,8 +45,9 @@ fly_pip_reqs "$STACK/klippy-env" \
 	"$STACK/klippain_shaketune/requirements.txt"
 
 if [[ -d $STACK/pellcorp/rpi/nginx ]]; then
-	install -d /etc/nginx/sites-available /etc/nginx/sites-enabled
-	cp -a "$STACK/pellcorp/rpi/nginx/." /usr/share/fly-debian/simpleaf/nginx/ 2>/dev/null || true
+	install -d /etc/nginx/sites-available /etc/nginx/sites-enabled \
+		/usr/share/fly-debian/simpleaf/nginx
+	cp -a "$STACK/pellcorp/rpi/nginx/." /usr/share/fly-debian/simpleaf/nginx/
 fi
 if [[ -f $STACK/pellcorp/rpi/moonraker.conf ]]; then
 	install -d /usr/share/fly-debian/simpleaf/config
@@ -45,13 +55,42 @@ if [[ -f $STACK/pellcorp/rpi/moonraker.conf ]]; then
 		[[ -f $STACK/pellcorp/rpi/$f ]] && \
 			install -m 0644 "$STACK/pellcorp/rpi/$f" "/usr/share/fly-debian/simpleaf/config/$f"
 	done
+	# moonraker.conf includes these; without them the service crash-loops.
+	for f in notifier.conf spoolman.conf; do
+		[[ -f $STACK/pellcorp/config/$f ]] && \
+			install -m 0644 "$STACK/pellcorp/config/$f" "/usr/share/fly-debian/simpleaf/config/$f"
+	done
 fi
 
-for f in klipper.service moonraker.service crowsnest.service pellcorp.done.software README.fragment; do
+# ARMv7 GrumpyScreen — preferred touch UI on Fly Lite (512 MB). KlipperScreen
+# (X/Mesa) OOMs this board. First-user bind enables the unit and frees tty1.
+if [[ -f $OVERLAY/simpleaf/grumpyscreen/grumpyscreen ]]; then
+	install -d "$STACK/grumpyscreen" /usr/share/fly-debian/simpleaf/grumpyscreen
+	install -m 0755 "$OVERLAY/simpleaf/grumpyscreen/grumpyscreen" \
+		"$STACK/grumpyscreen/grumpyscreen"
+	install -m 0755 "$OVERLAY/simpleaf/grumpyscreen/grumpyscreen" \
+		/usr/share/fly-debian/simpleaf/grumpyscreen/grumpyscreen
+	for f in grumpyscreen.cfg release.info; do
+		[[ -f $OVERLAY/simpleaf/grumpyscreen/$f ]] || continue
+		install -m 0644 "$OVERLAY/simpleaf/grumpyscreen/$f" "$STACK/grumpyscreen/$f"
+		install -m 0644 "$OVERLAY/simpleaf/grumpyscreen/$f" \
+			"/usr/share/fly-debian/simpleaf/grumpyscreen/$f"
+	done
+fi
+if [[ -f $OVERLAY/simpleaf/fly-grumpy-evdev.sh ]]; then
+	install -m 0755 "$OVERLAY/simpleaf/fly-grumpy-evdev.sh" \
+		/usr/local/sbin/fly-grumpy-evdev.sh
+fi
+
+for f in klipper.service moonraker.service crowsnest.service grumpyscreen.service \
+	pellcorp.done.software README.fragment patch-install-klipper.sh; do
 	if [[ -f $OVERLAY/simpleaf/$f ]]; then
 		install -m 0644 "$OVERLAY/simpleaf/$f" "/usr/share/fly-debian/simpleaf/$f"
 	fi
 done
+# patch script must stay executable if copied for reference
+[[ -f /usr/share/fly-debian/simpleaf/patch-install-klipper.sh ]] && \
+	chmod 0755 /usr/share/fly-debian/simpleaf/patch-install-klipper.sh
 
 if [[ -f /boot/README.txt && -f $OVERLAY/simpleaf/README.fragment ]]; then
 	cat "$OVERLAY/simpleaf/README.fragment" >>/boot/README.txt

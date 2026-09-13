@@ -1,0 +1,66 @@
+#!/bin/sh
+# systemd generator: pin Klipper-family units to CPUs 1-3 on Fly Lite 2.1.
+# Installed as /etc/systemd/system-generators/fly-klipper-cpu-affinity.
+#
+# Do not wrap KIAUH or Simple-AF. Those installers write klipper.service
+# (or klipper-<name>.service). This drop-in merges on daemon-reload.
+set -eu
+
+fly_klipper_cpu_affinity_pin_unit() {
+  _name=${1##*/}
+  case $_name in
+    *.service) ;;
+    *) return 1 ;;
+  esac
+  _name=${_name%.service}
+  _base=${_name%%@*}
+  _base=$(printf '%s' "$_base" | tr '[:upper:]' '[:lower:]')
+  case $_base in
+    klipper|klipper-*|moonraker|moonraker-*|klipperscreen|klipperscreen-*|grumpyscreen|grumpyscreen-*|crowsnest|crowsnest-*|webcamd|webcamd-*)
+      return 0
+      ;;
+  esac
+  return 1
+}
+
+fly_klipper_cpu_affinity_write() {
+  _dir=$1
+  _unit=$2
+  mkdir -p "$_dir/${_unit}.d"
+  cat >"$_dir/${_unit}.d/50-fly-cpu-affinity.conf" <<'EOF'
+# Fly Lite 2.1: keep the Klipper stack off CPU0.
+# 8189fs is not SMP-safe. isolcpus=1-3 already parks unpinned work on CPU0.
+# CPUAffinity uses sched_setaffinity, so it still works with
+# cgroup_disable=cpu,cpuacct in armbianEnv.txt.
+[Service]
+CPUAffinity=1-3
+EOF
+}
+
+# Sourced by the test script (do not `return` — that would exit the caller).
+if [ "${FLY_KLIPPER_CPU_AFFINITY_LIB:-}" = 1 ]; then
+  :
+else
+  normal_dir=${1:-/run/systemd/generator}
+
+  IFS=':'
+  # shellcheck disable=SC2086
+  set -- ${FLY_AFFINITY_UNIT_PATHS:-/etc/systemd/system:/usr/lib/systemd/system:/lib/systemd/system}
+  unset IFS
+
+  # Always seed the common names so the first installer enable picks them up.
+  for seed in klipper.service klipper-mcu.service moonraker.service klipperscreen.service KlipperScreen.service grumpyscreen.service crowsnest.service webcamd.service; do
+    fly_klipper_cpu_affinity_write "$normal_dir" "$seed"
+  done
+
+  for unit_dir in "$@"; do
+    [ -d "$unit_dir" ] || continue
+    for unit_path in "$unit_dir"/*.service; do
+      [ -e "$unit_path" ] || continue
+      unit=${unit_path##*/}
+      if fly_klipper_cpu_affinity_pin_unit "$unit"; then
+        fly_klipper_cpu_affinity_write "$normal_dir" "$unit"
+      fi
+    done
+  done
+fi

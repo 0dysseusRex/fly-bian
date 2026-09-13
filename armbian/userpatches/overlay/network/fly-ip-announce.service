@@ -1,0 +1,19 @@
+[Unit]
+Description=Fly announce wlan0 IPv4 on consoles and login banner
+Documentation=file:///usr/share/fly-debian/first-boot/README.txt
+After=network-online.target fly-apply-fly-net.service systemd-networkd-wait-online.service
+Wants=network-online.target
+# Do not hard-fail boot if Wi-Fi is slow or absent.
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/fly-ip-announce.sh
+# Retry a few times if DHCP is late after the script's internal wait.
+Restart=on-failure
+RestartSec=15
+StartLimitIntervalSec=180
+StartLimitBurst=6
+
+[Install]
+WantedBy=multi-user.target

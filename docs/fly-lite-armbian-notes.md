@@ -137,6 +137,19 @@ sudo ./scripts/install-klipper-cpu-affinity.sh
 
 ---
 
+## Touch UI: prefer GrumpyScreen (not KlipperScreen)
+
+On this 512 MB H3 board, **GrumpyScreen** is the supported touch UI:
+
+- Baked ARMv7 binary (official `grumpyscreen-rpi` is ARMv8 and SIGILLs here).
+- Speaks fbdev/DRM + evdev — no Xorg/Mesa apt storm.
+- Simple-AF named images enable `grumpyscreen` on first user bind and free `getty@tty1`.
+- Armbian `BOOT_LOGO=desktop` stays on for the Simple-AF HDMI boot splash.
+
+**Do not install KlipperScreen** on Fly Lite. Lab installs OOM mid-apt and have zeroed `/boot/uInitrd`, leaving the card stuck in U-Boot until `uInitrd` is rebuilt from `initrd.img-*`.
+
+---
+
 ## Simple-AF and KIAUH (looks hung, still working)
 
 Both Simple-AF (`~/pellcorp/installer.sh` as `fly` over SSH, not root) and KIAUH do the same kind of work on this 512 MB + 8189fs board: big `git clone`s, `index-pack`, then `apt-get` / venv / pip. Those steps print little or nothing and look dead. KIAUH is not faster; it hits the same Moonraker/Klipper clones and dep installs.

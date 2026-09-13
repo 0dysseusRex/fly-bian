@@ -102,6 +102,10 @@ fi
 if [[ -f $GOLDEN/sbin/load-8189fs ]]; then
   install -m 0755 "$GOLDEN/sbin/load-8189fs" /usr/local/sbin/load-8189fs
 fi
+if [[ -f $OVERLAY/network/fly-disable-wlan1.sh ]]; then
+  install -m 0755 "$OVERLAY/network/fly-disable-wlan1.sh" \
+    /usr/local/sbin/fly-disable-wlan1.sh
+fi
 if [[ -f $GOLDEN/sbin/fly-online-isolated-cpus.sh ]]; then
   install -m 0755 "$GOLDEN/sbin/fly-online-isolated-cpus.sh" \
     /usr/local/sbin/fly-online-isolated-cpus.sh
@@ -145,26 +149,47 @@ if [[ -f /boot/armbianEnv.txt ]]; then
   fi
 fi
 
-# greetd + agreety: HDMI login without X / LightDM. graphical.target
-# otherwise sits on a splash with no greeter (BOOT_LOGO=desktop).
+# Console login: multi-user + getty on tty1 until Simple-AF bind.
+# greetd fought touch UIs, crashed on large MOTD, and left HDMI stuck
+# on graphical.target. Prefer GrumpyScreen (fbdev, ARMv7) over
+# KlipperScreen (X/Mesa) on this 512 MB board — KS installs OOM.
+# After first user bind, Simple-AF enables grumpyscreen and frees tty1.
+# fly-ip-announce prints wlan0 IPv4 on consoles after network-online.
 if command -v apt-get >/dev/null; then
   export DEBIAN_FRONTEND=noninteractive
   apt-get update
-  if ! apt-get install -y --no-install-recommends greetd; then
-    echo "customize-image: greetd not available; leave getty on tty1"
-  fi
+  apt-get install -y --no-install-recommends locales openssh-server || true
+  # Moonraker machine endpoints need the DBus PolKit interface.
+  apt-get install -y --no-install-recommends polkitd || true
 fi
-if [[ -f $OVERLAY/greetd/config.toml ]]; then
-  install -d /etc/greetd
-  install -m 0644 "$OVERLAY/greetd/config.toml" /etc/greetd/config.toml
+# Host keys must exist before first boot or ssh.service crash-loops.
+if command -v ssh-keygen >/dev/null; then
+  ssh-keygen -A
 fi
-if [[ -f $OVERLAY/greetd/tty1.conf ]]; then
-  install -d /etc/systemd/system/greetd.service.d
-  install -m 0644 "$OVERLAY/greetd/tty1.conf" /etc/systemd/system/greetd.service.d/tty1.conf
-fi
+for motd_heavy in 30-armbian-sysinfo 35-armbian-tips 41-armbian-config \
+  30-armbian-updates 40-armbian-messages; do
+  [[ -f /etc/update-motd.d/$motd_heavy ]] && chmod a-x "/etc/update-motd.d/$motd_heavy" || true
+done
+rm -f /etc/systemd/system/display-manager.service 2>/dev/null || true
 if command -v systemctl >/dev/null; then
-  systemctl enable greetd.service
-  systemctl set-default graphical.target
+  systemctl disable greetd.service 2>/dev/null || true
+  systemctl set-default multi-user.target
+  systemctl enable getty@tty1.service 2>/dev/null || true
+fi
+echo "customize-image: console -> getty@tty1, multi-user.target (no greetd)"
+
+if [[ -f $OVERLAY/network/fly-ip-announce.sh && -f $OVERLAY/network/fly-ip-announce.service ]]; then
+  install -m 0755 "$OVERLAY/network/fly-ip-announce.sh" \
+    /usr/local/sbin/fly-ip-announce.sh
+  install -m 0644 "$OVERLAY/network/fly-ip-announce.service" \
+    /etc/systemd/system/fly-ip-announce.service
+  if command -v systemctl >/dev/null; then
+    systemctl enable fly-ip-announce.service
+  else
+    mkdir -p /etc/systemd/system/multi-user.target.wants
+    ln -sf /etc/systemd/system/fly-ip-announce.service \
+      /etc/systemd/system/multi-user.target.wants/fly-ip-announce.service
+  fi
 fi
 
 # Fly-bian SSH splash (replaces Armbian-unofficial figlet in 10-armbian-header)

@@ -283,13 +283,19 @@ apply_location() {
 	fi
 	if ! is_placeholder "$locale"; then
 		if [ -f /etc/locale.gen ]; then
-			sed -i "s/^# ${locale}/${locale}/" /etc/locale.gen || true
+			# Debian lines look like: "# en_US.UTF-8 UTF-8"
+			sed -i -E "s/^#\\s*(${locale}([[:space:]].*)?)$/\\1/" /etc/locale.gen || true
+			if ! grep -qE "^${locale}([[:space:]]|$)" /etc/locale.gen 2>/dev/null; then
+				printf '%s UTF-8\n' "$locale" >>/etc/locale.gen
+			fi
 		fi
 		if command -v locale-gen >/dev/null 2>&1; then
-			locale-gen "$locale" >/dev/null 2>&1 || true
+			locale-gen "$locale" >/dev/null 2>&1 || locale-gen >/dev/null 2>&1 || true
 		fi
 		if command -v update-locale >/dev/null 2>&1; then
-			update-locale "LANG=$locale" "LANGUAGE=$locale" "LC_ALL=$locale" >/dev/null 2>&1 || true
+			update-locale "LANG=$locale" "LANGUAGE=$locale" >/dev/null 2>&1 || true
+		else
+			printf 'LANG=%s\n' "$locale" >/etc/default/locale
 		fi
 		log "locale $locale"
 	fi

@@ -1,0 +1,5 @@
+arch=armv7hf
+abi=EABI5
+note=Static GrumpyScreen build for Allwinner H3 (armv7). Official grumpyscreen-rpi is ARMv8 and SIGILLs here.
+source=https://github.com/pellcorp/grumpyscreen
+build=CROSS_COMPILE=arm-linux-gnueabihf- GUPPY_CALIBRATE=true

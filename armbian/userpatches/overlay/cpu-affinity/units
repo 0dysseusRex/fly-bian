@@ -1,0 +1,11 @@
+# Seeded drop-in targets. The generator also pins any later unit whose
+# name matches the prefixes in fly-klipper-cpu-affinity (klipper-2,
+# moonraker-voron, klipper@.service, …).
+klipper.service
+klipper-mcu.service
+moonraker.service
+klipperscreen.service
+KlipperScreen.service
+grumpyscreen.service
+crowsnest.service
+webcamd.service

@@ -1,0 +1,27 @@
+[Unit]
+Description=GrumpyScreen
+After=moonraker.service multi-user.target
+# Own HDMI VT1; prefer GrumpyScreen over getty / KlipperScreen on this board.
+Conflicts=getty@tty1.service
+StartLimitIntervalSec=0
+ConditionPathExists=/dev/tty1
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=5
+User=__USER__
+StandardOutput=tty
+StandardError=tty
+TTYPath=/dev/tty1
+ExecStartPre=/bin/sh -c 'echo -ne "\\033[?25l"'
+ExecStartPre=/usr/local/sbin/fly-grumpy-evdev.sh
+WorkingDirectory=__HOME__/grumpyscreen
+EnvironmentFile=-/run/fly-grumpy-evdev.env
+Environment="CONFIG_FILE=__HOME__/grumpyscreen/grumpyscreen.cfg"
+Environment="CONFIG_OVERRIDE_FILE=__HOME__/printer_data/config/grumpyscreen.ini"
+Environment="WPA_SUPPLICANT_SOCKET=/var/run/wpa_supplicant"
+ExecStart=__HOME__/grumpyscreen/grumpyscreen
+
+[Install]
+WantedBy=multi-user.target
