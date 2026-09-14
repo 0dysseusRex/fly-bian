@@ -12,13 +12,10 @@ WantedBy=multi-user.target
 [Service]
 Type=simple
 User=__USER__
-RemainAfterExit=yes
 WorkingDirectory=__HOME__/crowsnest
-# Real unit is written by `make install` under crowsnest; this is a
-# fallback that matches the Python entrypoint. Prefer running
-# install-crowsnest.sh (not marking crowsnest done in pellcorp.done)
-# so ustreamer / camera-streamer packages are installed too.
-Environment=CROWSNEST_ARGS=-c __HOME__/printer_data/config/crowsnest.conf
-ExecStart=/usr/bin/python3 -m crowsnest $CROWSNEST_ARGS
+# Fallback until `make install` / install-crowsnest.sh writes the real unit
+# (venv + EnvironmentFile). Do not use Environment=CROWSNEST_ARGS=-c /path
+# — systemd splits on '=' and drops the path.
+ExecStart=/usr/bin/python3 -m crowsnest -c __HOME__/printer_data/config/crowsnest.conf -l __HOME__/printer_data/logs/crowsnest.log
 Restart=on-failure
 RestartSec=30

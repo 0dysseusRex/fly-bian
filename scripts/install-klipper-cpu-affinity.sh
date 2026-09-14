@@ -23,7 +23,7 @@ while read -r unit; do
   install -m 0644 "$src/50-fly-cpu-affinity.conf" "$ddir/50-fly-cpu-affinity.conf"
 done <"$src/units"
 
-user_dir=$dest/etc/systemd/user
+user_dir=$dest/etc/systemd/use
 while read -r unit; do
   [[ -z $unit || $unit == \#* ]] && continue
   ddir=$user_dir/${unit}.d

@@ -1,0 +1,42 @@
+#!/bin/bash
+# Fly-bian MOTD Commands entries (same style as Armbian 41-commands).
+# Runs after 41-commands; does not repeat the "Commands:" header.
+set -euo pipefail
+
+THIS_SCRIPT="fly-commands"
+MOTD_DISABLE=""
+[[ -f /etc/default/armbian-motd ]] && . /etc/default/armbian-motd
+for f in ${MOTD_DISABLE}; do
+	[[ $f == "$THIS_SCRIPT" ]] && exit 0
+done
+
+# Prefer the patched Armbian Commands list (41) when fly-help is already there.
+if grep -q 'fly-help' /etc/update-motd.d/41-commands 2>/dev/null; then
+	exit 0
+fi
+
+list=(
+	"Help|fly-help"
+	"Install|fly-start"
+)
+
+# Match Armbian 41-commands width for the stock labels when present.
+name_len=13
+output=()
+for l in "${list[@]}"; do
+	IFS='|' read -r name command <<<"$l"
+	if command -v "$command" >/dev/null 2>&1; then
+		(( ${#name} > name_len )) && name_len=${#name}
+		output+=("${name}|${command}")
+	fi
+done
+
+[[ ${#output[@]} -eq 0 ]] && exit 0
+
+# Append under Armbian's existing "Commands:" block (41-commands). No second header.
+for l in "${output[@]}"; do
+	IFS='|' read -r name command <<<"$l"
+	printf ' \e[1;33m%-'"$name_len"'s\e[0m: \e[0;92m%s\e[0m\n' "$name" "$command"
+done
+printf '\033[0m'
+exit 0

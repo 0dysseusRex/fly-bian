@@ -1,13 +1,16 @@
 # Copied to /tmp/overlay during Armbian customize-image.sh.
 # Stage files from this git repo before compile:
 
+#   ./scripts/stage-armbian-overlay.sh
+#   # or manually:
 #   mkdir -p armbian/userpatches/overlay/cpu-affinity
 #   mkdir -p armbian/userpatches/overlay/first-boot
 #   cp klipper/cpu-affinity/* armbian/userpatches/overlay/cpu-affinity/
-#   cp first-boot/fly-net.txt first-boot/README.txt armbian/userpatches/overlay/first-boot/
+#   cp first-boot/fly-start.txt first-boot/README.txt armbian/userpatches/overlay/first-boot/
 #
-# customize-image.sh copies fly-net.txt + README.txt onto /boot (the FAT
+# customize-image.sh copies fly-start.txt + README.txt onto /boot (the FAT
 # volume). fly-windows-bootfs labels that volume FLY-SETUP (not armbi_boot).
+# tools/fly-help and tools/fly-start install to /usr/local/bin.
 
 # swapfile/ is native to userpatches (not copied from repo root).
 # customize-image.sh installs fly-swapfile.service; the 2 GiB file is
@@ -28,10 +31,21 @@
 #     (preferred over KlipperScreen on 512 MB; frees getty@tty1)
 #
 # motd/ is the Fly-bian SSH splash (replaces Armbian-unofficial figlet).
-# customize-image.sh installs it and patches 10-armbian-header.
+# customize-image.sh installs it and patches 10-armbian-header, and adds
+# Help→fly-help / Install→fly-start under Armbian MOTD Commands (41 + 42).
+#
+# boot/fly-boot-complete prints "Boot Complete" after multi-user.target
+# (WantedBy=default.target) on ttyS0 / console / tty1 and /etc/issue.d.
 #
 # Console is multi-user + getty@tty1 (no greetd). network/fly-ip-announce
 # prints wlan0 IPv4 on serial/HDMI and /etc/issue.d after network-online.
+#
+# simpleaf bake also hardens pellcorp config-helper (armhf SIGSEGV on
+# remove-section-entry) and softens installer cleanup_probe || true.
+#
+# crowsnest/fly-crowsnest-add-cams → /usr/local/bin: SSH helper to discover
+# USB V4L2 cams and append [cam] sections to ~/printer_data/config/crowsnest.conf.
+# bake + strip-placeholders remove pellcorp [cam web] / /dev/video0 examples.
 #
 # hdmi/fly-lite-hdmi.dts enables &hdmi (Fly DTB ships it disabled).
 # from-golden/ also has the compiled .dtbo plus DTB, TFT firmware, and

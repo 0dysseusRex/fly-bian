@@ -14,8 +14,9 @@ User=__USER__
 StandardOutput=tty
 StandardError=tty
 TTYPath=/dev/tty1
-ExecStartPre=/bin/sh -c 'echo -ne "\\033[?25l"'
-ExecStartPre=/usr/local/sbin/fly-grumpy-evdev.sh
+# + = run as root so we can write /run and touch tty1 before dropping to User=
+ExecStartPre=+/bin/sh -c 'echo -ne "\\033[?25l" > /dev/tty1'
+ExecStartPre=+/usr/local/sbin/fly-grumpy-evdev.sh
 WorkingDirectory=__HOME__/grumpyscreen
 EnvironmentFile=-/run/fly-grumpy-evdev.env
 Environment="CONFIG_FILE=__HOME__/grumpyscreen/grumpyscreen.cfg"

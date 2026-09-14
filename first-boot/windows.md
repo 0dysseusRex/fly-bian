@@ -6,7 +6,7 @@ This repo cannot open **COM4**. That port is on the bench PC.
 
 Etcher / Raspberry Pi Imager **ejects** the card. Unplug and replug the reader.
 
-Disk Management (`diskmgmt.msc`): the small FAT partition labelled **`FLY-SETUP`**. If it has no letter, right-click → Change Drive Letter. Open `README.txt` and edit `fly-net.txt` there.
+Disk Management (`diskmgmt.msc`): the small FAT partition labelled **`FLY-SETUP`**. If it has no letter, right-click → Change Drive Letter. Open `README.txt` and edit `fly-start.txt` there.
 
 Eject, card in the Lite, independent 5 V, IPEX antenna. First boot grows Debian and runs the first-run wizard.
 

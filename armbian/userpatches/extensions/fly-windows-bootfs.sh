@@ -1,6 +1,6 @@
 # Windows will not auto-mount Armbian's default 0xea XBOOTLDR type.
 # Armbian formats p1 as FAT labelled armbi_boot. Product name is FLY-SETUP
-# with fly-net.txt + README.txt in the volume root (Windows/macOS/Linux).
+# with fly-start.txt + README.txt in the volume root (Windows/macOS/Linux).
 function post_build_image__fly_windows_fat() {
 	local img="${FINAL_IMAGE_FILE}"
 	display_alert "FLY-SETUP partition type" "set p1 to 0x0e (FAT16 LBA) so Windows can mount it" "info"
@@ -35,8 +35,10 @@ function post_build_image__fly_windows_fat() {
 		rmdir "${mnt}" || true
 		return 1
 	fi
-	if [[ -f ${src}/fly-net.txt ]]; then
-		install -m 0644 "${src}/fly-net.txt" "${mnt}/fly-net.txt"
+	if [[ -f ${src}/fly-start.txt ]]; then
+		install -m 0644 "${src}/fly-start.txt" "${mnt}/fly-start.txt"
+	elif [[ -f ${src}/fly-net.txt ]]; then
+		install -m 0644 "${src}/fly-net.txt" "${mnt}/fly-start.txt"
 	fi
 	if [[ -f ${src}/README.txt ]]; then
 		install -m 0644 "${src}/README.txt" "${mnt}/README.txt"
@@ -45,5 +47,5 @@ function post_build_image__fly_windows_fat() {
 	umount "${mnt}"
 	rmdir "${mnt}"
 	losetup -d "${loop}"
-	display_alert "FLY-SETUP volume" "labelled FLY-SETUP; fly-net.txt + README.txt on p1" "info"
+	display_alert "FLY-SETUP volume" "labelled FLY-SETUP; fly-start.txt + README.txt on p1" "info"
 }

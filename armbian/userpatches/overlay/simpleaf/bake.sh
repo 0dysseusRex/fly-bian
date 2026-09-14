@@ -10,7 +10,7 @@ fly_klipper_stack_apt
 
 STACK=/opt/fly-simple-af
 install -d "$STACK" /usr/share/fly-debian/simpleaf /etc/fly-debian
-printf 'simpleaf\n' >/etc/fly-debian/stack-flavor
+printf 'simpleaf\n' >/etc/fly-debian/stack-flavo
 
 fly_git_clone https://github.com/pellcorp/creality.git "$STACK/pellcorp"
 fly_git_clone https://github.com/Arksine/moonraker.git "$STACK/moonraker"
@@ -30,6 +30,14 @@ install -d /etc/fly-debian
 if [[ -f $OVERLAY/simpleaf/patch-install-klipper.sh ]]; then
 	bash "$OVERLAY/simpleaf/patch-install-klipper.sh" \
 		"$STACK/pellcorp/rpi/install-klipper.sh"
+fi
+if [[ -f $OVERLAY/simpleaf/patch-config-helper.sh && -f $STACK/pellcorp/tools/config-helper.py ]]; then
+	bash "$OVERLAY/simpleaf/patch-config-helper.sh" \
+		"$STACK/pellcorp/tools/config-helper.py"
+fi
+if [[ -f $OVERLAY/simpleaf/patch-installer-cleanup.sh && -f $STACK/pellcorp/rpi/installer.sh ]]; then
+	bash "$OVERLAY/simpleaf/patch-installer-cleanup.sh" \
+		"$STACK/pellcorp/rpi/installer.sh"
 fi
 
 echo "fly-bake: moonraker-env (no speedups / uvloop compile)"
@@ -55,6 +63,14 @@ if [[ -f $STACK/pellcorp/rpi/moonraker.conf ]]; then
 		[[ -f $STACK/pellcorp/rpi/$f ]] && \
 			install -m 0644 "$STACK/pellcorp/rpi/$f" "/usr/share/fly-debian/simpleaf/config/$f"
 	done
+	# Drop pellcorp [cam web] / /dev/video0 example — on H3 video0 is cedrus.
+	if [[ -x $OVERLAY/crowsnest/fly-crowsnest-strip-placeholders ]]; then
+		for f in \
+			"$STACK/pellcorp/rpi/crowsnest.conf" \
+			/usr/share/fly-debian/simpleaf/config/crowsnest.conf; do
+			[[ -f $f ]] && python3 "$OVERLAY/crowsnest/fly-crowsnest-strip-placeholders" "$f" || true
+		done
+	fi
 	# moonraker.conf includes these; without them the service crash-loops.
 	for f in notifier.conf spoolman.conf; do
 		[[ -f $STACK/pellcorp/config/$f ]] && \
@@ -83,14 +99,16 @@ if [[ -f $OVERLAY/simpleaf/fly-grumpy-evdev.sh ]]; then
 fi
 
 for f in klipper.service moonraker.service crowsnest.service grumpyscreen.service \
-	pellcorp.done.software README.fragment patch-install-klipper.sh; do
+	pellcorp.done.software README.fragment patch-install-klipper.sh \
+	patch-config-helper.sh patch-installer-cleanup.sh; do
 	if [[ -f $OVERLAY/simpleaf/$f ]]; then
 		install -m 0644 "$OVERLAY/simpleaf/$f" "/usr/share/fly-debian/simpleaf/$f"
 	fi
 done
-# patch script must stay executable if copied for reference
-[[ -f /usr/share/fly-debian/simpleaf/patch-install-klipper.sh ]] && \
-	chmod 0755 /usr/share/fly-debian/simpleaf/patch-install-klipper.sh
+# patch scripts must stay executable if copied for reference
+for f in patch-install-klipper.sh patch-config-helper.sh patch-installer-cleanup.sh; do
+	[[ -f /usr/share/fly-debian/simpleaf/$f ]] && chmod 0755 "/usr/share/fly-debian/simpleaf/$f"
+done
 
 if [[ -f /boot/README.txt && -f $OVERLAY/simpleaf/README.fragment ]]; then
 	cat "$OVERLAY/simpleaf/README.fragment" >>/boot/README.txt

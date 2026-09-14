@@ -1,0 +1,141 @@
+#!/bin/bash
+# Set GrumpyScreen display rotation over SSH (0/1/2/3 = 0°/90°/180°/270°).
+# Writes ~/printer_data/config/grumpyscreen.ini (override) and restarts the unit.
+set -euo pipefail
+
+INI="${GRUMPY_INI:-$HOME/printer_data/config/grumpyscreen.ini}"
+CFG="${GRUMPY_CFG:-$HOME/grumpyscreen/grumpyscreen.cfg}"
+DRY_RUN=0
+RESTART=1
+
+usage() {
+	cat <<'EOF'
+Usage: fly-grumpy-rotate [options] [0|1|2|3]
+
+Set GrumpyScreen UI rotation in 90° steps.
+  0 = none, 1 = 90°, 2 = 180°, 3 = 270°
+
+With no rotation argument, prints the current value and exits.
+
+Options:
+  -c, --ini PATH    Override file (default: ~/printer_data/config/grumpyscreen.ini)
+  -n, --dry-run     Show what would be written; do not write or restart
+  --no-restart      Write config but do not restart grumpyscreen.service
+  -h, --help        Show this help
+
+Examples:
+  fly-grumpy-rotate           # show current
+  fly-grumpy-rotate 0         # landscape / no rotation
+  fly-grumpy-rotate 3         # 270° (common for FPC panels)
+EOF
+}
+
+current_rotate() {
+	local f val=""
+	for f in "$INI" "$CFG"; do
+		[[ -f $f ]] || continue
+		val=$(awk -F: '
+			BEGIN{IGNORECASE=1; in_ui=0}
+			/^\[/ { in_ui = (tolower($0) ~ /^\[ui\]/) }
+			in_ui && /^[[:space:]]*display_rotate[[:space:]]*:/ {
+				gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2)
+				sub(/#.*/, "", $2)
+				gsub(/[[:space:]]+/, "", $2)
+				print $2
+				exit
+			}
+		' "$f")
+		[[ -n $val ]] && { printf '%s' "$val"; return 0; }
+	done
+	printf '%s' "?"
+}
+
+ROTATE=""
+while [[ $# -gt 0 ]]; do
+	case "$1" in
+		-c|--ini) INI=$2; shift 2 ;;
+		-n|--dry-run) DRY_RUN=1; shift ;;
+		--no-restart) RESTART=0; shift ;;
+		-h|--help) usage; exit 0 ;;
+		[0-3]) ROTATE=$1; shift ;;
+		*) echo "Unknown argument: $1" >&2; usage >&2; exit 2 ;;
+	esac
+done
+
+cur=$(current_rotate)
+if [[ -z $ROTATE ]]; then
+	echo "Current display_rotate: $cur"
+	echo "Override file: $INI"
+	echo "Base config:   $CFG"
+	exit 0
+fi
+
+echo "Current display_rotate: $cur"
+echo "Setting display_rotate: $ROTATE"
+echo "Writing: $INI"
+
+if [[ $DRY_RUN -eq 1 ]]; then
+	echo "Dry-run only; not writing or restarting."
+	exit 0
+fi
+
+mkdir -p "$(dirname "$INI")"
+python3 - "$INI" "$ROTATE" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+rotate = sys.argv[2]
+text = path.read_text(encoding="utf-8") if path.is_file() else ""
+
+if re.search(r"(?im)^\[ui\]", text):
+    if re.search(r"(?im)^[ \t]*display_rotate[ \t]*:", text):
+        # replace only inside [ui] section
+        parts = re.split(r"(?=^\[)", text, flags=re.M)
+        out = []
+        for part in parts:
+            if re.match(r"(?im)^\[ui\]", part.lstrip()):
+                if re.search(r"(?im)^[ \t]*display_rotate[ \t]*:", part):
+                    part = re.sub(
+                        r"(?im)^([ \t]*display_rotate[ \t]*:)[^\n]*$",
+                        rf"\g<1> {rotate}",
+                        part,
+                        count=1,
+                    )
+                else:
+                    lines = part.splitlines(True)
+                    # insert after [ui] header
+                    lines.insert(1, f"display_rotate: {rotate}\n")
+                    part = "".join(lines)
+            out.append(part)
+        text = "".join(out)
+    else:
+        text = re.sub(
+            r"(?im)^(\[ui\][^\n]*\n)",
+            rf"\1display_rotate: {rotate}\n",
+            text,
+            count=1,
+        )
+else:
+    if text and not text.endswith("\n"):
+        text += "\n"
+    text += f"\n[ui]\ndisplay_rotate: {rotate}\n"
+
+path.write_text(text, encoding="utf-8")
+print(f"wrote {path}")
+PY
+
+if [[ $RESTART -eq 1 ]]; then
+	if systemctl cat grumpyscreen.service >/dev/null 2>&1; then
+		echo "Restarting grumpyscreen..."
+		if sudo -n systemctl restart grumpyscreen 2>/dev/null; then
+			:
+		else
+			sudo systemctl restart grumpyscreen
+		fi
+		echo "Done. Touch will recalibrate if rotation changed ($cur -> $ROTATE)."
+	else
+		echo "grumpyscreen.service not found; config updated only."
+	fi
+fi

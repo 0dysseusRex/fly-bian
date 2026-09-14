@@ -1,0 +1,282 @@
+#!/bin/bash
+# Discover USB V4L2 cameras and add [cam ...] sections to crowsnest.conf.
+# Safe to re-run: already-configured devices are skipped.
+set -euo pipefail
+
+CONF="${CROWSNEST_CONF:-$HOME/printer_data/config/crowsnest.conf}"
+DRY_RUN=0
+RESTART=1
+PORT_BASE=8080
+
+usage() {
+	cat <<'EOF'
+Usage: fly-crowsnest-add-cams [options]
+
+Find connected USB cameras and append [cam ...] blocks to crowsnest.conf.
+Prefers stable /dev/v4l/by-id/*-video-index0 paths. Skips SoC encoders
+(cedrus/sunxi) and devices already listed in the config.
+
+Options:
+  -c, --conf PATH   Config file (default: ~/printer_data/config/crowsnest.conf)
+  -n, --dry-run     Print what would be added; do not write or restart
+  --no-restart      Write config but do not restart crowsnest.service
+  -h, --help        Show this help
+
+Examples:
+  fly-crowsnest-add-cams
+  fly-crowsnest-add-cams --dry-run
+  sudo systemctl status crowsnest
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+	case "$1" in
+		-c|--conf) CONF=$2; shift 2 ;;
+		-n|--dry-run) DRY_RUN=1; shift ;;
+		--no-restart) RESTART=0; shift ;;
+		-h|--help) usage; exit 0 ;;
+		*) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
+	esac
+done
+
+# Remove stock [cam web] / /dev/video0 placeholders before adding real cams.
+if command -v fly-crowsnest-strip-placeholders >/dev/null 2>&1; then
+	fly-crowsnest-strip-placeholders "$CONF" 2>/dev/null || true
+elif [[ -x /usr/local/bin/fly-crowsnest-strip-placeholders ]]; then
+	/usr/local/bin/fly-crowsnest-strip-placeholders "$CONF" 2>/dev/null || true
+fi
+
+sanitize_name() {
+	local s=$1
+	s=${s#usb-}
+	s=${s%-video-index0}
+	s=${s%-video-index[0-9]}
+	s=$(printf '%s' "$s" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/_/g; s/^_+//; s/_+$//; s/_+/_/g')
+	[[ -n $s ]] || s=cam
+	if [[ ${#s} -gt 40 ]]; then
+		s=${s:0:40}
+	fi
+	printf '%s' "$s"
+}
+
+is_soc_encoder() {
+	local path=$1
+	case "$path" in
+		*cedrus*|*sunxi*) return 0 ;;
+	esac
+	if [[ $path == */by-path/platform-* && $path != *usb* ]]; then
+		return 0
+	fi
+	return 1
+}
+
+has_capture() {
+	local dev=$1
+	if command -v v4l2-ctl >/dev/null 2>&1; then
+		if v4l2-ctl -d "$dev" --all 2>/dev/null | grep -qi 'Video Capture'; then
+			return 0
+		fi
+		if v4l2-ctl -d "$dev" --info 2>/dev/null | grep -qi 'Video Capture'; then
+			return 0
+		fi
+	fi
+	case "$dev" in
+		*-video-index0|*/video0) return 0 ;;
+	esac
+	return 1
+}
+
+device_configured() {
+	local needle=$1
+	[[ -f $CONF ]] || return 1
+	grep -F "device: $needle" "$CONF" >/dev/null 2>&1
+}
+
+name_taken() {
+	local needle=$1
+	[[ -f $CONF ]] || return 1
+	grep -E "^\[cam[[:space:]]+$needle\]" "$CONF" >/dev/null 2>&1
+}
+
+port_taken() {
+	local p=$1
+	[[ -f $CONF ]] || return 1
+	grep -E "^[[:space:]]*(port|rtsp_port)[[:space:]]*:[[:space:]]*$p[[:space:]]*$" "$CONF" >/dev/null 2>&1
+}
+
+unique_name() {
+	local base=$1 name=$1 n=2
+	while name_taken "$name"; do
+		name="${base}_${n}"
+		n=$((n + 1))
+	done
+	# Also avoid colliding with names we will write in this run
+	while [[ " ${USED_NAMES:-} " == *" $name "* ]]; do
+		name="${base}_${n}"
+		n=$((n + 1))
+	done
+	printf '%s' "$name"
+}
+
+next_http_port() {
+	local p=$PORT_BASE
+	while port_taken "$p" || [[ " ${USED_PORTS:-} " == *" $p "* ]]; do
+		p=$((p + 1))
+	done
+	printf '%s' "$p"
+}
+
+ensure_header() {
+	if [[ -f $CONF ]]; then
+		return 0
+	fi
+	mkdir -p "$(dirname "$CONF")"
+	cat >"$CONF" <<'EOF'
+# Crowsnest webcam config — managed in part by fly-crowsnest-add-cams
+[crowsnest]
+log_path: ~/printer_data/logs/crowsnest.log
+log_level: verbose
+delete_log: false
+no_proxy: false
+
+EOF
+}
+
+ensure_ustreamer() {
+	if command -v ustreamer >/dev/null 2>&1; then
+		return 0
+	fi
+	echo "ustreamer not found; installing from apt..."
+	if sudo -n apt-get install -y --no-install-recommends ustreamer 2>/dev/null; then
+		:
+	else
+		sudo apt-get install -y --no-install-recommends ustreame
+	fi
+	command -v ustreamer >/dev/null 2>&1 || {
+		echo "ERROR: ustreamer still missing after apt install" >&2
+		return 1
+	}
+}
+
+restart_crowsnest() {
+	if ! systemctl cat crowsnest.service >/dev/null 2>&1; then
+		echo "crowsnest.service not installed yet; config updated only."
+		echo "After Simple-AF/KIAUH installs crowsnest: sudo systemctl enable --now crowsnest"
+		return 0
+	fi
+	echo "Restarting crowsnest..."
+	# enable --now: restart alone leaves a never-started unit inactive.
+	if sudo -n systemctl enable --now crowsnest 2>/dev/null; then
+		:
+	else
+		sudo systemctl enable --now crowsnest
+	fi
+	if sudo -n systemctl restart crowsnest 2>/dev/null; then
+		:
+	else
+		sudo systemctl restart crowsnest
+	fi
+	sleep 1
+	if systemctl is-active --quiet crowsnest; then
+		ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+		echo "crowsnest active. Stream URL example: http://${ip:-<board-ip>}:8080/?action=stream"
+	else
+		echo "WARN: crowsnest did not stay active. Check: journalctl -u crowsnest -e" >&2
+		echo "      Common cause: missing ustreamer (fly-crowsnest-add-cams installs it)." >&2
+		return 1
+	fi
+}
+
+discover_devices() {
+	local d
+	shopt -s nullglob
+	for d in /dev/v4l/by-id/*-video-index0; do
+		is_soc_encoder "$d" && continue
+		has_capture "$d" || continue
+		printf '%s\n' "$d"
+	done
+	if ! compgen -G '/dev/v4l/by-id/*-video-index0' >/dev/null; then
+		for d in /dev/v4l/by-path/*usb*-video-index0; do
+			is_soc_encoder "$d" && continue
+			has_capture "$d" || continue
+			printf '%s\n' "$d"
+		done
+	fi
+}
+
+USED_NAMES=""
+USED_PORTS=""
+TMP_OUT=$(mktemp)
+trap 'rm -f "$TMP_OUT"' EXIT
+
+mapfile -t DEVS < <(discover_devices | sort -u)
+if [[ ${#DEVS[@]} -eq 0 || -z ${DEVS[0]:-} ]]; then
+	echo "No USB capture cameras found under /dev/v4l/by-id (or by-path)."
+	echo "Plug in a UVC webcam and re-run. SoC encoders (cedrus) are ignored."
+	exit 1
+fi
+
+echo "Config: $CONF"
+echo "Found ${#DEVS[@]} candidate device(s):"
+for dev in "${DEVS[@]}"; do
+	echo "  $dev"
+done
+echo
+
+ADDED=0
+: >"$TMP_OUT"
+
+for dev in "${DEVS[@]}"; do
+	if device_configured "$dev"; then
+		echo "Skip (already configured): $dev"
+		continue
+	fi
+	base=$(sanitize_name "$(basename "$dev")")
+	name=$(unique_name "$base")
+	http_port=$(next_http_port)
+	USED_NAMES="${USED_NAMES} ${name}"
+	USED_PORTS="${USED_PORTS} ${http_port}"
+
+	{
+		echo
+		echo "[cam ${name}]"
+		echo "mode: ustreamer"
+		echo "port: ${http_port}"
+		echo "device: ${dev}"
+		echo "resolution: 640x480"
+		echo "max_fps: 15"
+		echo "#custom_flags:"
+		echo "#v4l2ctl:"
+	} >>"$TMP_OUT"
+
+	echo "Add [cam ${name}]  port=${http_port}  device=${dev}"
+	ADDED=$((ADDED + 1))
+	PORT_BASE=$((http_port + 1))
+done
+
+if [[ $ADDED -eq 0 ]]; then
+	echo "Nothing to add."
+	# Still ensure streamer + service so existing cam sections work after install.
+	if [[ $DRY_RUN -eq 0 && $RESTART -eq 1 ]]; then
+		ensure_ustreamer || true
+		restart_crowsnest || true
+	fi
+	exit 0
+fi
+
+if [[ $DRY_RUN -eq 1 ]]; then
+	echo
+	echo "Dry-run only; would append:"
+	cat "$TMP_OUT"
+	exit 0
+fi
+
+ensure_ustreame
+ensure_heade
+cat "$TMP_OUT" >>"$CONF"
+echo
+echo "Wrote $ADDED camera section(s) to $CONF"
+
+if [[ $RESTART -eq 1 ]]; then
+	restart_crowsnest
+fi

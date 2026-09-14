@@ -1,0 +1,13 @@
+[Unit]
+Description=Announce Fly-bian boot complete after multi-user
+Documentation=file:///usr/share/fly-debian/first-boot/README.txt
+# Pulled by default.target so After=multi-user.target is not a cycle.
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/fly-boot-complete.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=default.target

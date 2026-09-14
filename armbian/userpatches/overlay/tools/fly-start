@@ -1,0 +1,168 @@
+#!/bin/bash
+# fly-start — interactive Simple-AF install/update using FLY-SETUP fly-start.txt
+set -euo pipefail
+
+LOGTAG=fly-start
+
+log() { printf '%s\n' "$*"; }
+
+die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
+
+if [[ ${EUID:-0} -eq 0 ]]; then
+	die "Run as your sudo user (e.g. fly), not root."
+fi
+
+find_start_file() {
+	local cand mp
+	for cand in \
+		"$HOME/fly-start.txt" \
+		/boot/fly-start.txt \
+		/usr/share/fly-debian/first-boot/fly-start.txt \
+		/boot/fly-net.txt \
+		/usr/share/fly-debian/first-boot/fly-net.txt
+	do
+		[[ -f $cand ]] && { printf '%s' "$cand"; return 0; }
+	done
+	for mp in /mnt/FLY-SETUP /media/FLY-SETUP; do
+		for cand in "$mp/fly-start.txt" "$mp/fly-net.txt"; do
+			[[ -f $cand ]] && { printf '%s' "$cand"; return 0; }
+		done
+	done
+	return 1
+}
+
+yesish() {
+	case "$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')" in
+		y|yes|true|1) return 0 ;;
+		*) return 1 ;;
+	esac
+}
+
+get_key() {
+	local file=$1 key=$2
+	local line val
+	line=$(grep -E "^${key}=" "$file" | tail -n 1 || true)
+	[[ -z $line ]] && { printf ''; return 0; }
+	val=${line#*=}
+	val=${val%\"}
+	val=${val#\"}
+	val=${val%\'}
+	val=${val#\'}
+	# trim spaces
+	val=$(printf '%s' "$val" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+	printf '%s' "$val"
+}
+
+expand_home() {
+	# Expand leading ~/ only
+	local s=$1
+	case "$s" in
+		~/*) printf '%s%s' "$HOME" "${s:1}" ;;
+		*) printf '%s' "$s" ;;
+	esac
+}
+
+SRC=$(find_start_file) || die "fly-start.txt not found (expected on FLY-SETUP / /boot)."
+WORK=$(mktemp)
+tr -d '\r' <"$SRC" >"$WORK"
+trap 'rm -f "$WORK"' EXIT
+
+INSTALL_CMD=$(get_key "$WORK" INSTALL_CMD)
+AUTO_CAMERAS=$(get_key "$WORK" AUTO_CAMERAS)
+BOOT_DISPLAY=$(get_key "$WORK" INSTALL_BOOT_DISPLAY)
+# tolerate older key name if we document both
+[[ -z $BOOT_DISPLAY ]] && BOOT_DISPLAY=$(get_key "$WORK" BOOT_DISPLAY)
+
+[[ -n $INSTALL_CMD ]] || INSTALL_CMD='~/pellcorp/installer.sh --install --printer YourPrinter --probe YourProbe'
+
+cat <<EOF
+Fly-bian — fly-start
+====================
+Config: $SRC
+
+From fly-start.txt:
+  INSTALL_CMD=$INSTALL_CMD
+  AUTO_CAMERAS=$AUTO_CAMERAS
+  INSTALL_BOOT_DISPLAY=$BOOT_DISPLAY
+
+Choose:
+  1) Run Full Install Script
+  2) Update Simple AF
+  3) Cancel
+EOF
+
+printf 'Enter choice [1-3]: '
+read -r choice || true
+case "$choice" in
+	1)
+		cmd=$(expand_home "$INSTALL_CMD")
+		log ""
+		log "=== Full install ==="
+		log "Running: $cmd"
+		log ""
+		# shellcheck disable=SC2086
+		bash -lc "$cmd" || die "installer failed (exit $?)"
+		log ""
+		log "Installer finished."
+
+		# Moonraker PolKit (reboot/restart from Mainsail). Bind often fails
+		# here because set-policykit-rules needs interactive sudo.
+		if command -v fly-moonraker-polkit >/dev/null; then
+			log ""
+			log "=== Moonraker PolKit rules ==="
+			fly-moonraker-polkit "$(id -un)" || log "WARN: fly-moonraker-polkit failed."
+		fi
+
+		if yesish "$AUTO_CAMERAS"; then
+			log ""
+			log "=== AUTO_CAMERAS=Yes — adding USB cameras ==="
+			if command -v fly-crowsnest-add-cams >/dev/null; then
+				# Ensures ustreamer + enable --now restart so streams show immediately.
+				fly-crowsnest-add-cams || log "WARN: fly-crowsnest-add-cams reported an error (cam may be missing)."
+			else
+				log "WARN: fly-crowsnest-add-cams not installed."
+			fi
+			# Always kick crowsnest after install even if cams were already in conf.
+			if systemctl cat crowsnest.service >/dev/null 2>&1; then
+				sudo systemctl enable --now crowsnest 2>/dev/null || true
+				sudo systemctl restart crowsnest 2>/dev/null || true
+			fi
+		else
+			log "Skipping cameras (AUTO_CAMERAS is not Yes)."
+		fi
+
+		if yesish "$BOOT_DISPLAY"; then
+			log ""
+			log "=== INSTALL_BOOT_DISPLAY=Yes — enabling GrumpyScreen ==="
+			if [[ -x $HOME/grumpyscreen/grumpyscreen ]] || [[ -f /etc/systemd/system/grumpyscreen.service ]]; then
+				sudo systemctl disable getty@tty1.service 2>/dev/null || true
+				sudo systemctl enable grumpyscreen.service 2>/dev/null || true
+				sudo systemctl restart grumpyscreen.service 2>/dev/null || \
+					sudo systemctl start grumpyscreen.service 2>/dev/null || \
+					log "WARN: could not start grumpyscreen (check HDMI /dev/tty1)."
+				log "GrumpyScreen enabled (Simple-AF boot/touch display)."
+			else
+				log "WARN: GrumpyScreen binary/unit not found; re-run after stack bind/install."
+			fi
+		else
+			log "Skipping boot display (INSTALL_BOOT_DISPLAY is not Yes)."
+		fi
+		log ""
+		log "Done. Fluidd: http://$(hostname -I 2>/dev/null | awk '{print $1}')/"
+		;;
+	2)
+		log ""
+		log "=== Update Simple AF ==="
+		update_cmd=$(expand_home '~/pellcorp/installer.sh --update')
+		log "Running: $update_cmd"
+		bash -lc "$update_cmd" || die "update failed (exit $?)"
+		log "Update finished."
+		;;
+	3|""|q|Q)
+		log "Cancelled."
+		exit 0
+		;;
+	*)
+		die "Invalid choice: $choice"
+		;;
+esac

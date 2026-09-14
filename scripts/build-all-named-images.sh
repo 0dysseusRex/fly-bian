@@ -6,7 +6,12 @@ build=/home/rex/fly-build/armbian-build
 master_log=/home/rex/fly-build/compile-all.log
 
 sed -i 's/\r$//' "$root/scripts/run-armbian-compile.sh" \
-	"$root/scripts/stage-armbian-overlay.sh" || true
+	"$root/scripts/stage-armbian-overlay.sh" \
+	"$root/scripts/flybian-require-new-version.sh" \
+	"$root/scripts/bump-flybian-version.sh" || true
+
+# New image set → must bump FLYBIAN_VERSION first (no staged images for this ver yet).
+bash "$root/scripts/flybian-require-new-version.sh"
 
 {
 	echo "=== $(date -Is) stage overlay ==="

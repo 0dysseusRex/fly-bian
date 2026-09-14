@@ -1,5 +1,5 @@
 [Unit]
-Description=Fly announce wlan0 IPv4 on consoles and login banner
+Description=Fly announce wlan0 IPv4 on consoles and login banne
 Documentation=file:///usr/share/fly-debian/first-boot/README.txt
 After=network-online.target fly-apply-fly-net.service systemd-networkd-wait-online.service
 Wants=network-online.target

@@ -11,7 +11,7 @@ This repository is the contract and the patches. Flashable `.img` files are **no
 | Image | Who it is for |
 | --- | --- |
 | **Named Fly Lite 2.1 Armbian image** (`fly-lite-21`) | Hardware + wizard only. Install Simple-AF or KIAUH yourself later. |
-| **Simple-AF image** (`fly-lite-21-simpleaf`) | Same hardware, pellcorp/Klipper stack pre-baked under `/opt`. After login: `~/pellcorp/installer.sh --install --printer …`. Do not add KIAUH. |
+| **Simple-AF image** (`fly-lite-21-simpleaf`) | Same hardware, pellcorp/Klipper stack pre-baked under `/opt`. After login: `fly-start` (or `~/pellcorp/installer.sh --install --printer …`). Do not add KIAUH. |
 | **KIAUH image** (`fly-lite-21-kiauh`) | Same hardware, KIAUH + stock Klipper/Moonraker/UIs pre-baked. After login: `~/kiauh/kiauh.sh`. Do not add Simple-AF. |
 | Current lab dump `fly-lite-v2.1-armbian-cpu-affinity.img.gz` | Already-working card (full-size `dd`). Use only until the named image exists. |
 | Stock Orange Pi Lite Trixie from [armbian.com/orange-pi-lite](https://www.armbian.com/orange-pi-lite/) | Recovery / comparison. Single ext4, no Fly DTB, U-Boot card-detect is wrong on this PCB. |
@@ -30,7 +30,7 @@ After flashing, **eject, unplug, and replug** the card so the small FAT volume a
 
 On that volume you will find:
 
-- `fly-net.txt` — Wi-Fi, locale/timezone, root, and the sudo user (headless first-run)
+- `fly-start.txt` — Wi-Fi, locale/timezone, root, sudo user, plus Simple-AF install options
 - `README.txt` — the same three setup paths, written for a first-time user
 
 Then put the card in the Lite, fit the IPEX antenna, and apply 5 V. First boot **expands the Debian partition** to fill the card and creates a 2 GB `/swapfile`. That can take several minutes.
@@ -39,12 +39,14 @@ Then put the card in the Lite, fit the IPEX antenna, and apply 5 V. First boot *
 
 Armbian’s wizard only runs on serial or HDMI, so Wi-Fi in the file by itself cannot give you SSH. Fill **Wi-Fi + root + user** (and ideally locale/timezone) **before** the first power-on. `Your…` placeholders are ignored.
 
-1. Open `fly-net.txt` on `FLY-SETUP` (Notepad is fine).
+1. Open `fly-start.txt` on `FLY-SETUP` (Notepad is fine).
 2. Set `WIFI_SSID`, `WIFI_PSK`, `WIFI_COUNTRY`. Leave `USE_STATIC=0` unless you need a static IPv4.
 3. Set `LOCALE` / `TIMEZONE` (examples in the file).
 4. Set `ROOT_PASSWORD`, `USER_NAME` (lowercase login), `USER_PASSWORD`.
-5. Eject the volume. Card back in the Lite. Power on.
-6. Wait for resize + radio (often several minutes), then `ssh USER_NAME@THE.PRINTER.IP`.
+5. Optionally set `INSTALL_CMD`, `AUTO_CAMERAS`, `INSTALL_BOOT_DISPLAY` for later `fly-start`.
+6. Eject the volume. Card back in the Lite. Power on.
+7. Wait for resize + radio (often several minutes), then `ssh USER_NAME@THE.PRINTER.IP`.
+8. Run `fly-help` or `fly-start`.
 
 Leave root or user as `Your…` and the on-screen wizard still runs. 2.4 GHz only. Passwords in the file are plaintext. There is no pre-made `fly` account unless you type that name yourself.
 
@@ -61,6 +63,8 @@ FPC-HDMI (or a USB-A HDMI adapter is not a thing — use the FPC) plus a USB key
 ## After first login
 
 ```bash
+fly-help                  # install tips + custom commands
+fly-start                 # Simple-AF full install / update (reads fly-start.txt)
 sudo apt update
 # Do not apt-upgrade kernel, DTB, or U-Boot until those are in a named rebuild.
 ```
@@ -68,6 +72,29 @@ sudo apt update
 On the **base** image, Klipper is optional — install Simple-AF or KIAUH later as your normal user. On the **Simple-AF** or **KIAUH** named images the git trees and venvs are already on the card; first boot copies them into your home. CPU affinity for those units is already on every flavor (`klipper/cpu-affinity/`).
 
 On this 512 MB board, several Simple-AF **and** KIAUH steps look hung but are still working: `git clone` (Moonraker especially — `Receiving objects` / `index-pack` over 8189fs), then `apt-get` of build deps. Progress is on the SSH/wizard session, not COM4. Wait if git or apt is still moving. Do not reboot. Details: [`docs/fly-lite-armbian-notes.md`](docs/fly-lite-armbian-notes.md#simple-af-and-kiauh-looks-hung-still-working).
+
+### USB cameras (Crowsnest)
+
+After Crowsnest is installed (Simple-AF/`make install` or KIAUH), plug in a UVC webcam and from SSH:
+
+```bash
+fly-crowsnest-add-cams          # discover cams, edit ~/printer_data/config/crowsnest.conf, restart
+fly-crowsnest-add-cams --dry-run
+```
+
+Uses stable `/dev/v4l/by-id/…-video-index0` paths and skips the H3 cedrus encoder. Re-run after plugging another cam; already-configured devices are left alone. Stream example: `http://<board-ip>:8080/?action=stream`. Set `AUTO_CAMERAS=Yes` in `fly-start.txt` to run this after a full `fly-start` install.
+
+### GrumpyScreen rotation
+
+```bash
+fly-grumpy-rotate          # show current
+fly-grumpy-rotate 0        # 0°
+fly-grumpy-rotate 1        # 90°
+fly-grumpy-rotate 2        # 180°
+fly-grumpy-rotate 3        # 270° (image default)
+```
+
+Writes `~/printer_data/config/grumpyscreen.ini` and restarts GrumpyScreen. Changing rotation triggers touch recalibration. Set `INSTALL_BOOT_DISPLAY=Yes` in `fly-start.txt` to enable GrumpyScreen after a full `fly-start` install.
 
 ## Other Fly boards
 
@@ -81,9 +108,12 @@ On this 512 MB board, several Simple-AF **and** KIAUH steps look hung but are st
 
 | Path | What it is |
 | --- | --- |
-| `first-boot/` | `fly-net.txt` + `README.txt` that belong on `FLY-SETUP` |
+| `FLYBIAN_VERSION` | Product version (`0.2` … `1.0`). Bump before every new image (`scripts/bump-flybian-version.sh`). See [`docs/image-naming.md`](docs/image-naming.md) |
+| `first-boot/` | `fly-start.txt` + `README.txt` that belong on `FLY-SETUP` |
 | `scripts/prepare-sd.sh` | Copy those files onto a mounted FAT volume |
+| `scripts/stage-flybian-release.sh` | Rename/copy Armbian output to Fly-bian product names |
 | `docs/build-named-image.md` | How to **build** the named Lite 2.1 image (Armbian userpatches) |
+| `docs/image-naming.md` | Fly-bian release filename scheme |
 | `armbian/userpatches/` | Board file, customize hook, overlay for that build |
 | `docs/fly-lite-armbian-notes.md` | Lab log (working cpu-affinity card) |
 | `docs/lite21-bringup.md` | U-Boot paste if a stock Orange Pi Lite image will not autoboot |

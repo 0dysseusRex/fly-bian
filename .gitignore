@@ -1,4 +1,5 @@
-# Local first-boot secrets (keep the template in first-boot/fly-net.txt)
+# Local first-boot secrets (keep the template in first-boot/fly-start.txt)
+first-boot/fly-start.local.txt
 first-boot/fly-net.local.txt
 
 # Image blobs (may contain Wi-Fi / printer secrets)

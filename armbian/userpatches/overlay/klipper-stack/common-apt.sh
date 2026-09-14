@@ -16,7 +16,8 @@ fly_klipper_stack_apt() {
 		avrdude gcc-avr binutils-avr avr-libc \
 		stm32flash dfu-util pkg-config \
 		libnewlib-arm-none-eabi gcc-arm-none-eabi binutils-arm-none-eabi \
-		v4l-utils
+		v4l-utils \
+		ustreamer
 	apt-get remove --purge -y brltty modemmanager 2>/dev/null || true
 }
 

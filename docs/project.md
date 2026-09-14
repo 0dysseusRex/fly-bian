@@ -2,7 +2,7 @@
 
 Debian-based images you can flash to a MicroSD card (and later to eMMC on boards that have it) for Mellow Fly hosts. Not FlyOS-FAST.
 
-How to **build** the Lite 2.1 named image: [`build-named-image.md`](build-named-image.md). How to **use** it: [`../README.md`](../README.md).
+How to **build** the Lite 2.1 named image: [`build-named-image.md`](build-named-image.md). How images are **named**: [`image-naming.md`](image-naming.md). How to **use** it: [`../README.md`](../README.md).
 
 ## Order of work
 
@@ -15,7 +15,7 @@ How to **build** the Lite 2.1 named image: [`build-named-image.md`](build-named-
 
 | Path | What the new user does |
 | --- | --- |
-| **FAT `FLY-SETUP`** | Edit `fly-net.txt`; read `README.txt`. Windows, macOS, Linux. |
+| **FAT `FLY-SETUP`** | Edit `fly-start.txt`; read `README.txt`. Windows, macOS, Linux. After SSH: `fly-help` / `fly-start`. |
 | **Serial** | Type-C, 115200 8N1. Finish the Armbian wizard. |
 | **HDMI + USB keyboard** | FPC-HDMI, USB-A keyboard. Leave TFT unplugged for first boot. |
 

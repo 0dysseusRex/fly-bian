@@ -21,10 +21,15 @@ Crowsnest is not marked done: the first install runs `make install`
 /dev/video1; /dev/video0 may be the SoC cedrus encoder). Do not compile
 uvloop / moonraker-speedups on this 512 MB board.
 
-A USB camera uses Crowsnest. After the installer, edit
-~/printer_data/config/crowsnest.conf (device path) and:
+A USB camera uses Crowsnest. After the installer:
 
-  sudo systemctl enable --now crowsnest
+  fly-crowsnest-add-cams
+  sudo systemctl enable --now crowsnest   # if not already enabled
+
+That finds UVC cams under /dev/v4l/by-id and appends [cam …] sections
+to ~/printer_data/config/crowsnest.conf (skips cedrus /dev/video0).
+Stock pellcorp [cam web] placeholders are stripped from the image and
+when you run the helper. Dry-run: fly-crowsnest-add-cams --dry-run
 
 Web UIs (bound on first user):
 
@@ -34,6 +39,7 @@ Web UIs (bound on first user):
 
 Touch UI: GrumpyScreen is preferred and enabled on first user bind
 (ARMv7 binary under ~/grumpyscreen). It owns HDMI VT1 after the wizard.
+Rotate over SSH: fly-grumpy-rotate 0|1|2|3 (writes grumpyscreen.ini).
 Do not install KlipperScreen on this 512 MB board — X/Mesa apt installs
 OOM and have corrupted /boot (uInitrd) in lab runs.
 

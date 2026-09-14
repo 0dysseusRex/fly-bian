@@ -10,7 +10,7 @@ fly_klipper_stack_apt
 
 STACK=/opt/fly-kiauh
 install -d "$STACK" /usr/share/fly-debian/kiauh /etc/fly-debian
-printf 'kiauh\n' >/etc/fly-debian/stack-flavor
+printf 'kiauh\n' >/etc/fly-debian/stack-flavo
 
 fly_git_clone https://github.com/dw-0/kiauh.git "$STACK/kiauh"
 fly_git_clone https://github.com/Klipper3d/klipper.git "$STACK/klipper"

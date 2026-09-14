@@ -4,7 +4,7 @@
 set -euo pipefail
 
 MARKER=/var/lib/fly-stack-bound
-FLAVOR_FILE=/etc/fly-debian/stack-flavor
+FLAVOR_FILE=/etc/fly-debian/stack-flavo
 OPT_SAF=/opt/fly-simple-af
 OPT_KIAUH=/opt/fly-kiauh
 
@@ -87,10 +87,23 @@ apply_simpleaf_nginx() {
 }
 
 # Moonraker machine/reboot APIs need PolKit rules for the real user.
+# Prefer fly-moonraker-polkit (root-safe). Fall back to upstream script.
 apply_moonraker_polkit() {
 	groupadd -f moonraker-admin 2>/dev/null || true
-	if [[ -x $home/moonraker/scripts/set-policykit-rules.sh ]]; then
-		USER=$user HOME=$home "$home/moonraker/scripts/set-policykit-rules.sh" \
+	usermod -aG moonraker-admin "$user" 2>/dev/null || true
+	if [[ -x /usr/local/bin/fly-moonraker-polkit ]]; then
+		/usr/local/bin/fly-moonraker-polkit "$user" \
+			|| log "fly-moonraker-polkit failed (non-fatal)"
+		return 0
+	fi
+	local script=$home/moonraker/scripts/set-policykit-rules.sh
+	[[ -x $script ]] || script=$OPT_SAF/moonraker/scripts/set-policykit-rules.sh
+	[[ -x $script ]] || return 0
+	if command -v runuser >/dev/null; then
+		runuser -u "$user" -- env USER="$user" HOME="$home" "$script" -f \
+			|| log "set-policykit-rules failed (non-fatal)"
+	else
+		su -s /bin/bash "$user" -c "USER=$user HOME=$home $script -f" \
 			|| log "set-policykit-rules failed (non-fatal)"
 	fi
 }

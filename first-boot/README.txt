@@ -14,7 +14,7 @@ There are three ways to get a login. Pick one.
 
 1) Text file (no cable) — recommended
 -------------------------------------
-Edit fly-net.txt in this folder with Notepad, TextEdit, or any editor.
+Edit fly-start.txt in this folder with Notepad, TextEdit, or any editor.
 Replace every Your… placeholder you want applied. For SSH with no serial
 cable, fill all three of Wi-Fi, Root, and User:
 
@@ -30,6 +30,12 @@ cable, fill all three of Wi-Fi, Root, and User:
   USER_PASSWORD=that user's password
   USER_REALNAME=Your Name
 
+Optional Simple-AF helpers (used later by `fly-start` over SSH):
+
+  INSTALL_CMD=~/pellcorp/installer.sh --install --printer … --probe …
+  AUTO_CAMERAS=Yes
+  INSTALL_BOOT_DISPLAY=Yes
+
 Leave USE_STATIC=0 unless you know you need a fixed IP.
 
 Save. Eject the card safely. Put it in the Fly Lite. Power on. Wait until
@@ -38,16 +44,18 @@ the card has grown, the 2 GB swap file is there, and the radio has joined
 (DHCP list) and:
 
   ssh USER_NAME@THE.PRINTER.IP
+  fly-help
+  fly-start
 
 There is no pre-made account in the image. The name and password are
-whatever you put in fly-net.txt.
+whatever you put in fly-start.txt.
 
 If you leave USER_NAME=YourUser or ROOT_PASSWORD=YourRootPassword, the
 on-screen first-run wizard still runs (use path 2 or 3). Wi-Fi alone is
 not enough for SSH — a user has to exist first.
 
 The onboard radio is 2.4 GHz only. Only wlan0 is used (wlan1 is a second
-virtual iface from the same chip and stays down). Secrets in fly-net.txt
+virtual iface from the same chip and stays down). Secrets in fly-start.txt
 are plain text.
 
 
@@ -63,7 +71,7 @@ macOS / Linux: /dev/ttyUSB0 or similar, same 115200 8N1.
 Do not toggle DTR/RTS "to reset" — that does not reset this board and can
 stop autoboot.
 
-If fly-net.txt still has Your… placeholders, answer the on-screen questions
+If fly-start.txt still has Your… placeholders, answer the on-screen questions
 (root password, your user, location, Wi-Fi). If you already filled those
 fields, you can log in with that user; you do not need to repeat the wizard.
 
@@ -79,9 +87,6 @@ questions here. Then set Wi-Fi in the menus if you skipped the text file.
 
 If it looks stuck
 -----------------
-Wait for the partition to grow and for the 2 GB swap file to appear
-(/swapfile), then for Wi-Fi if you filled fly-net.txt. A reboot that never
-comes back usually needs a 5 V power cycle, not another software reboot.
-
-More detail is in the Fly-bian Project git repository (README.md,
-docs/getting-started.md, first-boot/).
+First boot is slow: resize, then swapfile, then Wi-Fi if you filled
+fly-start.txt. A reboot that never finishes is normal to fix with a 5 V
+power cycle (soft reboot can hang on this board).

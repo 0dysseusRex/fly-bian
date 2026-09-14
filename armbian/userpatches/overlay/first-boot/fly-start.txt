@@ -7,6 +7,8 @@
 # several minutes (the card grows, then the radio joins), and:
 #
 #   ssh USER_NAME@THE.PRINTER.IP
+#   fly-help          # install tips + custom commands
+#   fly-start         # menu: full install / update / cancel
 #
 # Find the IP on your router DHCP list, or:
 #   Windows: arp -a   /   nmap -sn 192.168.1.0/24
@@ -54,3 +56,15 @@ USER_PASSWORD=YourUserPassword
 USER_REALNAME=Your Name
 USER_SHELL=bash
 USER_SSH_KEY=
+
+# --- Simple-AF install (used by `fly-start` over SSH) ---
+# Full installer command for "Run Full Install Script". Edit printer/probe/mount.
+# Run as your sudo user (not root). Example for Creality K1 Max + BLTouch:
+INSTALL_CMD=~/pellcorp/installer.sh --install --printer creality-k1m-2023 --probe bltouch --mount Default
+
+# After a successful full install: discover USB cams into Crowsnest (Yes/No)
+AUTO_CAMERAS=No
+
+# After a successful full install: enable GrumpyScreen (Simple-AF touch /
+# boot display on HDMI VT1). Yes/No
+INSTALL_BOOT_DISPLAY=Yes

@@ -1,0 +1,80 @@
+#!/bin/bash
+# fly-help — short Fly Lite / Simple-AF install tips and custom commands.
+set -euo pipefail
+
+cat <<'EOF'
+Fly-bian / Fly Lite 2.1 — help
+==============================
+
+First boot
+----------
+1. On the FLY-SETUP FAT volume, edit fly-start.txt (Wi-Fi, root, user).
+2. Boot the board; wait for resize + Wi-Fi (several minutes).
+3. SSH in:  ssh USER@BOARD_IP
+4. Run:     fly-start     (guided Simple-AF install / update)
+   or:      fly-help      (this text)
+
+Simple-AF (Simple-AF image)
+---------------------------
+Trees are pre-baked under /opt and copied into your home on first user bind.
+Finish printer/probe with either:
+
+  fly-start
+  # or manually:
+  ~/pellcorp/installer.sh --install --printer <printer> --probe <probe> [--mount <mount>]
+
+Example:
+  ~/pellcorp/installer.sh --install --printer creality-k1m-2023 --probe bltouch --mount Default
+
+Update an existing install:
+  ~/pellcorp/installer.sh --update
+  # or choose "Update Simple AF" in fly-start
+
+Do not install KIAUH on a Simple-AF card (or Simple-AF on a KIAUH card).
+Do not install KlipperScreen on this 512 MB board — use GrumpyScreen.
+
+Web UIs (after install)
+-----------------------
+  Fluidd    http://BOARD_IP/
+  Mainsail  http://BOARD_IP:4409
+  Camera    http://BOARD_IP/webcam/?action=stream
+
+Custom commands (this image)
+----------------------------
+  fly-help
+      This help text.
+
+  fly-start
+      Interactive menu driven by fly-start.txt on FLY-SETUP /boot:
+        1) Run Full Install Script  — INSTALL_CMD, then optional cameras
+           and GrumpyScreen (AUTO_CAMERAS / INSTALL_BOOT_DISPLAY)
+        2) Update Simple AF         — ~/pellcorp/installer.sh --update
+        3) Cancel
+
+  fly-crowsnest-add-cams [--dry-run]
+      Find USB cameras under /dev/v4l/by-id and append [cam …] sections
+      to ~/printer_data/config/crowsnest.conf, then restart Crowsnest.
+      Skips the H3 cedrus encoder (/dev/video0).
+
+  fly-grumpy-rotate [0|1|2|3]
+      Set GrumpyScreen rotation (0°/90°/180°/270°). Writes
+      ~/printer_data/config/grumpyscreen.ini and restarts GrumpyScreen.
+      No argument: show current rotation.
+
+  fly-crowsnest-strip-placeholders
+      Remove stock [cam web] / /dev/video0 placeholders from a conf file
+      (used by the camera helper and image bake).
+
+Image identity
+--------------
+  /etc/fly-debian/flybian-version   e.g. 0.1
+  /etc/fly-debian/flybian-image     e.g. Fly-bian-0.1_Fly-Lite-2.1_Simple-AF
+
+Config file
+-----------
+  /boot/fly-start.txt   (FLY-SETUP FAT volume; also under first-boot/)
+  Keys for fly-start: INSTALL_CMD, AUTO_CAMERAS=Yes|No,
+  INSTALL_BOOT_DISPLAY=Yes|No
+
+Serial: 115200 8N1, Type-C. Do not pulse DTR/RTS.
+EOF

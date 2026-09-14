@@ -1,6 +1,7 @@
 #!/bin/bash
 # Fly-bian Project SSH splash. TAAG Breach Blue / TheDraw palette on black
 # (#5555FF, #0000AA, #AAAAAA) from patorjk ft=thedraw&fp=true.
+# fly-help / fly-start are listed under Armbian MOTD Commands (41/42), not here.
 set -euo pipefail
 
 ART="${FLYBIAN_ART:-/usr/share/fly-debian/motd/flybian.txt}"
@@ -9,12 +10,12 @@ ANSI="${FLYBIAN_ANSI:-/usr/share/fly-debian/motd/flybian.ansi}"
 if [[ -s $ANSI ]]; then
 	# MOTD is not a tty; always emit color. Client (SSH/PuTTY) interprets it.
 	cat "$ANSI"
-	printf '\e[0m\n\n\n'
+	printf '\e[0m\n'
 	exit 0
 fi
 
 if [[ ! -f $ART ]]; then
-	printf '\e[38;2;255;0;0mFly-bian Project\e[0m\n\n\n'
+	printf '\e[38;2;255;0;0mFly-bian Project\e[0m\n\n'
 	exit 0
 fi
 
@@ -46,7 +47,7 @@ def paint(text: str) -> str:
 			parts.append(ch)
 		parts.append(RESET)
 		out.append("".join(parts))
-	return "\n".join(out) + "\n\n\n"
+	return "\n".join(out) + "\n"
 
 sys.stdout.write(paint(Path(sys.argv[1]).read_text(encoding="utf-8")))
 PY

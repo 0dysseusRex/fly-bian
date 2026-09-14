@@ -1,8 +1,9 @@
 #!/bin/sh
-# Apply FLY-SETUP/fly-net.txt: Wi-Fi after 8189fs, plus first-run accounts
+# Apply FLY-SETUP/fly-start.txt: Wi-Fi after 8189fs, plus first-run accounts
 # when the user replaced the Your… placeholders. Image ships placeholders
 # only — never a baked daily user. Leave /root/.not_logged_in_yet alone
 # unless root + user are both filled.
+# Accepts legacy fly-net.txt if fly-start.txt is absent.
 set -eu
 
 SSID_PLACEHOLDER=YourNetwork
@@ -14,6 +15,8 @@ log() {
 
 FILE=""
 for cand in \
+	/boot/fly-start.txt \
+	/usr/share/fly-debian/first-boot/fly-start.txt \
 	/boot/fly-net.txt \
 	/usr/share/fly-debian/first-boot/fly-net.txt
 do
@@ -25,6 +28,10 @@ done
 
 if [ -z "${FILE}" ] || [ ! -f "$FILE" ]; then
 	for mp in /mnt/FLY-SETUP /media/FLY-SETUP; do
+		if [ -f "$mp/fly-start.txt" ]; then
+			FILE=$mp/fly-start.txt
+			break
+		fi
 		if [ -f "$mp/fly-net.txt" ]; then
 			FILE=$mp/fly-net.txt
 			break
@@ -305,7 +312,7 @@ write_preset_fallback() {
 	[ -f /root/.not_logged_in_yet ] || return 0
 	# So a later serial login can finish any remaining firstlogin prompts.
 	{
-		printf '%s\n' '# generated from fly-net.txt — do not bake this into the image'
+		printf '%s\n' '# generated from fly-start.txt — do not bake this into the image'
 		if [ "$wifi_ready" = 1 ]; then
 			printf 'PRESET_NET_CHANGE_DEFAULTS="1"\n'
 			printf 'PRESET_NET_WIFI_ENABLED="1"\n'
@@ -367,7 +374,7 @@ apply_accounts() {
 	esac
 	real=$user_real
 	if is_placeholder "$real"; then
-		real=$user
+		real=$use
 	fi
 
 	printf '%s:%s\n' root "$root_pw" | chpasswd

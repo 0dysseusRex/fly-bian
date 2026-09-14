@@ -6,11 +6,21 @@ Working hardware (already proven on the lab card) must land in this image. Lab l
 
 ## Product name
 
-Armbian-style filename, for example:
+User-facing releases follow [`image-naming.md`](image-naming.md):
 
 ```
-Armbian_fly-lite-21_trixie_current_<kernel>_minimal.img.xz
+Fly-bian-<VERSION>_<DEVICE>_<FLAVOR>.img.xz
 ```
+
+Current product version is in repo-root [`FLYBIAN_VERSION`](../FLYBIAN_VERSION) (starts at **0.1**; **1.0** = first fully working release). Examples:
+
+```
+Fly-bian-0.1_Fly-Lite-2.1_Base.img.xz
+Fly-bian-0.1_Fly-Lite-2.1_Simple-AF.img.xz
+Fly-bian-0.1_Fly-Lite-2.1_KIAUH.img.xz
+```
+
+Armbian still builds with board ids `fly-lite-21` / `fly-lite-21-simpleaf` / `fly-lite-21-kiauh` and may emit a long `Armbian-unofficial_…` filename. Staging renames to the Fly-bian product name (`scripts/stage-flybian-release.sh`). Kernel / Armbian trunk strings go in release notes and `.img.txt`, not the product filename.
 
 Board id: `fly-lite-21` (family `sun8i`, 32-bit). Image type: **Debian Trixie Minimal CLI** (no desktop).
 
@@ -19,7 +29,7 @@ Board id: `fly-lite-21` (family `sun8i`, 32-bit). Image type: **Debian Trixie Mi
 | Partition | Type | Size in the *file* | Role |
 | --- | --- | --- | --- |
 | (SPL / U-Boot) | raw sectors | Armbian default | Allwinner boot, before the partition table |
-| `mmcblk0p1` | FAT32, label **`FLY-SETUP`** | ~128–256 MB | `fly-net.txt`, `README.txt`. Must mount on Windows, macOS, and Linux after flash. |
+| `mmcblk0p1` | FAT32, label **`FLY-SETUP`** | ~128–256 MB | `fly-start.txt`, `README.txt`. Must mount on Windows, macOS, and Linux after flash. |
 | `mmcblk0p2` | ext4 root | **as small as Armbian will emit** (not the full card) | Debian + `/boot`. **Grow to fill the SD on first boot.** |
 
 Prefer Armbian’s own `BOOTFS_TYPE=fat` + `BOOTSIZE=256` if the `sun8i` path still autoboots. If the family forces a single ext4, add `FLY-SETUP` as a dedicated FAT partition and point U-Boot at **partition 2** for the rootfs (`root=/dev/mmcblk0p2`). Autoboot must work with no serial paste.
@@ -37,12 +47,12 @@ Leave Armbian’s first-run wizard **enabled**:
 
 Wi-Fi from the FAT file is optional and must not skip the wizard:
 
-- If `fly-net.txt` still has `WIFI_SSID=YourNetwork`, do not join a network; still run the wizard.
+- If `fly-start.txt` still has `WIFI_SSID=YourNetwork`, do not join a network; still run the wizard.
 - If the user edited SSID/PSK, apply that (Armbian `armbian_first_run.txt` or a small systemd oneshot that reads `/boot` **and** the `FLY-SETUP` partition). Do not require the user to know about `armbian_first_run.txt`.
 
 Copy onto `FLY-SETUP` at image-build time (from this repo):
 
-- `first-boot/fly-net.txt` (placeholder SSID)
+- `first-boot/fly-start.txt` (placeholder SSID)
 - `first-boot/README.txt`
 
 Windows: after flash, replug the reader and assign a drive letter if needed. macOS/Linux: volume name `FLY-SETUP`.
@@ -91,13 +101,13 @@ Do not point documentation at Armbian’s `Trixie_current_minimal` **short URL**
 ## Verify on the Lite before declaring done
 
 1. Flash the **xz** (or `.img`) with Etcher / Raspberry Pi Imager / `dd`. Image file should be far smaller than 32 GB.
-2. Replug: `FLY-SETUP` mounts; `README.txt` and `fly-net.txt` are there.
+2. Replug: `FLY-SETUP` mounts; `README.txt` and `fly-start.txt` are there.
 3. First power-on **without** editing Wi-Fi: wizard still runs on serial and/or HDMI. Rootfs fills the card (`lsblk`).
-4. Second card (or reflash): edit `fly-net.txt`, boot, wizard **and** `wlan0` on the SSID.
+4. Second card (or reflash): edit `fly-start.txt`, boot, wizard **and** `wlan0` on the SSID.
 5. SSH as the **wizard user**, not a baked `fly`.
 6. `wlan0` stays up with load on CPUs 1–3 (`isolcpus` layout).
 7. Heartbeat LED. USB-A. Serial at 115200.
 8. `systemctl cat klipper.service.d/50-fly-cpu-affinity.conf` exists even though Klipper is not installed.
 9. After first boot + resize: `swapon --show` lists `/swapfile` at 2 GiB.
 
-Copy the artifact into `C:\Users\udrdr\fly-lite-armbian-image\Releases\<version>\Fly Lite 2.1\<base|simpleaf|kiauh>\` (V3 under `Fly Pi V3`), `sha256sum` the `.img.xz`, add a line to `Releases/RELEASES.txt`, and record it in [`images.md`](images.md). Do not commit the image or passwords.
+Copy the artifact with `scripts/stage-flybian-release.sh base|simpleaf|kiauh|all` into `C:\Users\udrdr\fly-lite-armbian-image\Releases\Fly-bian-<ver>\Fly-Lite-2.1\<Base|Simple-AF|KIAUH>\`, update `RELEASES.txt` / `UPDATE-NOTES.txt`, and record it in [`images.md`](images.md). Naming: [`image-naming.md`](image-naming.md). Do not commit the image or passwords.

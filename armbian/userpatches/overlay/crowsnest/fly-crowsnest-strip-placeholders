@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+"""Remove stock Crowsnest placeholder cams from a conf file.
+
+Drops:
+  - [cam web] (Simple-AF / pellcorp example name)
+  - any [cam …] whose device is exactly /dev/video0 (H3 cedrus / stock path)
+
+Usage: fly-crowsnest-strip-placeholders <crowsnest.conf> [...]
+"""
+from __future__ import annotations
+
+import re
+import sys
+from pathlib import Path
+
+
+def strip_placeholders(text: str) -> tuple[str, bool]:
+    parts = re.split(r"(?=^\[)", text, flags=re.M)
+    out: list[str] = []
+    changed = False
+    for part in parts:
+        if not part.strip():
+            continue
+        header = part.lstrip().splitlines()[0].strip()
+        low = header.lower()
+        if low.startswith("[cam"):
+            name_m = re.match(r"(?i)\[cam\s+([^\]]+)\]", header)
+            name = name_m.group(1).strip().lower() if name_m else ""
+            dev_m = re.search(r"(?im)^\s*device\s*:\s*(\S+)", part)
+            dev = dev_m.group(1) if dev_m else ""
+            if name == "web" or dev == "/dev/video0":
+                changed = True
+                continue
+        out.append(part)
+    new = "".join(out)
+    new = re.sub(r"\n{3,}", "\n\n", new).rstrip() + "\n"
+    return new, changed or new != text
+
+
+def main(argv: list[str]) -> int:
+    if len(argv) < 2:
+        print(__doc__.strip(), file=sys.stderr)
+        return 2
+    rc = 0
+    for arg in argv[1:]:
+        path = Path(arg)
+        if not path.is_file():
+            print(f"skip missing: {path}", file=sys.stderr)
+            rc = 1
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        new, changed = strip_placeholders(text)
+        if changed:
+            path.write_text(new, encoding="utf-8")
+            print(f"stripped placeholders: {path}")
+        else:
+            print(f"no placeholders: {path}")
+    return rc
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

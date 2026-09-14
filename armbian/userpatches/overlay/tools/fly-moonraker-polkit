@@ -1,0 +1,79 @@
+#!/bin/bash
+# Install Moonraker PolKit rules for a user. Safe to re-run as root.
+# set-policykit-rules.sh needs interactive sudo when run via runuser; this
+# writes the same rules directly so fly-bind / fly-start work unattended.
+set -euo pipefail
+
+user=${1:-}
+if [[ -z $user ]]; then
+	if [[ ${EUID:-0} -eq 0 ]]; then
+		echo "usage: $0 <username>" >&2
+		exit 2
+	fi
+	user=$(id -un)
+fi
+
+home=$(getent passwd "$user" | cut -d: -f6)
+[[ -n $home ]] || {
+	echo "fly-moonraker-polkit: unknown user $user" >&2
+	exit 1
+}
+
+as_root() {
+	if [[ ${EUID:-0} -eq 0 ]]; then
+		"$@"
+	else
+		sudo "$@"
+	fi
+}
+
+as_root groupadd -f moonraker-admin
+as_root usermod -aG moonraker-admin "$user" 2>/dev/null || true
+
+unit=/etc/systemd/system/moonraker.service
+if [[ -f $unit ]] && ! grep -q 'SupplementaryGroups=moonraker-admin' "$unit"; then
+	echo "fly-moonraker-polkit: adding SupplementaryGroups to $unit"
+	as_root sed -i '/^Type=simple$/a SupplementaryGroups=moonraker-admin' "$unit"
+	as_root systemctl daemon-reload
+fi
+
+# Prefer modern rules.d (polkitd >= 0.106). Debian Trixie is 126.
+rule_dir=
+if [[ -d /usr/share/polkit-1/rules.d ]]; then
+	rule_dir=/usr/share/polkit-1/rules.d
+elif [[ -d /etc/polkit-1/rules.d ]]; then
+	rule_dir=/etc/polkit-1/rules.d
+fi
+
+if [[ -z $rule_dir ]]; then
+	echo "fly-moonraker-polkit: no polkit rules directory" >&2
+	exit 1
+fi
+
+rule_file=$rule_dir/moonraker.rules
+tmp=$(mktemp)
+cat >"$tmp" <<EOF
+// Allow Moonraker user to manage systemd units, reboot and shutdown
+polkit.addRule(function(action, subject) {
+    if ((action.id == "org.freedesktop.systemd1.manage-units" ||
+         action.id == "org.freedesktop.login1.power-off" ||
+         action.id == "org.freedesktop.login1.power-off-multiple-sessions" ||
+         action.id == "org.freedesktop.login1.reboot" ||
+         action.id == "org.freedesktop.login1.reboot-multiple-sessions" ||
+         action.id == "org.freedesktop.login1.halt" ||
+         action.id == "org.freedesktop.login1.halt-multiple-sessions" ||
+         action.id.startsWith("org.freedesktop.packagekit.")) &&
+        subject.user == "$user") {
+        return polkit.Result.YES;
+    }
+});
+EOF
+as_root install -m 0644 "$tmp" "$rule_file"
+rm -f "$tmp"
+
+as_root systemctl restart polkit 2>/dev/null || as_root systemctl restart polkitd 2>/dev/null || true
+if systemctl cat moonraker.service >/dev/null 2>&1; then
+	as_root systemctl restart moonraker 2>/dev/null || true
+fi
+
+echo "fly-moonraker-polkit: installed $rule_file for user=$user"

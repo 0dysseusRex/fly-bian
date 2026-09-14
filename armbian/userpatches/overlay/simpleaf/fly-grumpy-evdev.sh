@@ -1,6 +1,7 @@
 #!/bin/bash
 # Pick a Fly-LCD (or any *Fly*LCD*) evdev node for GrumpyScreen.
 # Writes /run/fly-grumpy-evdev.env for EnvironmentFile=- in the unit.
+# Must run as root (systemd ExecStartPre=+...); User=fly cannot write /run.
 set -euo pipefail
 
 out=/run/fly-grumpy-evdev.env

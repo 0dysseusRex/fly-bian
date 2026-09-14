@@ -103,7 +103,7 @@ ls -l /dev/serial/by-id/ 2>/dev/null || true
 echo
 echo "======== net ========"
 ip -br link
-ip -br addr
+ip -br add
 echo
 echo "======== gpio ========"
 command -v gpioinfo >/dev/null && gpioinfo || ls /sys/class/gpio /dev/gpiochip* 2>/dev/null

@@ -7,6 +7,25 @@ echo "Fly Lite 2.1 customize-image: affinity, HDMI, golden overlays, 2G swapfile
 
 OVERLAY="${OVERLAY:-/tmp/overlay}"
 
+# Product identity (Fly-bian version + release stem). See docs/image-naming.md.
+install -d /etc/fly-debian
+FLYBIAN_VER=0.1
+if [[ -f $OVERLAY/FLYBIAN_VERSION ]]; then
+  FLYBIAN_VER=$(tr -d '[:space:]' <"$OVERLAY/FLYBIAN_VERSION")
+fi
+printf '%s\n' "$FLYBIAN_VER" >/etc/fly-debian/flybian-version
+DEVICE_TOKEN=Fly-Lite-2.1
+FLAVOR_TOKEN=Base
+if [[ -f $OVERLAY/fly-flavor ]]; then
+  case "$(tr -d '[:space:]' <"$OVERLAY/fly-flavor")" in
+    simpleaf) FLAVOR_TOKEN=Simple-AF ;;
+    kiauh) FLAVOR_TOKEN=KIAUH ;;
+    *) FLAVOR_TOKEN=Base ;;
+  esac
+fi
+printf 'Fly-bian-%s_%s_%s\n' "$FLYBIAN_VER" "$DEVICE_TOKEN" "$FLAVOR_TOKEN" \
+  >/etc/fly-debian/flybian-image
+
 install -d /etc/systemd/system-generators
 if [[ -f $OVERLAY/cpu-affinity/fly-klipper-cpu-affinity ]]; then
   install -m 0755 "$OVERLAY/cpu-affinity/fly-klipper-cpu-affinity" \
@@ -21,12 +40,16 @@ if [[ -f $OVERLAY/cpu-affinity/50-fly-cpu-affinity.conf && -f $OVERLAY/cpu-affin
   done <"$OVERLAY/cpu-affinity/units"
 fi
 
-# FAT volume (BOOTFS_TYPE=fat → /boot is p1). Put fly-net.txt here so Windows
+# FAT volume (BOOTFS_TYPE=fat → /boot is p1). Put fly-start.txt here so Windows
 # sees it after flash. fly-windows-bootfs also labels p1 FLY-SETUP.
 install -d /usr/share/fly-debian/first-boot /boot
-if [[ -f $OVERLAY/first-boot/fly-net.txt ]]; then
-  install -m 0644 "$OVERLAY/first-boot/fly-net.txt" /usr/share/fly-debian/first-boot/fly-net.txt
-  install -m 0644 "$OVERLAY/first-boot/fly-net.txt" /boot/fly-net.txt
+if [[ -f $OVERLAY/first-boot/fly-start.txt ]]; then
+  install -m 0644 "$OVERLAY/first-boot/fly-start.txt" /usr/share/fly-debian/first-boot/fly-start.txt
+  install -m 0644 "$OVERLAY/first-boot/fly-start.txt" /boot/fly-start.txt
+elif [[ -f $OVERLAY/first-boot/fly-net.txt ]]; then
+  # Legacy filename during transition
+  install -m 0644 "$OVERLAY/first-boot/fly-net.txt" /usr/share/fly-debian/first-boot/fly-start.txt
+  install -m 0644 "$OVERLAY/first-boot/fly-net.txt" /boot/fly-start.txt
 fi
 if [[ -f $OVERLAY/first-boot/README.txt ]]; then
   install -m 0644 "$OVERLAY/first-boot/README.txt" /usr/share/fly-debian/first-boot/README.txt
@@ -68,7 +91,7 @@ if [[ -f $GOLDEN/boot/sun8i-h3-fly-lite.dtb ]]; then
 fi
 
 # User overlays: mmc-broken-cd, IO, TFT, HDMI. Never load fly-lite-leds (-EBUSY).
-install -d /boot/overlay-user
+install -d /boot/overlay-use
 if [[ -d $GOLDEN/overlay-user ]]; then
   for f in "$GOLDEN/overlay-user"/*; do
     [[ -f $f ]] || continue
@@ -151,7 +174,7 @@ fi
 
 # Console login: multi-user + getty on tty1 until Simple-AF bind.
 # greetd fought touch UIs, crashed on large MOTD, and left HDMI stuck
-# on graphical.target. Prefer GrumpyScreen (fbdev, ARMv7) over
+# on graphical.target. Prefer GrumpyScreen (fbdev, ARMv7) ove
 # KlipperScreen (X/Mesa) on this 512 MB board — KS installs OOM.
 # After first user bind, Simple-AF enables grumpyscreen and frees tty1.
 # fly-ip-announce prints wlan0 IPv4 on consoles after network-online.
@@ -159,6 +182,12 @@ if command -v apt-get >/dev/null; then
   export DEBIAN_FRONTEND=noninteractive
   apt-get update
   apt-get install -y --no-install-recommends locales openssh-server || true
+  # Minimal images ship LANG=en_US.UTF-8 but only C.utf8 compiled.
+  if [[ -f /etc/locale.gen ]]; then
+    sed -i 's/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+    locale-gen en_US.UTF-8 || true
+    update-locale LANG=en_US.UTF-8 LANGUAGE=en_US.UTF-8 || true
+  fi
   # Moonraker machine endpoints need the DBus PolKit interface.
   apt-get install -y --no-install-recommends polkitd || true
 fi
@@ -192,6 +221,44 @@ if [[ -f $OVERLAY/network/fly-ip-announce.sh && -f $OVERLAY/network/fly-ip-annou
   fi
 fi
 
+# After multi-user.target: print "Boot Complete" on consoles.
+if [[ -f $OVERLAY/boot/fly-boot-complete.sh && -f $OVERLAY/boot/fly-boot-complete.service ]]; then
+  install -m 0755 "$OVERLAY/boot/fly-boot-complete.sh" \
+    /usr/local/sbin/fly-boot-complete.sh
+  install -m 0644 "$OVERLAY/boot/fly-boot-complete.service" \
+    /etc/systemd/system/fly-boot-complete.service
+  if command -v systemctl >/dev/null; then
+    systemctl enable fly-boot-complete.service
+  else
+    mkdir -p /etc/systemd/system/default.target.wants
+    ln -sf /etc/systemd/system/fly-boot-complete.service \
+      /etc/systemd/system/default.target.wants/fly-boot-complete.service
+  fi
+fi
+
+# SSH helpers: help, guided install, cameras, GrumpyScreen rotation
+if [[ -f $OVERLAY/tools/fly-help ]]; then
+  install -m 0755 "$OVERLAY/tools/fly-help" /usr/local/bin/fly-help
+fi
+if [[ -f $OVERLAY/tools/fly-start ]]; then
+  install -m 0755 "$OVERLAY/tools/fly-start" /usr/local/bin/fly-start
+fi
+if [[ -f $OVERLAY/tools/fly-moonraker-polkit ]]; then
+  install -m 0755 "$OVERLAY/tools/fly-moonraker-polkit" /usr/local/bin/fly-moonraker-polkit
+fi
+if [[ -f $OVERLAY/crowsnest/fly-crowsnest-add-cams ]]; then
+  install -m 0755 "$OVERLAY/crowsnest/fly-crowsnest-add-cams" \
+    /usr/local/bin/fly-crowsnest-add-cams
+fi
+if [[ -f $OVERLAY/crowsnest/fly-crowsnest-strip-placeholders ]]; then
+  install -m 0755 "$OVERLAY/crowsnest/fly-crowsnest-strip-placeholders" \
+    /usr/local/bin/fly-crowsnest-strip-placeholders
+fi
+if [[ -f $OVERLAY/simpleaf/fly-grumpy-rotate ]]; then
+  install -m 0755 "$OVERLAY/simpleaf/fly-grumpy-rotate" \
+    /usr/local/bin/fly-grumpy-rotate
+fi
+
 # Fly-bian SSH splash (replaces Armbian-unofficial figlet in 10-armbian-header)
 install -d /usr/share/fly-debian/motd
 if [[ -f $OVERLAY/motd/flybian.txt ]]; then
@@ -206,6 +273,17 @@ fi
 if [[ -f $OVERLAY/motd/patch-armbian-header.py ]]; then
   install -m 0755 "$OVERLAY/motd/patch-armbian-header.py" \
     /usr/share/fly-debian/motd/patch-armbian-header.py
+fi
+if [[ -f $OVERLAY/motd/patch-armbian-commands.py ]]; then
+  install -m 0755 "$OVERLAY/motd/patch-armbian-commands.py" \
+    /usr/share/fly-debian/motd/patch-armbian-commands.py
+fi
+if [[ -f $OVERLAY/motd/42-fly-commands ]]; then
+  install -m 0755 "$OVERLAY/motd/42-fly-commands" /etc/update-motd.d/42-fly-commands
+fi
+if [[ -x /usr/share/fly-debian/motd/patch-armbian-commands.py ]]; then
+  python3 /usr/share/fly-debian/motd/patch-armbian-commands.py \
+    /etc/update-motd.d/41-commands || true
 fi
 if [[ -x /usr/share/fly-debian/motd/patch-armbian-header.py && -f /etc/update-motd.d/10-armbian-header ]]; then
   if ! python3 /usr/share/fly-debian/motd/patch-armbian-header.py; then
