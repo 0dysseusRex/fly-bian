@@ -1,6 +1,6 @@
 # Fly Debian
 
-Armbian (Debian) images for [Mellow Fly](https://mellow.klipper.cn/en/docs/ProductDoc/SBC/) single-board hosts. Not FlyOS-FAST. Normal apt, a normal user, and the board’s hardware.
+Armbian (Debian) images for [Mellow Fly Lite 2](https://mellow.klipper.cn/en/docs/ProductDoc/SBC/fly-lite/lite2/) single-board hosts. Not FlyOS-FAST. Normal apt, a normal user, and the board’s hardware.
 
 **Fly Lite 2.1 is first.** Fly Pi V3 is next. Other Fly hosts get a blurb until we pick one up.
 
@@ -43,7 +43,7 @@ Armbian’s wizard only runs on serial or HDMI, so Wi-Fi in the file by itself c
 2. Set `WIFI_SSID`, `WIFI_PSK`, `WIFI_COUNTRY`. Leave `USE_STATIC=0` unless you need a static IPv4.
 3. Set `LOCALE` / `TIMEZONE` (examples in the file).
 4. Set `ROOT_PASSWORD`, `USER_NAME` (lowercase login), `USER_PASSWORD`.
-5. Optionally set `INSTALL_CMD`, `AUTO_CAMERAS`, `INSTALL_BOOT_DISPLAY` for later `fly-start`.
+5. Optionally set `INSTALL_CMD`, `AUTO_CAMERAS`, `ENABLE_GRUMPYSCREEN`, `INSTALL_BOOT_DISPLAY` for later `fly-start`.
 6. Eject the volume. Card back in the Lite. Power on.
 7. Wait for resize + radio (often several minutes), then `ssh USER_NAME@THE.PRINTER.IP`.
 8. Run `fly-help` or `fly-start`.
@@ -94,7 +94,19 @@ fly-grumpy-rotate 2        # 180°
 fly-grumpy-rotate 3        # 270° (image default)
 ```
 
-Writes `~/printer_data/config/grumpyscreen.ini` and restarts GrumpyScreen. Changing rotation triggers touch recalibration. Set `INSTALL_BOOT_DISPLAY=Yes` in `fly-start.txt` to enable GrumpyScreen after a full `fly-start` install.
+Writes `~/printer_data/config/grumpyscreen.ini` and restarts GrumpyScreen. Changing rotation triggers touch recalibration. Set `ENABLE_GRUMPYSCREEN=Yes` in `fly-start.txt` to enable GrumpyScreen after a full `fly-start` install. Set `INSTALL_BOOT_DISPLAY=Yes` for the Plymouth early-boot splash (not GrumpyScreen). Toggle later with `fly-boot-display enable|disable` or fly-start menu 3/4. Rotate from fly-start menu 5/6 or `fly-grumpy-rotate`.
+
+### Boot display (Plymouth)
+
+Simple-AF images bake `plymouth` + the Simple-AF theme. Default is off (`bootlogo=false`) to keep early boot light on 512 MB.
+
+```bash
+fly-boot-display status
+fly-boot-display enable    # Simple-AF splash; reboot to apply
+fly-boot-display disable   # text boot sequence for diagnostics; reboot to apply
+```
+
+Or set `INSTALL_BOOT_DISPLAY=Yes` in `fly-start.txt` (full install) / fly-start menu 3–4.
 
 ## Other Fly boards
 

@@ -45,7 +45,7 @@ repl_wipe = r'''  # Fly-bian prebake: keep git trees and venvs already on the ca
     sudo systemctl stop klipper 2> /dev/null
     # force rebuild of klipper-mcu
     [ -f /usr/local/bin/klipper_mcu ] && sudo rm /usr/local/bin/klipper_mcu
-    rm -rf $BASEDIR/klippe
+    rm -rf $BASEDIR/klipper
   fi
 
   if [ "$mode" != "update" ] && [ -d $BASEDIR/klippy-env ] && [ "$FLY_PREBAKED" != "1" ]; then
@@ -137,7 +137,7 @@ repl_build = '''  # Fly Lite: host MCU LTO often ICE/OOMs on 512MB; K1 uses prin
         echo "kernel.sched_rt_runtime_us = -1" | sudo tee /etc/sysctl.d/10-disable-rt-group-limit.conf > /dev/null
       fi
 
-      cd $BASEDIR/klippe
+      cd $BASEDIR/klipper
       cp .config.linux .config
       make clean
       make || exit $?

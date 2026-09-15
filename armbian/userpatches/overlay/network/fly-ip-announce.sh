@@ -17,7 +17,13 @@ get_ip() {
 announce() {
 	local line=$1
 	# Prefer consoles humans watch; ignore write errors (no HDMI, busy VT).
-	for t in /dev/ttyS0 /dev/console /dev/tty1; do
+	# Skip tty1 when GrumpyScreen owns HDMI — console text corrupts the UI.
+	local targets=(/dev/ttyS0 /dev/console)
+	if ! systemctl is-enabled --quiet grumpyscreen.service 2>/dev/null \
+		&& ! systemctl is-active --quiet grumpyscreen.service 2>/dev/null; then
+		targets+=(/dev/tty1)
+	fi
+	for t in "${targets[@]}"; do
 		if [[ -c $t && -w $t ]]; then
 			printf '\n%s\n\n' "$line" >"$t" 2>/dev/null || true
 		fi

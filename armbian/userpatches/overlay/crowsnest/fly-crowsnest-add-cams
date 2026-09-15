@@ -150,7 +150,7 @@ ensure_ustreamer() {
 	if sudo -n apt-get install -y --no-install-recommends ustreamer 2>/dev/null; then
 		:
 	else
-		sudo apt-get install -y --no-install-recommends ustreame
+		sudo apt-get install -y --no-install-recommends ustreamer
 	fi
 	command -v ustreamer >/dev/null 2>&1 || {
 		echo "ERROR: ustreamer still missing after apt install" >&2
@@ -271,8 +271,8 @@ if [[ $DRY_RUN -eq 1 ]]; then
 	exit 0
 fi
 
-ensure_ustreame
-ensure_heade
+ensure_ustreamer
+ensure_header
 cat "$TMP_OUT" >>"$CONF"
 echo
 echo "Wrote $ADDED camera section(s) to $CONF"

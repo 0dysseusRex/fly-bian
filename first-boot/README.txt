@@ -34,7 +34,18 @@ Optional Simple-AF helpers (used later by `fly-start` over SSH):
 
   INSTALL_CMD=~/pellcorp/installer.sh --install --printer … --probe …
   AUTO_CAMERAS=Yes
+
+  ENABLE_GRUMPYSCREEN=Yes
+    Touch UI on the Fly-LCD after boot (temps, macros, status). Not a splash
+    screen. Prefer this over KlipperScreen on 512 MB.
+
   INSTALL_BOOT_DISPLAY=Yes
+    Plymouth splash logo during early Linux boot (Simple-AF theme). See:
+    https://pellcorp.github.io/creality-wiki/rpi_boot_display/
+    Packages + theme are baked into Simple-AF images; this only enables
+    the splash. Independent of GrumpyScreen. Later: fly-boot-display
+    enable|disable (or fly-start menu 3 / 4) then reboot — disable to
+    watch the text boot sequence when diagnosing issues.
 
 Leave USE_STATIC=0 unless you know you need a fixed IP.
 
@@ -90,3 +101,7 @@ If it looks stuck
 First boot is slow: resize, then swapfile, then Wi-Fi if you filled
 fly-start.txt. A reboot that never finishes is normal to fix with a 5 V
 power cycle (soft reboot can hang on this board).
+
+On 512 MB, leave INSTALL_BOOT_DISPLAY=No until after first boot settles
+(swap is up). An early splash that vanishes, then an oops mentioning
+armbian-apt-upd, is memory pressure — power-cycle and wait for Boot Complete.

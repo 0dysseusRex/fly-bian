@@ -11,11 +11,13 @@ Type=simple
 Restart=on-failure
 RestartSec=5
 User=__USER__
-StandardOutput=tty
-StandardError=tty
+# Do not mirror stdout/stderr onto tty1 — that fights the framebuffer UI.
+StandardOutput=journal
+StandardError=journal
 TTYPath=/dev/tty1
 # + = run as root so we can write /run and touch tty1 before dropping to User=
-ExecStartPre=+/bin/sh -c 'echo -ne "\\033[?25l" > /dev/tty1'
+ExecStartPre=+/bin/sh -c 'systemctl stop getty@tty1.service 2>/dev/null || true; systemctl mask getty@tty1.service 2>/dev/null || true'
+ExecStartPre=+/bin/sh -c 'echo -ne "\\033[2J\\033[H\\033[?25l" > /dev/tty1'
 ExecStartPre=+/usr/local/sbin/fly-grumpy-evdev.sh
 WorkingDirectory=__HOME__/grumpyscreen
 EnvironmentFile=-/run/fly-grumpy-evdev.env

@@ -1,10 +1,18 @@
 #!/bin/bash
-# Announce that multi-user boot finished (serial / HDMI / issue).
+# Announce that multi-user boot finished (serial / issue).
+# Skip HDMI tty1 when GrumpyScreen owns the framebuffer — writing there
+# corrupts the UI (vertical bars / mixed journal text).
 set -euo pipefail
 
 MSG=${FLY_BOOT_COMPLETE_MSG:-Boot Complete}
 
-for t in /dev/ttyS0 /dev/console /dev/tty1; do
+targets=(/dev/ttyS0 /dev/console)
+if ! systemctl is-enabled --quiet grumpyscreen.service 2>/dev/null \
+	&& ! systemctl is-active --quiet grumpyscreen.service 2>/dev/null; then
+	targets+=(/dev/tty1)
+fi
+
+for t in "${targets[@]}"; do
 	if [[ -c $t && -w $t ]]; then
 		printf '\n%s\n\n' "$MSG" >"$t" 2>/dev/null || true
 	fi

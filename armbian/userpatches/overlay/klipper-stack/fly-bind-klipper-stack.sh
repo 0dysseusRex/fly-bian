@@ -129,6 +129,7 @@ case "$flavor" in
 			/etc/systemd/system/crowsnest.service
 		# GrumpyScreen is preferred on Fly Lite (512 MB): no X/Mesa, ARMv7 binary.
 		# KlipperScreen apt/X installs OOMs this board — do not enable it here.
+		# Unit is installed but not enabled; fly-start ENABLE_GRUMPYSCREEN controls that.
 		if [[ -f /usr/share/fly-debian/simpleaf/grumpyscreen.service ]]; then
 			mkdir -p "$home/grumpyscreen"
 			if [[ -d /usr/share/fly-debian/simpleaf/grumpyscreen ]]; then
@@ -137,12 +138,14 @@ case "$flavor" in
 			fi
 			install_unit /usr/share/fly-debian/simpleaf/grumpyscreen.service \
 				/etc/systemd/system/grumpyscreen.service
-			# Grumpy owns HDMI VT1; getty stays for the first-run wizard only.
-			systemctl disable getty@tty1.service 2>/dev/null || true
-			systemctl enable grumpyscreen.service 2>/dev/null || true
+			# Leave getty@tty1 alone until fly-start enables GrumpyScreen.
 		fi
 		apply_simpleaf_nginx
 		apply_moonraker_polkit
+		if [[ -x /usr/local/bin/fly-ensure-shaketune ]]; then
+			/usr/local/bin/fly-ensure-shaketune "$user" \
+				|| log "fly-ensure-shaketune failed (non-fatal)"
+		fi
 		systemctl daemon-reload
 		systemctl enable klipper.service moonraker.service nginx.service 2>/dev/null || true
 		# Do not start klipper until the user runs the printer/probe installer.

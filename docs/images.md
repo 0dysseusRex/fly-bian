@@ -2,17 +2,17 @@
 
 **Named images** (Armbian `.img.xz`, not a 32 GB `dd`). Naming: [`image-naming.md`](image-naming.md). Build: [`build-named-image.md`](build-named-image.md).
 
-Product releases are versioned as **Fly-bian** (repo `FLYBIAN_VERSION`, currently **0.2** → … → **1.0**):
+Product releases are versioned as **Fly-bian** (repo `FLYBIAN_VERSION`, currently **0.4**):
 
 ```
 C:\Users\udrdr\fly-lite-armbian-image\Releases\
   RELEASES.txt
-  Fly-bian-0.2\
+  Fly-bian-0.4\
     Fly-Lite-2.1\
       UPDATE-NOTES.txt
-      Base\          Fly-bian-0.2_Fly-Lite-2.1_Base.img.xz
-      Simple-AF\     Fly-bian-0.2_Fly-Lite-2.1_Simple-AF.img.xz
-      KIAUH\         Fly-bian-0.2_Fly-Lite-2.1_KIAUH.img.xz
+      Base\          Fly-bian-0.4_Fly-Lite-2.1_Base.img.xz
+      Simple-AF\     Fly-bian-0.4_Fly-Lite-2.1_Simple-AF.img.xz
+      KIAUH\         Fly-bian-0.4_Fly-Lite-2.1_KIAUH.img.xz
   lab-snapshots\     old full-card dd dumps
 ```
 
@@ -20,9 +20,12 @@ Stage with: `scripts/stage-flybian-release.sh all`
 
 | File | SHA256 | What it is |
 | --- | --- | --- |
-| `Releases/Fly-bian-0.2/Fly-Lite-2.1/Simple-AF/Fly-bian-0.2_Fly-Lite-2.1_Simple-AF.img.xz` | `6168acb032b635045085f555529dd0ea7433f6687b90dfe2b0846b847dc68acd` | **Fly-bian 0.2 Simple-AF** (2026-09-13 rebuild). fly-start/fly-help, GrumpyScreen, host-MCU skip, FLY-SETUP. |
-| `Releases/Fly-bian-0.2/Fly-Lite-2.1/KIAUH/Fly-bian-0.2_Fly-Lite-2.1_KIAUH.img.xz` | `72d90c707aec424578a74d8b0a4f6d33bfc7f72ba5b64fc0ff6701a3dd18f094` | **Fly-bian 0.2 KIAUH.** |
-| `Releases/Fly-bian-0.2/Fly-Lite-2.1/Base/Fly-bian-0.2_Fly-Lite-2.1_Base.img.xz` | `8eac3b667933749d8485c45493cc7e91edf782f1457783ff404c34c8e29b7168` | **Fly-bian 0.2 Base.** |
+| `Releases/Fly-bian-0.4/Fly-Lite-2.1/Simple-AF/Fly-bian-0.4_Fly-Lite-2.1_Simple-AF.img.xz` | `4b0b2eedda3747aa05dabf0e0d9e5819e5d7fbda66895eff34e6f2f0fd98c8d0` | **Fly-bian 0.4 Simple-AF** (2026-09-14). `fly-boot-display` enable/disable, split Grumpy vs Plymouth flags, kernel 6.18.52. |
+| `Releases/Fly-bian-0.4/Fly-Lite-2.1/KIAUH/Fly-bian-0.4_Fly-Lite-2.1_KIAUH.img.xz` | `2495782c5a1df2fc3623b68186de05ea89f03872090c97e2ee3d0d286ae3244c` | **Fly-bian 0.4 KIAUH.** |
+| `Releases/Fly-bian-0.4/Fly-Lite-2.1/Base/Fly-bian-0.4_Fly-Lite-2.1_Base.img.xz` | `9bb5142ba04bf376e2348481f0e8bd43bd8671fba029db856b9e04963014e806` | **Fly-bian 0.4 Base.** |
+| `Releases/Fly-bian-0.2/Fly-Lite-2.1/Simple-AF/Fly-bian-0.2_Fly-Lite-2.1_Simple-AF.img.xz` | `6168acb032b635045085f555529dd0ea7433f6687b90dfe2b0846b847dc68acd` | Fly-bian 0.2 Simple-AF (older). |
+| `Releases/Fly-bian-0.2/Fly-Lite-2.1/KIAUH/Fly-bian-0.2_Fly-Lite-2.1_KIAUH.img.xz` | `72d90c707aec424578a74d8b0a4f6d33bfc7f72ba5b64fc0ff6701a3dd18f094` | Fly-bian 0.2 KIAUH. |
+| `Releases/Fly-bian-0.2/Fly-Lite-2.1/Base/Fly-bian-0.2_Fly-Lite-2.1_Base.img.xz` | `8eac3b667933749d8485c45493cc7e91edf782f1457783ff404c34c8e29b7168` | Fly-bian 0.2 Base. |
 
 Full-card dumps below are the earlier lab snapshots.
 

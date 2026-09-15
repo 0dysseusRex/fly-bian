@@ -1,0 +1,15 @@
+[Unit]
+Description=Online isolated CPUs 1-3 after 8189fs Wi-Fi (and swap when present)
+After=load-8189fs.service fly-swapfile.service
+Wants=load-8189fs.service
+# Prefer swap before hotplug on first boot (512 MB + resize is tight).
+Wants=fly-swapfile.service
+Before=fly-apply-fly-net.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/fly-online-isolated-cpus.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

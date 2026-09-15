@@ -8,13 +8,13 @@
 #
 #   ssh USER_NAME@THE.PRINTER.IP
 #   fly-help          # install tips + custom commands
-#   fly-start         # menu: full install / update / cancel
+#   fly-start         # menu: install / update / boot display / cancel
 #
 # Find the IP on your router DHCP list, or:
 #   Windows: arp -a   /   nmap -sn 192.168.1.0/24
 #   macOS:   arp -a   /   dns-sd -B _ssh._tcp local.
 #   Linux:   ip neigh /   nmap -sn 192.168.1.0/24
-# Hostname is usually fly-lite-21. Full guide: docs/getting-started.md
+# Hostname is usually fly-lite-21. Full guide: README.txt here, or fly-help on the board.
 #
 # Locale examples: en_US.UTF-8  en_GB.UTF-8  de_DE.UTF-8
 #   https://www.gnu.org/software/gettext/manual/html_node/Locale-Names.html
@@ -65,6 +65,21 @@ INSTALL_CMD=~/pellcorp/installer.sh --install --printer creality-k1m-2023 --prob
 # After a successful full install: discover USB cams into Crowsnest (Yes/No)
 AUTO_CAMERAS=No
 
-# After a successful full install: enable GrumpyScreen (Simple-AF touch /
-# boot display on HDMI VT1). Yes/No
-INSTALL_BOOT_DISPLAY=Yes
+# --- Post-install display options (fly-start full install only) ---
+#
+# ENABLE_GRUMPYSCREEN — touch / status UI on the Fly-LCD (HDMI VT1) after the
+# OS is up. This is the lightweight KlipperScreen alternative for 512 MB.
+# It is NOT a Linux boot splash. Docs: fly-help / fly-grumpy-rotate.
+# Yes/No
+ENABLE_GRUMPYSCREEN=Yes
+#
+# INSTALL_BOOT_DISPLAY — Simple-AF Plymouth splash during early boot
+# (logo while the kernel/initramfs comes up), same idea as:
+#   https://pellcorp.github.io/creality-wiki/rpi_boot_display/
+# Simple-AF images bake plymouth + the simpleaf theme; this flag only
+# enables it (sets bootlogo=true). Toggle later without reinstall:
+#   fly-boot-display enable|disable|status
+#   (also fly-start menu 3 = enable, 4 = disable)
+# Optional; needs HDMI. Independent of GrumpyScreen. Default No (512 MB).
+# Yes/No
+INSTALL_BOOT_DISPLAY=No

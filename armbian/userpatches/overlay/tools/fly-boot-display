@@ -1,0 +1,170 @@
+#!/bin/bash
+# Enable / disable the Plymouth Simple-AF early-boot splash (diagnostic toggle).
+# Armbian: bootlogo=true|false in /boot/armbianEnv.txt drives splash vs splash=verbose.
+# Simple-AF images bake plymouth + the simpleaf theme; enable only flips bootlogo.
+set -euo pipefail
+
+ENV_FILE=/boot/armbianEnv.txt
+THEME=simpleaf
+MARKER_DONE="${HOME}/pellcorp.done"
+SCRIPT_INSTALL="${HOME}/pellcorp/rpi/install-boot-display.sh"
+STASH=/usr/share/fly-debian/simpleaf/plymouth
+
+usage() {
+	cat <<'EOF'
+Usage: fly-boot-display <enable|disable|status>
+
+  enable   Activate Plymouth Simple-AF splash (Armbian bootlogo=true).
+           Theme/packages are pre-baked on Simple-AF images.
+           Reboot to see the logo during early boot.
+  disable  Turn splash off so HDMI/serial show the text boot sequence
+           (Armbian bootlogo=false → splash=verbose). Reboot to apply.
+  status   Show current bootlogo / Plymouth theme / cmdline splash state.
+
+Also available from fly-start menu options 4 and 5.
+Docs: https://pellcorp.github.io/creality-wiki/rpi_boot_display/
+EOF
+}
+
+need_sudo() {
+	if [[ ${EUID:-0} -eq 0 ]]; then
+		"$@"
+	elif sudo -n true 2>/dev/null; then
+		sudo "$@"
+	else
+		sudo "$@"
+	fi
+}
+
+get_bootlogo() {
+	if [[ -f $ENV_FILE ]]; then
+		awk -F= '/^bootlogo=/{print tolower($2); exit}' "$ENV_FILE" || true
+	fi
+}
+
+set_bootlogo() {
+	local want=$1
+	if [[ ! -f $ENV_FILE ]]; then
+		echo "WARN: $ENV_FILE missing; cannot set bootlogo=$want" >&2
+		return 0
+	fi
+	if grep -q '^bootlogo=' "$ENV_FILE"; then
+		need_sudo sed -i "s/^bootlogo=.*/bootlogo=${want}/" "$ENV_FILE"
+	else
+		need_sudo bash -c "echo 'bootlogo=${want}' >>'$ENV_FILE'"
+	fi
+	echo "Set bootlogo=${want} in $ENV_FILE"
+}
+
+ensure_plymouth_pkgs() {
+	if command -v plymouth >/dev/null 2>&1; then
+		return 0
+	fi
+	echo "Installing plymouth (Armbian/Debian packages)..."
+	need_sudo apt-get update -qq || true
+	need_sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+		plymouth plymouth-themes unzip || {
+		echo "ERROR: could not install plymouth" >&2
+		return 1
+	}
+}
+
+install_theme_from_stash() {
+	[[ -f $STASH/simpleaf.zip ]] || return 1
+	need_sudo mkdir -p /usr/share/plymouth/themes/simpleaf
+	need_sudo unzip -qo "$STASH/simpleaf.zip" -d /usr/share/plymouth/themes/simpleaf
+	[[ -f $STASH/simpleaf.plymouth ]] && \
+		need_sudo install -m 0644 "$STASH/simpleaf.plymouth" \
+			/usr/share/plymouth/themes/simpleaf/simpleaf.plymouth
+	[[ -f $STASH/simpleaf.script ]] && \
+		need_sudo install -m 0644 "$STASH/simpleaf.script" \
+			/usr/share/plymouth/themes/simpleaf/simpleaf.script
+	return 0
+}
+
+ensure_simpleaf_theme() {
+	ensure_plymouth_pkgs || return 1
+	if [[ -d /usr/share/plymouth/themes/simpleaf ]] \
+		&& [[ -f /usr/share/plymouth/themes/simpleaf/simpleaf.plymouth ]]; then
+		:
+	elif install_theme_from_stash; then
+		echo "Installed Simple-AF theme from image stash ($STASH)."
+	elif [[ -x $SCRIPT_INSTALL ]]; then
+		if [[ -f $MARKER_DONE ]] && ! [[ -d /usr/share/plymouth/themes/simpleaf ]]; then
+			need_sudo sed -i '/^boot-display$/d' "$MARKER_DONE" 2>/dev/null || \
+				sed -i '/^boot-display$/d' "$MARKER_DONE" || true
+		fi
+		bash "$SCRIPT_INSTALL" || echo "WARN: install-boot-display.sh reported an error." >&2
+	else
+		echo "WARN: Simple-AF Plymouth theme not found (bake missing?)." >&2
+		return 1
+	fi
+	if command -v plymouth-set-default-theme >/dev/null 2>&1; then
+		need_sudo plymouth-set-default-theme -R "$THEME" || \
+			need_sudo plymouth-set-default-theme "$THEME" || true
+	fi
+	if [[ -d /usr/share/plymouth/themes/simpleaf && -f $MARKER_DONE ]]; then
+		grep -qx 'boot-display' "$MARKER_DONE" 2>/dev/null || \
+			echo 'boot-display' >>"$MARKER_DONE"
+	fi
+	return 0
+}
+
+cmd_status() {
+	local logo theme splash_arg
+	logo=$(get_bootlogo)
+	[[ -n $logo ]] || logo="(unset)"
+	theme="(plymouth not installed)"
+	if command -v plymouth-set-default-theme >/dev/null 2>&1; then
+		theme=$(plymouth-set-default-theme 2>/dev/null || echo "(unknown)")
+	fi
+	splash_arg=$(tr ' ' '\n' </proc/cmdline | grep -E '^splash' | head -n1 || true)
+	[[ -n $splash_arg ]] || splash_arg="(none)"
+	cat <<EOF
+fly-boot-display status
+  armbianEnv bootlogo: ${logo}
+  plymouth theme:      ${theme}
+  cmdline splash:      ${splash_arg}
+  theme dir:           $([[ -d /usr/share/plymouth/themes/simpleaf ]] && echo present || echo missing)
+  image stash:         $([[ -f $STASH/simpleaf.zip ]] && echo present || echo missing)
+  pellcorp script:     $([[ -x $SCRIPT_INSTALL ]] && echo present || echo missing)
+
+  bootlogo=true  → graphical splash (after enable + reboot)
+  bootlogo=false → text boot sequence (after disable + reboot)
+EOF
+}
+
+cmd_enable() {
+	echo "=== Enable Plymouth / Simple-AF boot display ==="
+	ensure_simpleaf_theme || true
+	set_bootlogo true
+	echo "Done. Reboot to see the splash on HDMI."
+	echo "  sudo reboot"
+}
+
+cmd_disable() {
+	echo "=== Disable boot display (show text boot sequence) ==="
+	set_bootlogo false
+	if command -v plymouth-set-default-theme >/dev/null 2>&1; then
+		if plymouth-set-default-theme -l 2>/dev/null | grep -qx 'details'; then
+			need_sudo plymouth-set-default-theme -R details || true
+		elif plymouth-set-default-theme -l 2>/dev/null | grep -qx 'text'; then
+			need_sudo plymouth-set-default-theme -R text || true
+		fi
+	fi
+	echo "Done. Reboot to watch the startup sequence on HDMI/serial."
+	echo "  sudo reboot"
+	echo "Re-enable later with: fly-boot-display enable"
+}
+
+case "${1:-}" in
+	enable|on|install) cmd_enable ;;
+	disable|off) cmd_disable ;;
+	status|"") cmd_status ;;
+	-h|--help|help) usage ;;
+	*)
+		echo "Unknown argument: $1" >&2
+		usage >&2
+		exit 2
+		;;
+esac

@@ -1,6 +1,6 @@
 [Unit]
 Description=Apply FLY-SETUP fly-start.txt (Wi-Fi and optional first-run accounts)
-After=armbian-firstrun.service armbian-resize-filesystem.service systemd-networkd.service load-8189fs.service
+After=armbian-firstrun.service armbian-resize-filesystem.service systemd-networkd.service load-8189fs.service fly-swapfile.service fly-online-isolated-cpus.service
 Wants=systemd-networkd.service load-8189fs.service
 Before=getty.target
 

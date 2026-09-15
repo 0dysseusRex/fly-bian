@@ -47,6 +47,24 @@ if command -v dtc >/dev/null && [[ -f $root/armbian/userpatches/overlay/hdmi/fly
 fi
 
 cd "$build"
+
+# Upstream Armbian sunxi-6.18 ships arm-dts-sun4i-a10-fix-pmu-interrupt.patch,
+# which fails on current linux-6.18.y ("Reversed / already applied"). It only
+# touches sun4i-a10 (not H3 Fly Lite). Disable it in series.conf (leading "-")
+# until Armbian rebases the series. Keep the patch file present.
+series=$build/patch/kernel/archive/sunxi-6.18/series.conf
+bad_rel=patches.armbian/arm-dts-sun4i-a10-fix-pmu-interrupt.patch
+bad_patch=$build/patch/kernel/archive/sunxi-6.18/$bad_rel
+parked=$build/userpatches/disabled-upstream-patches/arm-dts-sun4i-a10-fix-pmu-interrupt.patch
+mkdir -p "$build/userpatches/disabled-upstream-patches"
+if [[ -f $parked && ! -f $bad_patch ]]; then
+	cp -a "$parked" "$bad_patch"
+fi
+if [[ -f $series ]] && grep -qE "^[[:space:]]*${bad_rel//\//\\/}[[:space:]]*$" "$series"; then
+	sed -i -E "s|^([[:space:]]*)${bad_rel//\//\\/}[[:space:]]*$|\\1- ${bad_rel}|" "$series"
+	echo "fly-build: disabled already-applied sun4i-a10 PMU patch in series.conf"
+fi
+
 DOCKER_EXTRA_ARGS=(--dns 8.8.8.8 --dns 1.1.1.1 -e PESTER_TERMINAL=no)
 export DOCKER_EXTRA_ARGS
 # Skip Armbian's WSL2 "press ENTER in Windows Terminal" countdown (blocks tmux/nohup).

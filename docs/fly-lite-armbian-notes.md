@@ -143,8 +143,10 @@ On this 512 MB H3 board, **GrumpyScreen** is the supported touch UI:
 
 - Baked ARMv7 binary (official `grumpyscreen-rpi` is ARMv8 and SIGILLs here).
 - Speaks fbdev/DRM + evdev — no Xorg/Mesa apt storm.
-- Simple-AF named images enable `grumpyscreen` on first user bind and free `getty@tty1`.
-- Armbian `BOOT_LOGO=desktop` stays on for the Simple-AF HDMI boot splash.
+- Simple-AF installs GrumpyScreen on first user bind; `fly-start` /
+  `ENABLE_GRUMPYSCREEN` enables it and frees `getty@tty1`.
+- Plymouth Simple-AF splash is optional (`INSTALL_BOOT_DISPLAY` /
+  `fly-boot-display`). Armbian `BOOT_LOGO=desktop` still ships `boot.bmp`.
 
 **Do not install KlipperScreen** on Fly Lite. Lab installs OOM mid-apt and have zeroed `/boot/uInitrd`, leaving the card stuck in U-Boot until `uInitrd` is rebuilt from `initrd.img-*`.
 

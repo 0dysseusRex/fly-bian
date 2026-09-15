@@ -1,0 +1,50 @@
+#!/bin/bash
+# Link Klippain Shake&Tune into Klipper extras so [shaketune] is valid.
+# Safe to re-run. Does not comment out config — installs the missing module.
+set -euo pipefail
+
+user=${1:-}
+if [[ -z $user ]]; then
+	if [[ ${EUID:-0} -eq 0 ]]; then
+		echo "usage: $0 <username>" >&2
+		exit 2
+	fi
+	user=$(id -un)
+fi
+
+home=$(getent passwd "$user" | cut -d: -f6)
+[[ -n $home && -d $home ]] || {
+	echo "fly-ensure-shaketune: home missing for $user" >&2
+	exit 1
+}
+
+shake=$home/klippain_shaketune
+klipper=$home/klipper
+extras=$klipper/klippy/extras
+link=$extras/shaketune
+
+if [[ ! -d $shake/shaketune ]]; then
+	echo "fly-ensure-shaketune: $shake/shaketune missing (not installed yet)" >&2
+	exit 1
+fi
+if [[ ! -d $extras ]]; then
+	echo "fly-ensure-shaketune: $extras missing" >&2
+	exit 1
+fi
+
+if [[ -L $link || -d $link ]]; then
+	# Refresh link to the expected tree
+	rm -rf "$link"
+fi
+ln -sfn "$shake/shaketune" "$link"
+chown -h "$user:$user" "$link" 2>/dev/null || true
+echo "fly-ensure-shaketune: linked $link -> $shake/shaketune"
+
+# Restart klipper if it is already running so the section loads.
+if systemctl is-active --quiet klipper 2>/dev/null; then
+	if [[ ${EUID:-0} -eq 0 ]]; then
+		systemctl restart klipper || true
+	else
+		sudo systemctl restart klipper || true
+	fi
+fi

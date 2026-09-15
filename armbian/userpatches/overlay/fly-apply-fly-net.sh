@@ -426,7 +426,10 @@ finish_firstlogin() {
 	systemctl enable ssh.service >/dev/null 2>&1 || true
 	systemctl restart ssh.service >/dev/null 2>&1 || \
 		systemctl restart sshd.service >/dev/null 2>&1 || true
-	systemctl daemon-reload >/dev/null 2>&1 || true
+	# Avoid daemon-reload here on first boot: it re-runs generators
+	# (fly-klipper-cpu-affinity) while CPUs may still be hotplugging and
+	# RAM is tight after resize/swap — that correlated with a 6.18.x
+	# __bitmap_clear oops. Units we touch above do not need a reload.
 	log "first-run complete; SSH should accept USER_NAME"
 }
 

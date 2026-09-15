@@ -39,6 +39,17 @@ if [[ -f $OVERLAY/simpleaf/patch-installer-cleanup.sh && -f $STACK/pellcorp/rpi/
 	bash "$OVERLAY/simpleaf/patch-installer-cleanup.sh" \
 		"$STACK/pellcorp/rpi/installer.sh"
 fi
+if [[ -f $OVERLAY/simpleaf/patch-shaketune-importlib.sh && -f $STACK/klippain_shaketune/shaketune/shaketune.py ]]; then
+	bash "$OVERLAY/simpleaf/patch-shaketune-importlib.sh" \
+		"$STACK/klippain_shaketune/shaketune/shaketune.py"
+fi
+
+# Plymouth Simple-AF early-boot splash (packages + theme). Toggle with
+# fly-boot-display / INSTALL_BOOT_DISPLAY — default bootlogo=false.
+if [[ -f $OVERLAY/simpleaf/bake-plymouth.sh ]]; then
+	# shellcheck source=/dev/null
+	source "$OVERLAY/simpleaf/bake-plymouth.sh" "$OVERLAY/simpleaf/plymouth"
+fi
 
 echo "fly-bake: moonraker-env (no speedups / uvloop compile)"
 fly_venv "$STACK/moonraker-env"
@@ -51,6 +62,13 @@ fly_pip_reqs "$STACK/klippy-env" \
 	"$STACK/klipper/scripts/klippy-requirements.txt" \
 	"$STACK/pellcorp/rpi/klippy-requirements.txt" \
 	"$STACK/klippain_shaketune/requirements.txt"
+
+# So [shaketune] is valid after bind without a separate install.sh run.
+if [[ -d $STACK/klippain_shaketune/shaketune && -d $STACK/klipper/klippy/extras ]]; then
+	ln -sfn "$STACK/klippain_shaketune/shaketune" \
+		"$STACK/klipper/klippy/extras/shaketune"
+	echo "fly-bake: linked klippy extras/shaketune"
+fi
 
 if [[ -d $STACK/pellcorp/rpi/nginx ]]; then
 	install -d /etc/nginx/sites-available /etc/nginx/sites-enabled \
@@ -100,13 +118,14 @@ fi
 
 for f in klipper.service moonraker.service crowsnest.service grumpyscreen.service \
 	pellcorp.done.software README.fragment patch-install-klipper.sh \
-	patch-config-helper.sh patch-installer-cleanup.sh; do
+	patch-config-helper.sh patch-installer-cleanup.sh patch-shaketune-importlib.sh; do
 	if [[ -f $OVERLAY/simpleaf/$f ]]; then
 		install -m 0644 "$OVERLAY/simpleaf/$f" "/usr/share/fly-debian/simpleaf/$f"
 	fi
 done
 # patch scripts must stay executable if copied for reference
-for f in patch-install-klipper.sh patch-config-helper.sh patch-installer-cleanup.sh; do
+for f in patch-install-klipper.sh patch-config-helper.sh patch-installer-cleanup.sh \
+	patch-shaketune-importlib.sh; do
 	[[ -f /usr/share/fly-debian/simpleaf/$f ]] && chmod 0755 "/usr/share/fly-debian/simpleaf/$f"
 done
 

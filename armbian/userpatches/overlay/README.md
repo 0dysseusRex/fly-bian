@@ -27,8 +27,12 @@
 # fly-bind-klipper-stack (first real user) also:
 #   - applies pellcorp nginx sites (Mainsail :4409, Fluidd :80)
 #   - runs Moonraker set-policykit-rules.sh (needs polkitd from customize)
-#   - installs ARMv7 GrumpyScreen under ~/grumpyscreen and enables it
-#     (preferred over KlipperScreen on 512 MB; frees getty@tty1)
+#   - installs ARMv7 GrumpyScreen under ~/grumpyscreen (unit not enabled;
+#     fly-start ENABLE_GRUMPYSCREEN controls enable + getty@tty1)
+#   - INSTALL_BOOT_DISPLAY / fly-boot-display = Plymouth splash, not Grumpy
+#     (fly-start menu 3 enable / 4 disable for diagnostic text boot)
+#   - Simple-AF bake installs plymouth + simpleaf theme (bootlogo=false
+#     until enabled); assets under overlay/simpleaf/plymouth/
 #
 # motd/ is the Fly-bian SSH splash (replaces Armbian-unofficial figlet).
 # customize-image.sh installs it and patches 10-armbian-header, and adds

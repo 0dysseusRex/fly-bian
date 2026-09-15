@@ -174,9 +174,9 @@ fi
 
 # Console login: multi-user + getty on tty1 until Simple-AF bind.
 # greetd fought touch UIs, crashed on large MOTD, and left HDMI stuck
-# on graphical.target. Prefer GrumpyScreen (fbdev, ARMv7) ove
+# on graphical.target. Prefer GrumpyScreen (fbdev, ARMv7) over
 # KlipperScreen (X/Mesa) on this 512 MB board — KS installs OOM.
-# After first user bind, Simple-AF enables grumpyscreen and frees tty1.
+# fly-start ENABLE_GRUMPYSCREEN enables grumpyscreen and frees tty1.
 # fly-ip-announce prints wlan0 IPv4 on consoles after network-online.
 if command -v apt-get >/dev/null; then
   export DEBIAN_FRONTEND=noninteractive
@@ -190,6 +190,8 @@ if command -v apt-get >/dev/null; then
   fi
   # Moonraker machine endpoints need the DBus PolKit interface.
   apt-get install -y --no-install-recommends polkitd || true
+  # Plymouth for optional early-boot splash (Simple-AF theme baked in flavor bake).
+  apt-get install -y --no-install-recommends plymouth plymouth-themes unzip || true
 fi
 # Host keys must exist before first boot or ssh.service crash-loops.
 if command -v ssh-keygen >/dev/null; then
@@ -199,13 +201,24 @@ for motd_heavy in 30-armbian-sysinfo 35-armbian-tips 41-armbian-config \
   30-armbian-updates 40-armbian-messages; do
   [[ -f /etc/update-motd.d/$motd_heavy ]] && chmod a-x "/etc/update-motd.d/$motd_heavy" || true
 done
+# 512 MB + maxcpus=1: Armbian's @reboot apt simulate (armbian-apt-updates)
+# OOMs during first boot (COMM truncates to armbian-apt-upd). MOTD update
+# counts stay empty; run apt manually when the board is idle with swap up.
+rm -f /etc/cron.d/armbian-updates 2>/dev/null || true
+if [[ -x /usr/lib/armbian/armbian-apt-updates ]]; then
+  chmod a-x /usr/lib/armbian/armbian-apt-updates || true
+fi
+if command -v systemctl >/dev/null; then
+  systemctl disable --now apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+  systemctl mask apt-daily.service apt-daily-upgrade.service 2>/dev/null || true
+fi
 rm -f /etc/systemd/system/display-manager.service 2>/dev/null || true
 if command -v systemctl >/dev/null; then
   systemctl disable greetd.service 2>/dev/null || true
   systemctl set-default multi-user.target
   systemctl enable getty@tty1.service 2>/dev/null || true
 fi
-echo "customize-image: console -> getty@tty1, multi-user.target (no greetd)"
+echo "customize-image: console -> getty@tty1, multi-user.target (no greetd; no @reboot apt)"
 
 if [[ -f $OVERLAY/network/fly-ip-announce.sh && -f $OVERLAY/network/fly-ip-announce.service ]]; then
   install -m 0755 "$OVERLAY/network/fly-ip-announce.sh" \
@@ -236,15 +249,21 @@ if [[ -f $OVERLAY/boot/fly-boot-complete.sh && -f $OVERLAY/boot/fly-boot-complet
   fi
 fi
 
-# SSH helpers: help, guided install, cameras, GrumpyScreen rotation
+# SSH helpers: help, guided install, cameras, GrumpyScreen, boot display
 if [[ -f $OVERLAY/tools/fly-help ]]; then
   install -m 0755 "$OVERLAY/tools/fly-help" /usr/local/bin/fly-help
 fi
 if [[ -f $OVERLAY/tools/fly-start ]]; then
   install -m 0755 "$OVERLAY/tools/fly-start" /usr/local/bin/fly-start
 fi
+if [[ -f $OVERLAY/tools/fly-boot-display ]]; then
+  install -m 0755 "$OVERLAY/tools/fly-boot-display" /usr/local/bin/fly-boot-display
+fi
 if [[ -f $OVERLAY/tools/fly-moonraker-polkit ]]; then
   install -m 0755 "$OVERLAY/tools/fly-moonraker-polkit" /usr/local/bin/fly-moonraker-polkit
+fi
+if [[ -f $OVERLAY/tools/fly-ensure-shaketune ]]; then
+  install -m 0755 "$OVERLAY/tools/fly-ensure-shaketune" /usr/local/bin/fly-ensure-shaketune
 fi
 if [[ -f $OVERLAY/crowsnest/fly-crowsnest-add-cams ]]; then
   install -m 0755 "$OVERLAY/crowsnest/fly-crowsnest-add-cams" \

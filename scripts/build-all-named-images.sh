@@ -5,6 +5,9 @@ root=/mnt/c/Users/udrdr/fly-debian
 build=/home/rex/fly-build/armbian-build
 master_log=/home/rex/fly-build/compile-all.log
 
+export PATH="/mnt/wsl/docker-desktop/cli-tools/usr/bin:/usr/bin:${PATH:-/usr/bin}"
+hash -r
+
 sed -i 's/\r$//' "$root/scripts/run-armbian-compile.sh" \
 	"$root/scripts/stage-armbian-overlay.sh" \
 	"$root/scripts/flybian-require-new-version.sh" \

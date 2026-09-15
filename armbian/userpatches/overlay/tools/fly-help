@@ -46,10 +46,20 @@ Custom commands (this image)
 
   fly-start
       Interactive menu driven by fly-start.txt on FLY-SETUP /boot:
-        1) Run Full Install Script  — INSTALL_CMD, then optional cameras
-           and GrumpyScreen (AUTO_CAMERAS / INSTALL_BOOT_DISPLAY)
+        1) Run Full Install Script  — INSTALL_CMD, then optional:
+             AUTO_CAMERAS, ENABLE_GRUMPYSCREEN, INSTALL_BOOT_DISPLAY
         2) Update Simple AF         — ~/pellcorp/installer.sh --update
-        3) Cancel
+        3) Enable boot display      — Plymouth Simple-AF splash
+        4) Disable boot display     — text boot sequence (diagnostics)
+        5) Show GrumpyScreen rotation
+        6) Set GrumpyScreen rotation (0°/90°/180°/270°)
+        7) Cancel
+
+  fly-boot-display enable|disable|status
+      Toggle the early-boot Plymouth splash without re-running install.
+      disable → bootlogo=false (splash=verbose) so HDMI shows startup text.
+      enable  → install/activate Simple-AF theme + bootlogo=true.
+      Reboot after enable/disable. Same as fly-start menu 3 / 4.
 
   fly-crowsnest-add-cams [--dry-run]
       Find USB cameras under /dev/v4l/by-id and append [cam …] sections
@@ -59,22 +69,34 @@ Custom commands (this image)
   fly-grumpy-rotate [0|1|2|3]
       Set GrumpyScreen rotation (0°/90°/180°/270°). Writes
       ~/printer_data/config/grumpyscreen.ini and restarts GrumpyScreen.
-      No argument: show current rotation.
+      No argument: show current rotation. Same as fly-start menu 5 / 6.
 
   fly-crowsnest-strip-placeholders
       Remove stock [cam web] / /dev/video0 placeholders from a conf file
       (used by the camera helper and image bake).
 
+Display options in fly-start.txt
+--------------------------------
+  ENABLE_GRUMPYSCREEN=Yes|No
+      Touch / status UI on the Fly-LCD after the OS is up (not a splash).
+
+  INSTALL_BOOT_DISPLAY=Yes|No
+      Plymouth early-boot logo (Simple-AF theme), same as:
+      https://pellcorp.github.io/creality-wiki/rpi_boot_display/
+      Simple-AF images bake plymouth + theme; this flag / fly-boot-display
+      only enables or disables the splash (bootlogo=true|false).
+      Toggle later with fly-boot-display / fly-start 3–4.
+
 Image identity
 --------------
-  /etc/fly-debian/flybian-version   e.g. 0.1
-  /etc/fly-debian/flybian-image     e.g. Fly-bian-0.1_Fly-Lite-2.1_Simple-AF
+  /etc/fly-debian/flybian-version   e.g. 0.4
+  /etc/fly-debian/flybian-image     e.g. Fly-bian-0.4_Fly-Lite-2.1_Simple-AF
 
 Config file
 -----------
   /boot/fly-start.txt   (FLY-SETUP FAT volume; also under first-boot/)
-  Keys for fly-start: INSTALL_CMD, AUTO_CAMERAS=Yes|No,
-  INSTALL_BOOT_DISPLAY=Yes|No
+  Keys for fly-start: INSTALL_CMD, AUTO_CAMERAS,
+  ENABLE_GRUMPYSCREEN, INSTALL_BOOT_DISPLAY
 
 Serial: 115200 8N1, Type-C. Do not pulse DTR/RTS.
 EOF

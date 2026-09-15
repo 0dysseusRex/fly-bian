@@ -34,7 +34,18 @@ Optional Simple-AF helpers (used later by `fly-start` over SSH):
 
   INSTALL_CMD=~/pellcorp/installer.sh --install --printer … --probe …
   AUTO_CAMERAS=Yes
+
+  ENABLE_GRUMPYSCREEN=Yes
+    Touch UI on the Fly-LCD after boot (temps, macros, status). Not a splash
+    screen. Prefer this over KlipperScreen on 512 MB.
+
   INSTALL_BOOT_DISPLAY=Yes
+    Plymouth splash logo during early Linux boot (Simple-AF theme). See:
+    https://pellcorp.github.io/creality-wiki/rpi_boot_display/
+    Packages + theme are baked into Simple-AF images; this only enables
+    the splash. Independent of GrumpyScreen. Later: fly-boot-display
+    enable|disable (or fly-start menu 3 / 4) then reboot — disable to
+    watch the text boot sequence when diagnosing issues.
 
 Leave USE_STATIC=0 unless you know you need a fixed IP.
 
