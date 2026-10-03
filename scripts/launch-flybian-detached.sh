@@ -6,6 +6,10 @@ root=/mnt/c/Users/udrdr/fly-debian
 build=/home/rex/fly-build
 log=$build/compile-detached.log
 
+# Docker Desktop WSL CLI (docker may not be on default PATH).
+export PATH="/mnt/wsl/docker-desktop/cli-tools/usr/bin:/usr/bin:${PATH:-/usr/bin}"
+hash -r
+
 sed -i 's/\r$//' "$root/scripts/"*.sh \
 	"$root/armbian/userpatches/overlay/simpleaf/"*.sh \
 	"$root/armbian/userpatches/overlay/boot/"* \
@@ -35,6 +39,10 @@ cat >"$worker" <<'EOF'
 set -euo pipefail
 root=/mnt/c/Users/udrdr/fly-debian
 log=/home/rex/fly-build/compile-detached.log
+export PATH="/mnt/wsl/docker-desktop/cli-tools/usr/bin:/usr/bin:${PATH:-/usr/bin}"
+hash -r
+export PESTER_TERMINAL=no
+export WT_SESSION="${WT_SESSION:-fly-bian-build}"
 {
   echo "=== $(date -Is) DETACHED start base+simpleaf+kiauh ver=$(tr -d '[:space:]' <"$root/FLYBIAN_VERSION") ==="
   docker run --rm --privileged multiarch/qemu-user-static --reset -p yes || true

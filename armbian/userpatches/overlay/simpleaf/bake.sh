@@ -10,7 +10,7 @@ fly_klipper_stack_apt
 
 STACK=/opt/fly-simple-af
 install -d "$STACK" /usr/share/fly-debian/simpleaf /etc/fly-debian
-printf 'simpleaf\n' >/etc/fly-debian/stack-flavo
+printf 'simpleaf\n' >/etc/fly-debian/stack-flavor
 
 fly_git_clone https://github.com/pellcorp/creality.git "$STACK/pellcorp"
 fly_git_clone https://github.com/Arksine/moonraker.git "$STACK/moonraker"
@@ -81,6 +81,17 @@ if [[ -f $STACK/pellcorp/rpi/moonraker.conf ]]; then
 		[[ -f $STACK/pellcorp/rpi/$f ]] && \
 			install -m 0644 "$STACK/pellcorp/rpi/$f" "/usr/share/fly-debian/simpleaf/config/$f"
 	done
+	# 512 MB: apt CLI instead of PackageKit (avoids Mainsail PolKit noise).
+	if [[ -f /usr/share/fly-debian/simpleaf/config/moonraker.conf ]]; then
+		cfg=/usr/share/fly-debian/simpleaf/config/moonraker.conf
+		if grep -qE '^[[:space:]]*enable_packagekit[[:space:]]*:' "$cfg"; then
+			sed -i -E 's|^[[:space:]]*enable_packagekit[[:space:]]*:.*|enable_packagekit: False|' "$cfg"
+		elif grep -q '^\[update_manager\]' "$cfg"; then
+			sed -i '/^\[update_manager\]/a enable_packagekit: False' "$cfg"
+		else
+			printf '\n[update_manager]\nenable_packagekit: False\n' >>"$cfg"
+		fi
+	fi
 	# Drop pellcorp [cam web] / /dev/video0 example — on H3 video0 is cedrus.
 	if [[ -x $OVERLAY/crowsnest/fly-crowsnest-strip-placeholders ]]; then
 		for f in \
@@ -94,6 +105,38 @@ if [[ -f $STACK/pellcorp/rpi/moonraker.conf ]]; then
 		[[ -f $STACK/pellcorp/config/$f ]] && \
 			install -m 0644 "$STACK/pellcorp/config/$f" "/usr/share/fly-debian/simpleaf/config/$f"
 	done
+fi
+
+# Ensure GrumpyScreen override carries display_rotate in [ui]. Simple-AF's
+# install-grumpyscreen.sh copies pellcorp/config/grumpyscreen.ini over
+# printer_data/config/ — without this key, rotation falls back to the base
+# cfg and user fly-grumpy-rotate settings get wiped on reinstall.
+install -d /usr/share/fly-debian/simpleaf/config
+ensure_grumpy_display_rotate() {
+	local f=$1
+	[[ -f $f ]] || return 0
+	if grep -qiE '^[[:space:]]*display_rotate[[:space:]]*:' "$f"; then
+		return 0
+	fi
+	if grep -q '^\[ui\]' "$f"; then
+		sed -i '/^\[ui\]/a display_rotate: 0' "$f"
+	else
+		printf '\n[ui]\ndisplay_rotate: 0\n' >>"$f"
+	fi
+}
+if [[ -f $STACK/pellcorp/config/grumpyscreen.ini ]]; then
+	ensure_grumpy_display_rotate "$STACK/pellcorp/config/grumpyscreen.ini"
+	install -m 0644 "$STACK/pellcorp/config/grumpyscreen.ini" \
+		/usr/share/fly-debian/simpleaf/config/grumpyscreen.ini
+fi
+# Bind-time seed (rsync --ignore-existing): minimal override if no pellcorp copy.
+if [[ -f $OVERLAY/simpleaf/config/grumpyscreen.ini ]]; then
+	if [[ ! -f /usr/share/fly-debian/simpleaf/config/grumpyscreen.ini ]]; then
+		install -m 0644 "$OVERLAY/simpleaf/config/grumpyscreen.ini" \
+			/usr/share/fly-debian/simpleaf/config/grumpyscreen.ini
+	else
+		ensure_grumpy_display_rotate /usr/share/fly-debian/simpleaf/config/grumpyscreen.ini
+	fi
 fi
 
 # ARMv7 GrumpyScreen — preferred touch UI on Fly Lite (512 MB). KlipperScreen
@@ -135,4 +178,5 @@ if [[ -f /boot/README.txt && -f $OVERLAY/simpleaf/README.fragment ]]; then
 fi
 
 chmod -R a+rX "$STACK"
+fly_set_stack_identity simpleaf "$STACK/pellcorp"
 echo "fly-bake: Simple-AF stack ready in $STACK"

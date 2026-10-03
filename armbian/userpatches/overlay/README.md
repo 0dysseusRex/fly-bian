@@ -52,5 +52,8 @@
 # bake + strip-placeholders remove pellcorp [cam web] / /dev/video0 examples.
 #
 # hdmi/fly-lite-hdmi.dts enables &hdmi (Fly DTB ships it disabled).
-# from-golden/ also has the compiled .dtbo plus DTB, TFT firmware, and
-# 8189fs / isolcpus units — customize-image.sh installs those too.
+# tft/fly-lite-tft.dts + fly-lite-tft-c.dts: ST7796 panel-mipi-dbi + Cap GT911.
+# from-golden/firmware/ST7796S.bin + overlay-user copies; modules-load.d/fly-tft.conf.
+# tools/fly-tft-check → /usr/local/bin. Cap DIP default (fly-lite-tft-c in user_overlays);
+# Resi DIP: drop fly-lite-tft-c from armbianEnv.txt.
+# from-golden/ also has DTB / 8189fs / isolcpus units — customize-image.sh installs those.

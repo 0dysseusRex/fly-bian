@@ -18,7 +18,9 @@ Type-C, data-capable cable, **115200 8N1**, no flow control. Often **COM4**.
 
 PuTTY: Serial, `COM4`, 115200. Finish the wizard (root password, your user).
 
-`reboot` may hang — use a 5 V power cycle.
+`reboot` may hang — use a 5 V power cycle. Leave a few minutes between
+power cycles or hard resets; cycling too quickly or too often often leads
+to hung boots or kernel oops.
 
 ## 3. Stock Orange Pi Lite card (no FLY-SETUP)
 

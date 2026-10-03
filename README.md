@@ -1,18 +1,38 @@
-# Fly Debian
+# Fly-bian Project
 
-Armbian (Debian) images for [Mellow Fly Lite 2](https://mellow.klipper.cn/en/docs/ProductDoc/SBC/fly-lite/lite2/) single-board hosts. Not FlyOS-FAST. Normal apt, a normal user, and the board’s hardware.
+![Fly-bian Project SSH splash (MOTD)](docs/assets/fly-bian-splash.png)
 
-**Fly Lite 2.1 is first.** Fly Pi V3 is next. Other Fly hosts get a blurb until we pick one up.
+Unofficial Armbian (Debian) firmware for [Mellow Fly](https://mellow.klipper.cn/en/docs/ProductDoc/SBC/fly-lite/lite2/) single-board hosts. **Not FlyOS**, not an official Mellow product. Normal apt, a normal user, and the board’s hardware.
 
-This repository is the contract and the patches. Flashable `.img` files are **not** in git (they are large and may contain Wi-Fi secrets). Bench dumps live at `C:\Users\udrdr\fly-lite-armbian-image` — see [`docs/images.md`](docs/images.md).
+**Fly Lite 2.1 is first.** Fly Pi V3 is next. Other Mellow SBCs get notes until we pick one up.
+
+**Per-board docs** (hardware-deep READMEs): [`docs/boards/`](docs/boards/README.md) — start with [`Fly Lite 2.1`](docs/boards/fly-lite-2.1/README.md).
+
+## Support
+
+If Fly-bian helps your printer, you can [buy me a coffee on Ko-fi](https://ko-fi.com/0dysseusrex).
+
+This repository is the contract and the patches. Flashable `.img` files ship on **[GitHub Releases](https://github.com/0dysseusRex/fly-bian/releases)** (`Fly-bian-1.0` Base / Simple-AF / KIAUH), not in git. Bench dumps live at `C:\Users\udrdr\fly-lite-armbian-image` — see [`docs/images.md`](docs/images.md).
+
+## How this project is built (AI-first)
+
+Fly-bian is **heavily AI-assisted**. Day-to-day bring-up, overlays, docs, bake scripts, live serial/SSH diagnosis, and release prep are done in [Cursor](https://cursor.com) with an AI coding agent (**Auto** / Composer) working alongside a human maintainer who owns hardware, flashing, and final calls.
+
+Expect:
+
+- Agents that read the board, edit the tree, and drive long Armbian bakes
+- Docs and helpers written for that workflow (and for humans reproducing builds)
+- Mistakes caught by flashing and testing on real Fly hardware — treat AI output as draft until verified on a card
+
+If you contribute, AI-authored patches are welcome when they are reviewed on hardware the same way.
 
 ## What you flash
 
 | Image | Who it is for |
 | --- | --- |
 | **Named Fly Lite 2.1 Armbian image** (`fly-lite-21`) | Hardware + wizard only. Install Simple-AF or KIAUH yourself later. |
-| **Simple-AF image** (`fly-lite-21-simpleaf`) | Same hardware, pellcorp/Klipper stack pre-baked under `/opt`. After login: `fly-start` (or `~/pellcorp/installer.sh --install --printer …`). Do not add KIAUH. |
-| **KIAUH image** (`fly-lite-21-kiauh`) | Same hardware, KIAUH + stock Klipper/Moonraker/UIs pre-baked. After login: `~/kiauh/kiauh.sh`. Do not add Simple-AF. |
+| **Simple-AF image** (`fly-lite-21-simpleaf`) | Same hardware, [pellcorp Simple-AF](https://github.com/pellcorp/creality) stack pre-baked under `/opt`. After login: `fly-start`. How-to: [`docs/howto-simpleaf.md`](docs/howto-simpleaf.md). Upstream RPi docs: [creality-wiki/rpi](https://pellcorp.github.io/creality-wiki/rpi/). Do not add KIAUH. On 512 MB use GrumpyScreen, not KlipperScreen. |
+| **KIAUH image** (`fly-lite-21-kiauh`) | Same hardware, [KIAUH](https://github.com/dw-0/kiauh) + stock Klipper/Moonraker/UIs pre-baked. After login: `fly-kiauh`. How-to: [`docs/howto-kiauh.md`](docs/howto-kiauh.md). Lab notes: [`docs/kiauh-fly-lite.md`](docs/kiauh-fly-lite.md). Do not add Simple-AF. |
 | Current lab dump `fly-lite-v2.1-armbian-cpu-affinity.img.gz` | Already-working card (full-size `dd`). Use only until the named image exists. |
 | Stock Orange Pi Lite Trixie from [armbian.com/orange-pi-lite](https://www.armbian.com/orange-pi-lite/) | Recovery / comparison. Single ext4, no Fly DTB, U-Boot card-detect is wrong on this PCB. |
 
@@ -22,7 +42,9 @@ Do **not** flash Raspberry Pi OS, Mainsail OS, or Fly Gemini / Fly-Pi H5 communi
 
 Compact Allwinner **H3** host (512 MB, **MicroSD only**, no eMMC). Onboard 2.4 GHz Wi-Fi (IPEX), two USB-A, Type-C power + UART, FPC-HDMI, FPC-TFT. Independent **5 V**. Do not power it from a printer MCU.
 
-The working lab image uses Fly’s `sun8i-h3-fly-lite.dtb`, heartbeat LED, `wlan0` (8189fs on **CPU0**), TFT DRM bound (panel may still be in the mail). Klipper is **not** preinstalled. systemd drop-ins pin a later KIAUH or Simple-AF stack to CPUs **1–3**.
+Full hardware overview: **[`docs/boards/fly-lite-2.1/README.md`](docs/boards/fly-lite-2.1/README.md)**.
+
+Working images use Fly’s `sun8i-h3-fly-lite.dtb`, heartbeat LED, `wlan0` (8189fs on **CPU0**), TFT DRM. systemd drop-ins pin Klipper-family units to CPUs **1–3**.
 
 ## First boot (named image)
 
@@ -30,7 +52,7 @@ After flashing, **eject, unplug, and replug** the card so the small FAT volume a
 
 On that volume you will find:
 
-- `fly-start.txt` — Wi-Fi, locale/timezone, root, sudo user, plus Simple-AF install options
+- `fly-start.txt` — Wi-Fi, locale/timezone, root, sudo user; Simple-AF also has install/boot-display/AUTO_CAMERAS keys; KIAUH is Wi-Fi/accounts only
 - `README.txt` — the same three setup paths, written for a first-time user
 
 Then put the card in the Lite, fit the IPEX antenna, and apply 5 V. First boot **expands the Debian partition** to fill the card and creates a 2 GB `/swapfile`. That can take several minutes.
@@ -43,10 +65,10 @@ Armbian’s wizard only runs on serial or HDMI, so Wi-Fi in the file by itself c
 2. Set `WIFI_SSID`, `WIFI_PSK`, `WIFI_COUNTRY`. Leave `USE_STATIC=0` unless you need a static IPv4.
 3. Set `LOCALE` / `TIMEZONE` (examples in the file).
 4. Set `ROOT_PASSWORD`, `USER_NAME` (lowercase login), `USER_PASSWORD`.
-5. Optionally set `INSTALL_CMD`, `AUTO_CAMERAS`, `ENABLE_GRUMPYSCREEN`, `INSTALL_BOOT_DISPLAY` for later `fly-start`.
+5. Optionally set `INSTALL_CMD`, `AUTO_CAMERAS`, `ENABLE_GRUMPYSCREEN`, `INSTALL_BOOT_DISPLAY` for later `fly-start` (Simple-AF only).
 6. Eject the volume. Card back in the Lite. Power on.
 7. Wait for resize + radio (often several minutes), then `ssh USER_NAME@THE.PRINTER.IP`.
-8. Run `fly-help` or `fly-start`.
+8. Run `fly-help`, then `fly-start` (Simple-AF) or `fly-kiauh` (KIAUH).
 
 Leave root or user as `Your…` and the on-screen wizard still runs. 2.4 GHz only. Passwords in the file are plaintext. There is no pre-made `fly` account unless you type that name yourself.
 
@@ -58,13 +80,15 @@ Type-C to the PC, **115200 8N1**, no flow control. Data-capable cable. On Window
 
 FPC-HDMI (or a USB-A HDMI adapter is not a thing — use the FPC) plus a USB keyboard. Leave the FPC-TFT unplugged for first boot. Complete the wizard on that console.
 
-`reboot` on this hardware often hangs. Use a **5 V power cycle**.
+`reboot` on this hardware often hangs. Use a **5 V power cycle**. Space power cycles (or hard resets) a few minutes apart — cycling too quickly or too often often leads to hung boots or kernel oops.
 
 ## After first login
 
 ```bash
 fly-help                  # install tips + custom commands
-fly-start                 # Simple-AF full install / update (reads fly-start.txt)
+fly-start                 # Simple-AF only — install/update / boot display menu
+fly-kiauh                 # KIAUH only — Start KIAUH / Add USB cameras
+fly-kiauh cameras         # KIAUH — USB cams into Crowsnest (same as fly-crowsnest-add-cams)
 sudo apt update
 # Do not apt-upgrade kernel, DTB, or U-Boot until those are in a named rebuild.
 ```
@@ -72,6 +96,18 @@ sudo apt update
 On the **base** image, Klipper is optional — install Simple-AF or KIAUH later as your normal user. On the **Simple-AF** or **KIAUH** named images the git trees and venvs are already on the card; first boot copies them into your home. CPU affinity for those units is already on every flavor (`klipper/cpu-affinity/`).
 
 On this 512 MB board, several Simple-AF **and** KIAUH steps look hung but are still working: `git clone` (Moonraker especially — `Receiving objects` / `index-pack` over 8189fs), then `apt-get` of build deps. Progress is on the SSH/wizard session, not COM4. Wait if git or apt is still moving. Do not reboot. Details: [`docs/fly-lite-armbian-notes.md`](docs/fly-lite-armbian-notes.md#simple-af-and-kiauh-looks-hung-still-working).
+
+### RAM-heavy modules (512 MB — Simple-AF and KIAUH)
+
+The Lite has **512 MB RAM**. Heavy apps often **OOM** (process `Killed` / exit 137), leave **`dpkg` segfaults**, or break apt mid-install. Prefer phone/PC companion apps when offered.
+
+**Avoid:** OctoEverywhere (on-device — use the companion app), OctoApp, Obico, OctoPrint, Spoolman (Docker), KlipperScreen / DroidKlipp.  
+**Caution (at most one):** Mobileraker, Moonraker Telegram Bot, Moongate.  
+**Usually OK:** SimplyPrint, KAMP, TMC Autotune, themes / PrettyGCode, Klipper-Backup.
+
+**Diagnose / repair / finish a failed install:** [`docs/boards/fly-lite-2.1/oom.md`](docs/boards/fly-lite-2.1/oom.md) (`free -h`, `dmesg` OOM lines, `dpkg --configure -a`, one-package-at-a-time retries).
+
+**How-tos:** Simple-AF — [`docs/howto-simpleaf.md`](docs/howto-simpleaf.md) (links to [pellcorp/creality](https://github.com/pellcorp/creality) and the [RPi wiki](https://pellcorp.github.io/creality-wiki/rpi/)). KIAUH — [`docs/howto-kiauh.md`](docs/howto-kiauh.md). Stay on GrumpyScreen for Simple-AF; skip KlipperScreen when you can.
 
 ### USB cameras (Crowsnest)
 
@@ -82,7 +118,7 @@ fly-crowsnest-add-cams          # discover cams, edit ~/printer_data/config/crow
 fly-crowsnest-add-cams --dry-run
 ```
 
-Uses stable `/dev/v4l/by-id/…-video-index0` paths and skips the H3 cedrus encoder. Re-run after plugging another cam; already-configured devices are left alone. Stream example: `http://<board-ip>:8080/?action=stream`. Set `AUTO_CAMERAS=Yes` in `fly-start.txt` to run this after a full `fly-start` install.
+Uses stable `/dev/v4l/by-id/…-video-index0` paths and skips the H3 cedrus encoder. Re-run after plugging another cam; already-configured devices are left alone. Stream example: `http://<board-ip>:8080/?action=stream`. On Simple-AF, set `AUTO_CAMERAS=Yes` in `fly-start.txt` to run this after a full `fly-start` install. On KIAUH, use `fly-kiauh cameras` or `fly-crowsnest-add-cams`.
 
 ### GrumpyScreen rotation
 

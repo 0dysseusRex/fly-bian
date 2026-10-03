@@ -103,6 +103,15 @@ ensure_simpleaf_theme() {
 		need_sudo plymouth-set-default-theme -R "$THEME" || \
 			need_sudo plymouth-set-default-theme "$THEME" || true
 	fi
+	# Early splash runs from initramfs — theme PNGs must be packed there.
+	pics=$(ls /usr/share/plymouth/themes/simpleaf/pic_*.png 2>/dev/null | wc -l | tr -d ' ')
+	if [[ ${pics:-0} -lt 10 ]]; then
+		echo "WARN: simpleaf theme has only ${pics:-0} pic_*.png frames; splash may be blank." >&2
+	fi
+	if command -v update-initramfs >/dev/null 2>&1; then
+		echo "Rebuilding initramfs so the Simple-AF theme is in early boot..."
+		need_sudo update-initramfs -u || true
+	fi
 	if [[ -d /usr/share/plymouth/themes/simpleaf && -f $MARKER_DONE ]]; then
 		grep -qx 'boot-display' "$MARKER_DONE" 2>/dev/null || \
 			echo 'boot-display' >>"$MARKER_DONE"

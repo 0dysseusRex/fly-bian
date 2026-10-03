@@ -1,6 +1,6 @@
 [Unit]
 Description=GrumpyScreen
-After=moonraker.service multi-user.target
+After=moonraker.service multi-user.target fly-boot-complete.service
 # Own HDMI VT1; prefer GrumpyScreen over getty / KlipperScreen on this board.
 Conflicts=getty@tty1.service
 StartLimitIntervalSec=0

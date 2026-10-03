@@ -39,9 +39,24 @@ Web UIs (bound on first user):
 
 Touch UI: GrumpyScreen is preferred and enabled on first user bind
 (ARMv7 binary under ~/grumpyscreen). It owns HDMI VT1 after the wizard.
-Rotate over SSH: fly-grumpy-rotate 0|1|2|3 (writes grumpyscreen.ini).
+Rotation lives in ~/printer_data/config/grumpyscreen.ini under [ui]
+as display_rotate (0/1/2/3). Set via fly-grumpy-rotate, fly-start menu
+5/6, or GRUMPY_DISPLAY_ROTATE in fly-start.txt — the bake keeps that
+key in the pellcorp template so Simple-AF reinstalls do not wipe it.
+Grumpy paints /dev/fb0 (SPI TFT when fly-lite-tft is loaded). Cap touch
+is Goodix GT911 via fly-grumpy-evdev.sh.
 Do not install KlipperScreen on this 512 MB board — X/Mesa apt installs
 OOM and have corrupted /boot (uInitrd) in lab runs.
+
+Moonraker / community add-ons — heavy on 512 MB (prefer phone/PC companions):
+  AVOID:  OctoEverywhere (on-device), OctoApp, Obico, OctoPrint,
+          Spoolman (Docker), KlipperScreen
+  CAUTION: Mobileraker, Telegram Bot, Moongate (at most one)
+  OK:     SimplyPrint, KAMP, TMC Autotune, themes, PrettyGCode,
+          Klipper-Backup
+
+Do NOT install OctoEverywhere on-device — use the companion app.
+Do not stack several “moderate” agents with Klipper + Moonraker + Crowsnest.
 
 Official grumpyscreen-rpi is ARMv8 and SIGILLs on the H3 — do not replace
 the baked binary with that asset. Touch is auto-picked from

@@ -2,6 +2,8 @@
 # Stage Armbian build outputs under the Fly-bian product name.
 # Finds the newest matching Armbian-unofficial *.img.xz and copies it as:
 #   Fly-bian-<ver>_<Device>_<Flavor>.img.xz
+#   Fly-bian-<ver>_<Device>_Simple-AF-<pellcorpSHA>.img.xz
+#   Fly-bian-<ver>_<Device>_KIAUH-<kiauhTagOrSHA>.img.xz
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -33,9 +35,19 @@ armbian_glob_for() {
 	esac
 }
 
+stack_rev_for() {
+	local fl=$1 meta rev=""
+	meta="$src/flybian-meta-${fl}.txt"
+	if [[ -f $meta ]]; then
+		rev=$(awk -F= '/^stack_rev=/{print $2; exit}' "$meta" | tr -d '[:space:]')
+	fi
+	# Fallback: newest staged? no — require bake meta for non-base.
+	printf '%s' "$rev"
+}
+
 stage_flavor() {
 	local fl=$1
-	local glob xz base stem dest_rel dest
+	local glob xz base stem dest_rel dest rev
 	glob=$(armbian_glob_for "$fl")
 	# Newest match (by mtime)
 	xz=$(ls -1t "$src"/$glob 2>/dev/null | head -n 1 || true)
@@ -44,7 +56,12 @@ stage_flavor() {
 		return 1
 	fi
 	base=$(basename "$xz" .img.xz)
-	stem=$("$root/scripts/flybian-release-name.sh" stem "$fl" "$device")
+	rev=$(stack_rev_for "$fl")
+	if [[ $fl != base && -z $rev ]]; then
+		echo "WARN: no flybian-meta-${fl}.txt stack_rev; using 'unknown'" >&2
+		rev=unknown
+	fi
+	stem=$("$root/scripts/flybian-release-name.sh" stem "$fl" "$device" "$rev")
 	dest_rel=$("$root/scripts/flybian-release-name.sh" dir "$fl" "$device")
 	dest="$releases/$dest_rel"
 	mkdir -p "$dest"
@@ -52,6 +69,7 @@ stage_flavor() {
 	echo "=== Fly-bian $ver / $fl ==="
 	echo "source: $xz"
 	echo "dest:   $dest/${stem}.img.xz"
+	[[ -n $rev ]] && echo "stack_rev: $rev"
 
 	cp -av "$src/${base}.img.xz" "$dest/${stem}.img.xz"
 	if [[ -f $src/${base}.img.xz.sha ]]; then
@@ -61,17 +79,18 @@ stage_flavor() {
 	else
 		(cd "$dest" && sha256sum "${stem}.img.xz" >"${stem}.img.xz.sha")
 	fi
-	if [[ -f $src/${base}.img.txt ]]; then
-		{
-			echo "Fly-bian product: ${stem}"
-			echo "Fly-bian version: ${ver}"
-			echo "Device: ${device}"
-			echo "Flavor: ${fl}"
-			echo "Armbian artifact: ${base}"
-			echo "----"
+	{
+		echo "Fly-bian product: ${stem}"
+		echo "Fly-bian version: ${ver}"
+		echo "Device: ${device}"
+		echo "Flavor: ${fl}"
+		[[ -n $rev ]] && echo "Stack revision: ${rev}"
+		echo "Armbian artifact: ${base}"
+		echo "----"
+		if [[ -f $src/${base}.img.txt ]]; then
 			cat "$src/${base}.img.txt"
-		} >"$dest/${stem}.img.txt"
-	fi
+		fi
+	} >"$dest/${stem}.img.txt"
 	(cd "$dest" && sha256sum -c "${stem}.img.xz.sha")
 	cat "$dest/${stem}.img.xz.sha"
 }

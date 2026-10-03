@@ -83,3 +83,10 @@ ENABLE_GRUMPYSCREEN=Yes
 # Optional; needs HDMI. Independent of GrumpyScreen. Default No (512 MB).
 # Yes/No
 INSTALL_BOOT_DISPLAY=No
+
+# GRUMPY_DISPLAY_ROTATE — write display_rotate into
+# ~/printer_data/config/grumpyscreen.ini [ui] after a full install
+# (survives Simple-AF reinstalls when the template also carries this key).
+# 0 = 0°, 1 = 90°, 2 = 180°, 3 = 270°. Leave blank to skip.
+# Change later: fly-grumpy-rotate 0|1|2|3  (or fly-start menu 5/6)
+GRUMPY_DISPLAY_ROTATE=0

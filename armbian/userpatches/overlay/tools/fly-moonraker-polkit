@@ -1,7 +1,8 @@
 #!/bin/bash
 # Install Moonraker PolKit rules for a user. Safe to re-run as root.
-# set-policykit-rules.sh needs interactive sudo when run via runuser; this
-# writes the same rules directly so fly-bind / fly-start work unattended.
+# Matches Arksine/moonraker set-policykit-rules.sh (group-gated) so Mainsail
+# stops warning about PolKit. PackageKit itself is optional — prefer
+# enable_packagekit: False in moonraker.conf on 512 MB boards.
 set -euo pipefail
 
 user=${1:-}
@@ -29,22 +30,34 @@ as_root() {
 
 as_root groupadd -f moonraker-admin
 as_root usermod -aG moonraker-admin "$user" 2>/dev/null || true
+gid=$(getent group moonraker-admin | awk -F: '{print $3}')
+[[ -n $gid ]] || {
+	echo "fly-moonraker-polkit: moonraker-admin gid missing" >&2
+	exit 1
+}
 
-unit=/etc/systemd/system/moonraker.service
-if [[ -f $unit ]] && ! grep -q 'SupplementaryGroups=moonraker-admin' "$unit"; then
-	echo "fly-moonraker-polkit: adding SupplementaryGroups to $unit"
-	as_root sed -i '/^Type=simple$/a SupplementaryGroups=moonraker-admin' "$unit"
-	as_root systemctl daemon-reload
-fi
+# Ensure every moonraker*.service has the supplementary group.
+shopt -s nullglob
+for unit in /etc/systemd/system/moonraker.service /etc/systemd/system/moonraker-*.service; do
+	[[ -f $unit ]] || continue
+	if ! grep -q 'SupplementaryGroups=moonraker-admin' "$unit"; then
+		echo "fly-moonraker-polkit: adding SupplementaryGroups to $unit"
+		if grep -q '^Type=simple$' "$unit"; then
+			as_root sed -i '/^Type=simple$/a SupplementaryGroups=moonraker-admin' "$unit"
+		elif grep -q '^\[Service\]$' "$unit"; then
+			as_root sed -i '/^\[Service\]$/a SupplementaryGroups=moonraker-admin' "$unit"
+		fi
+	fi
+done
+shopt -u nullglob
+as_root systemctl daemon-reload
 
-# Prefer modern rules.d (polkitd >= 0.106). Debian Trixie is 126.
 rule_dir=
 if [[ -d /usr/share/polkit-1/rules.d ]]; then
 	rule_dir=/usr/share/polkit-1/rules.d
 elif [[ -d /etc/polkit-1/rules.d ]]; then
 	rule_dir=/etc/polkit-1/rules.d
 fi
-
 if [[ -z $rule_dir ]]; then
 	echo "fly-moonraker-polkit: no polkit rules directory" >&2
 	exit 1
@@ -52,6 +65,7 @@ fi
 
 rule_file=$rule_dir/moonraker.rules
 tmp=$(mktemp)
+# Upstream-style: only processes that have moonraker-admin in /proc/pid/status.
 cat >"$tmp" <<EOF
 // Allow Moonraker user to manage systemd units, reboot and shutdown
 polkit.addRule(function(action, subject) {
@@ -64,16 +78,38 @@ polkit.addRule(function(action, subject) {
          action.id == "org.freedesktop.login1.halt-multiple-sessions" ||
          action.id.startsWith("org.freedesktop.packagekit.")) &&
         subject.user == "$user") {
-        return polkit.Result.YES;
+        var regex = "^Groups:.+?\\\s${gid}[\\\s\\\0]";
+        var cmdpath = "/proc/" + subject.pid.toString() + "/status";
+        try {
+            polkit.spawn(["grep", "-Po", regex, cmdpath]);
+            return polkit.Result.YES;
+        } catch (error) {
+            return polkit.Result.NOT_HANDLED;
+        }
     }
 });
 EOF
 as_root install -m 0644 "$tmp" "$rule_file"
 rm -f "$tmp"
 
+# Prefer apt CLI over PackageKit on this board (actions often unregistered).
+cfg=$home/printer_data/config/moonraker.conf
+if [[ -f $cfg ]]; then
+	if grep -qE '^[[:space:]]*enable_packagekit[[:space:]]*:' "$cfg"; then
+		as_root sed -i -E 's|^[[:space:]]*enable_packagekit[[:space:]]*:.*|enable_packagekit: False|' "$cfg"
+	elif grep -q '^\[update_manager\]' "$cfg"; then
+		as_root sed -i '/^\[update_manager\]/a enable_packagekit: False' "$cfg"
+	else
+		printf '\n[update_manager]\nenable_packagekit: False\n' | as_root tee -a "$cfg" >/dev/null
+	fi
+	as_root chown "$user:$user" "$cfg" 2>/dev/null || true
+	echo "fly-moonraker-polkit: set enable_packagekit: False in $cfg"
+fi
+
 as_root systemctl restart polkit 2>/dev/null || as_root systemctl restart polkitd 2>/dev/null || true
 if systemctl cat moonraker.service >/dev/null 2>&1; then
 	as_root systemctl restart moonraker 2>/dev/null || true
 fi
 
-echo "fly-moonraker-polkit: installed $rule_file for user=$user"
+echo "fly-moonraker-polkit: installed $rule_file for user=$user (gid=$gid)"
+echo "fly-moonraker-polkit: if PolKit warnings remain, log out/in once so moonraker-admin applies"

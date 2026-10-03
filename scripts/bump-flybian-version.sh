@@ -33,4 +33,6 @@ esac
 next="${major}.${minor}"
 printf '%s\n' "$next" >"$file"
 echo "FLYBIAN_VERSION: $cur -> $next"
-echo "Next images: Fly-bian-${next}_<Device>_<Flavor>.img.xz"
+echo "Next images: Fly-bian-${next}_<Device>_Base.img.xz"
+echo "             Fly-bian-${next}_<Device>_Simple-AF-<pellcorpSHA>.img.xz"
+echo "             Fly-bian-${next}_<Device>_KIAUH-<kiauhRev>.img.xz"

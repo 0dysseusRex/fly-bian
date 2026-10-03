@@ -1,0 +1,109 @@
+/dts-v1/;
+/plugin/;
+
+/*
+ * Fly TFT V2 on Fly Lite 2.1 (H3): ST7796 SPI panel via panel-mipi-dbi +
+ * resistive ADS7846 on SPI0 CS1. Capacitive GT911 uses fly-lite-tft-c
+ * (disables ADS7846; Cap DIP frees PA2/PA3 for GT911 on i2c2 @ 0x14).
+ *
+ * Pins: DC PA20, reset PA21, CS0 PC3, CS1 PA19. Backlight PA6 is in the
+ * Fly base DTB (gpio-leds), not this overlay. Firmware: /lib/firmware/ST7796S.bin
+ * Cable: 16P FPC — reverse orientation vs some Pi harnesses.
+ */
+
+/ {
+	compatible = "allwinner,sun8i-h3";
+
+	fragment@0 {
+		target-path = "/aliases";
+		__overlay__ {
+			spi0 = "/soc/spi@1c68000";
+		};
+	};
+
+	fragment@1 {
+		target = <&pio>;
+		__overlay__ {
+			fly_display_pins: fly_display_pins {
+				pins = "PA20", "PA21";
+				function = "gpio_out";
+			};
+
+			touch_pins: touch_pins {
+				pins = "PA2", "PA3";
+				function = "gpio_in";
+				bias-pull-up;
+			};
+
+			spi0_cs_pins: spi0_cs_pins {
+				pins = "PC3", "PA19";
+				function = "gpio_out";
+			};
+		};
+	};
+
+	fragment@2 {
+		target = <&spi0>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&spi0_pins &spi0_cs_pins>;
+			cs-gpios = <&pio 2 3 1>, <&pio 0 19 1>;
+			status = "okay";
+
+			spidev@0 {
+				status = "disabled";
+			};
+
+			spidev@1 {
+				status = "disabled";
+			};
+
+			panel@0 {
+				compatible = "ST7796S", "panel-mipi-dbi-spi";
+				reg = <0>;
+				spi-max-frequency = <40000000>;
+				spi-cpha;
+				spi-cpol;
+				write-only;
+				dc-gpios = <&pio 0 20 0>;
+				reset-gpios = <&pio 0 21 0>;
+				rotation = <90>;
+				format = "r5g6b5";
+				firmware-name = "ST7796S.bin";
+				width-mm = <49>;
+				height-mm = <74>;
+				status = "okay";
+
+				/* panel-mipi-dbi: only hactive/vactive matter; porches must be 0 */
+				panel-timing {
+					clock-frequency = <0>;
+					hactive = <320>;
+					vactive = <480>;
+					hfront-porch = <0>;
+					hback-porch = <0>;
+					hsync-len = <0>;
+					vfront-porch = <0>;
+					vback-porch = <0>;
+					vsync-len = <0>;
+				};
+			};
+
+			touch@1 {
+				compatible = "ti,ads7846";
+				reg = <1>;
+				spi-max-frequency = <1000000>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&touch_pins>;
+				interrupt-parent = <&pio>;
+				interrupts = <0 3 2>;
+				pendown-gpio = <&pio 0 3 0>;
+				ti,keep-vref-on;
+				wakeup-source;
+				touchscreen-inverted-x;
+				touchscreen-swapped-x-y;
+			};
+		};
+	};
+};

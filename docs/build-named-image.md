@@ -10,14 +10,16 @@ User-facing releases follow [`image-naming.md`](image-naming.md):
 
 ```
 Fly-bian-<VERSION>_<DEVICE>_<FLAVOR>.img.xz
+Fly-bian-<VERSION>_<DEVICE>_Simple-AF-<PELLCORP_SHA>.img.xz
+Fly-bian-<VERSION>_<DEVICE>_KIAUH-<KIAUH_REV>.img.xz
 ```
 
 Current product version is in repo-root [`FLYBIAN_VERSION`](../FLYBIAN_VERSION) (starts at **0.1**; **1.0** = first fully working release). Examples:
 
 ```
-Fly-bian-0.1_Fly-Lite-2.1_Base.img.xz
-Fly-bian-0.1_Fly-Lite-2.1_Simple-AF.img.xz
-Fly-bian-0.1_Fly-Lite-2.1_KIAUH.img.xz
+Fly-bian-0.6_Fly-Lite-2.1_Base.img.xz
+Fly-bian-0.6_Fly-Lite-2.1_Simple-AF-58e5c1d.img.xz
+Fly-bian-0.6_Fly-Lite-2.1_KIAUH-v6.0.0.img.xz
 ```
 
 Armbian still builds with board ids `fly-lite-21` / `fly-lite-21-simpleaf` / `fly-lite-21-kiauh` and may emit a long `Armbian-unofficial_…` filename. Staging renames to the Fly-bian product name (`scripts/stage-flybian-release.sh`). Kernel / Armbian trunk strings go in release notes and `.img.txt`, not the product filename.
@@ -65,13 +67,13 @@ Clone from the working **cpu-affinity** card, not from stock Orange Pi Lite auto
 | --- | --- |
 | DTB | `sun8i-h3-fly-lite.dtb` as `fdtfile` |
 | SD card-detect | PF6 is **not** CD on this PCB. Patch **U-Boot and Linux** (`broken-cd` / `mmc-broken-cd`). Autoboot must see `mmc0` without `gpio clear PF6`. |
-| Overlays | `uart1 usbhost0 usbhost2 usbhost3` plus user `mmc-broken-cd fly-lite-io fly-lite-tft fly-lite-hdmi` (or compiled into the DTB). `fly-lite-hdmi` sets `&hdmi` okay — Fly’s DTB ships HDMI disabled, so Linux otherwise drops the HDMI5 after U-Boot. `disp_mode=800x480p60`. Do **not** load `fly-lite-leds` (duplicates Fly LED nodes → `-EBUSY`). |
+| Overlays | `uart1 usbhost0 usbhost2 usbhost3` plus user `mmc-broken-cd fly-lite-io fly-lite-tft fly-lite-tft-c fly-lite-hdmi` (or compiled into the DTB). `fly-lite-tft-c` is Cap DIP GT911 (omit for Resi). `fly-lite-hdmi` sets `&hdmi` okay — Fly’s DTB ships HDMI disabled, so Linux otherwise drops the HDMI5 after U-Boot. `disp_mode=800x480p60`. Do **not** load `fly-lite-leds` (duplicates Fly LED nodes → `-EBUSY`). |
 | Wi-Fi | RTL8189FTV / `8189fs` on SDIO. Boot **`maxcpus=1`**, then online isolated CPUs 1–3 **after** 8189fs (`isolcpus=1-3 irqaffinity=0`). Same pattern as `fly-online-isolated-cpus.service`. Do not boot four cores from t=0. |
 | CPU affinity | Install `klipper/cpu-affinity/` so a later Klipper stack is `CPUAffinity=1-3`. Do not wrap installers. Do not install Klipper. |
 | Kernel cmdline extras | `nohz=off clocksource=timer cma=16M` plus the isolcpus set. `console=serial` (or serial+display if HDMI wizard needs it — wizard must work on Type-C UART at 115200). |
 | Packages | Freeze kernel, DTB, and U-Boot (`armbian-hold` / apt-mark) so a casual `apt upgrade` does not lose PF6 + Fly DTB. |
 | Swap | 2 GiB `/swapfile` on first boot **after** rootfs grow (`fly-swapfile.service`). Do not `fallocate` it at image-build time (that bloats the `.img` by 2 GiB). Stock zram (~226 Mi) is not enough for Moonraker `uvloop` / clang on 512 MB. |
-| Displays | TFT software bind is OK (`panel-mipi-dbi`, `/lib/firmware/ST7796S.bin`). HDMI5 / FPC-HDMI: `fly-lite-hdmi` + `disp_mode=800x480p60` so the wizard has a DRM connector, not only U-Boot simplefb. |
+| Displays | TFT: `panel-mipi-dbi` + `/lib/firmware/ST7796S.bin` + `modules-load.d/fly-tft.conf`; Cap touch GT911 @ i2c2 `0x14` via `fly-lite-tft-c`. HDMI5 / FPC-HDMI: `fly-lite-hdmi` + `disp_mode=800x480p60` so the wizard has a DRM connector, not only U-Boot simplefb. |
 
 Type-C is a real UART (CH340 on Windows). Do not treat it as USB gadget-only. Do not pulse DTR/RTS in tests.
 

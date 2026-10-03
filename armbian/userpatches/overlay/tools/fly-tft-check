@@ -1,0 +1,40 @@
+#!/bin/sh
+# Quick Fly TFT V2 health check (panel-mipi-dbi + ADS7846 or GT911).
+set -eu
+
+echo '===ENV==='
+grep -E 'fdtfile|user_overlays|overlays' /boot/armbianEnv.txt 2>/dev/null || true
+
+echo '===OVERLAY/FW==='
+ls -l /boot/overlay-user/fly-lite-tft*.dtbo 2>/dev/null || echo 'no fly-lite-tft dtbo'
+ls -l /lib/firmware/ST7796S.bin 2>/dev/null || echo 'missing ST7796S.bin'
+
+echo '===MODULES==='
+lsmod | grep -iE 'mipi_dbi|panel_mipi|ads7846|goodix' || true
+cat /etc/modules-load.d/fly-tft.conf 2>/dev/null || true
+
+echo '===FB/DRM==='
+ls -l /dev/fb* /dev/dri/card* 2>/dev/null || echo 'no fb/dri'
+if [ -r /sys/class/graphics/fb0/virtual_size ]; then
+  echo -n 'fb0 virtual_size='; cat /sys/class/graphics/fb0/virtual_size
+fi
+
+echo '===INPUT==='
+ls -l /dev/input/event* 2>/dev/null || true
+sed -n '/Name=/p' /proc/bus/input/devices 2>/dev/null || true
+
+echo '===I2C (GT911 Cap @ 0x14 on i2c-2)==='
+if command -v i2cdetect >/dev/null 2>&1; then
+  for b in 2 3; do
+    [ -e "/dev/i2c-$b" ] || continue
+    echo "--- i2c-$b ---"
+    i2cdetect -y "$b" 2>/dev/null || true
+  done
+else
+  echo 'i2c-tools not installed'
+fi
+
+echo '===DMESG==='
+dmesg | grep -iE 'mipi-dbi|ST7796|ads7846|goodix|gt911|firmware|fly-lite-tft' | tail -40 || true
+
+echo '===DONE==='

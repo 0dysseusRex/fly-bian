@@ -47,7 +47,9 @@ if [[ -n $ip_addr ]]; then
 	announce "fly-lite: $IFACE $ip_addr"
 	echo "fly-ip-announce: $IFACE $ip_addr"
 else
+	# No Wi-Fi yet (placeholders, slow DHCP, radio down) is normal on first
+	# boot — announce and succeed so systemd does not paint [FAILED].
 	announce "fly-lite: $IFACE has no IPv4 yet"
 	echo "fly-ip-announce: $IFACE has no IPv4 yet"
-	exit 1
+	exit 0
 fi

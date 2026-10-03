@@ -14,7 +14,7 @@ command -v docker >/dev/null || {
 
 find "$root/scripts" -maxdepth 1 -type f -name '*.sh' -exec sed -i 's/\r$//' {} +
 find "$root/armbian/userpatches" -type f \
-	\( -name '*.sh' -o -name '*.csc' -o -name '*.service' -o -name 'fly-help' -o -name 'fly-start' -o -name 'fly-boot-display' \) \
+	\( -name '*.sh' -o -name '*.csc' -o -name '*.service' -o -name 'fly-help' -o -name 'fly-start' -o -name 'fly-kiauh' -o -name 'fly-boot-display' \) \
 	-exec sed -i 's/\r$//' {} +
 
 bash "$root/scripts/stage-armbian-overlay.sh"
@@ -22,6 +22,8 @@ cp -a "$root/FLYBIAN_VERSION" "$root/armbian/userpatches/overlay/FLYBIAN_VERSION
 test -f "$root/armbian/userpatches/overlay/first-boot/fly-start.txt"
 test -f "$root/armbian/userpatches/overlay/tools/fly-help"
 test -f "$root/armbian/userpatches/overlay/tools/fly-start"
+test -f "$root/armbian/userpatches/overlay/tools/fly-kiauh"
+test -f "$root/armbian/userpatches/overlay/kiauh/fly-start.txt"
 test -f "$root/armbian/userpatches/overlay/tools/fly-boot-display"
 
 # Truncate master log so a new run is obvious

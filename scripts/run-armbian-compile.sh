@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export PATH="/mnt/wsl/docker-desktop/cli-tools/usr/bin:/usr/bin:${PATH:-/usr/bin}"
+hash -r
 root=/mnt/c/Users/udrdr/fly-debian
 build=/home/rex/fly-build/armbian-build
 flavor=${1:-base}
@@ -48,22 +50,29 @@ fi
 
 cd "$build"
 
-# Upstream Armbian sunxi-6.18 ships arm-dts-sun4i-a10-fix-pmu-interrupt.patch,
-# which fails on current linux-6.18.y ("Reversed / already applied"). It only
-# touches sun4i-a10 (not H3 Fly Lite). Disable it in series.conf (leading "-")
-# until Armbian rebases the series. Keep the patch file present.
+# Upstream Armbian sunxi-6.18 series drifts vs linux-6.18.y. Disable broken
+# patches that do not affect Fly Lite H3 (leading "-" in series.conf).
 series=$build/patch/kernel/archive/sunxi-6.18/series.conf
-bad_rel=patches.armbian/arm-dts-sun4i-a10-fix-pmu-interrupt.patch
-bad_patch=$build/patch/kernel/archive/sunxi-6.18/$bad_rel
-parked=$build/userpatches/disabled-upstream-patches/arm-dts-sun4i-a10-fix-pmu-interrupt.patch
 mkdir -p "$build/userpatches/disabled-upstream-patches"
-if [[ -f $parked && ! -f $bad_patch ]]; then
-	cp -a "$parked" "$bad_patch"
-fi
-if [[ -f $series ]] && grep -qE "^[[:space:]]*${bad_rel//\//\\/}[[:space:]]*$" "$series"; then
-	sed -i -E "s|^([[:space:]]*)${bad_rel//\//\\/}[[:space:]]*$|\\1- ${bad_rel}|" "$series"
-	echo "fly-build: disabled already-applied sun4i-a10 PMU patch in series.conf"
-fi
+disable_series_patch() {
+	local rel=$1
+	local patch=$build/patch/kernel/archive/sunxi-6.18/$rel
+	local parked=$build/userpatches/disabled-upstream-patches/$(basename "$rel")
+	if [[ -f $parked && ! -f $patch ]]; then
+		mkdir -p "$(dirname "$patch")"
+		cp -a "$parked" "$patch"
+	fi
+	if [[ -f $series ]] && grep -qE "^[[:space:]]*${rel//\//\\/}[[:space:]]*$" "$series"; then
+		sed -i -E "s|^([[:space:]]*)${rel//\//\\/}[[:space:]]*$|\\1- ${rel}|" "$series"
+		echo "fly-build: disabled $rel in series.conf"
+	fi
+}
+# sun4i-a10 only — reversed/already applied on current 6.18.y
+disable_series_patch patches.armbian/arm-dts-sun4i-a10-fix-pmu-interrupt.patch
+# PinePhone light-sensor megous stack — fails hunk apply; unused on Lite
+disable_series_patch patches.megous/stk3310-6.18/0001-iio-light-stk3310-Implement-vdd-supply-and-power-it-.patch
+disable_series_patch patches.megous/stk3310-6.18/0002-iio-light-stk3310-Add-support-for-I2C-regulator.patch
+disable_series_patch patches.megous/stk3310-6.18/0003-iio-stk3310-Fix-regulator-disable-enable-order.patch
 
 DOCKER_EXTRA_ARGS=(--dns 8.8.8.8 --dns 1.1.1.1 -e PESTER_TERMINAL=no)
 export DOCKER_EXTRA_ARGS

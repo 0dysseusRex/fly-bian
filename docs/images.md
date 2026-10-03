@@ -2,17 +2,17 @@
 
 **Named images** (Armbian `.img.xz`, not a 32 GB `dd`). Naming: [`image-naming.md`](image-naming.md). Build: [`build-named-image.md`](build-named-image.md).
 
-Product releases are versioned as **Fly-bian** (repo `FLYBIAN_VERSION`, currently **0.4**):
+Product releases are versioned as **Fly-bian** (repo `FLYBIAN_VERSION`). From 0.6 onward, Simple-AF / KIAUH filenames include the stack revision (pellcorp short SHA / KIAUH tag). Naming: [`image-naming.md`](image-naming.md).
 
 ```
 C:\Users\udrdr\fly-lite-armbian-image\Releases\
   RELEASES.txt
-  Fly-bian-0.4\
+  Fly-bian-1.0\
     Fly-Lite-2.1\
       UPDATE-NOTES.txt
-      Base\          Fly-bian-0.4_Fly-Lite-2.1_Base.img.xz
-      Simple-AF\     Fly-bian-0.4_Fly-Lite-2.1_Simple-AF.img.xz
-      KIAUH\         Fly-bian-0.4_Fly-Lite-2.1_KIAUH.img.xz
+      Base\          Fly-bian-1.0_Fly-Lite-2.1_Base.img.xz
+      Simple-AF\     Fly-bian-1.0_Fly-Lite-2.1_Simple-AF-0d21afe.img.xz
+      KIAUH\         Fly-bian-1.0_Fly-Lite-2.1_KIAUH-v6.3.2.img.xz
   lab-snapshots\     old full-card dd dumps
 ```
 
@@ -20,7 +20,14 @@ Stage with: `scripts/stage-flybian-release.sh all`
 
 | File | SHA256 | What it is |
 | --- | --- | --- |
-| `Releases/Fly-bian-0.4/Fly-Lite-2.1/Simple-AF/Fly-bian-0.4_Fly-Lite-2.1_Simple-AF.img.xz` | `4b0b2eedda3747aa05dabf0e0d9e5819e5d7fbda66895eff34e6f2f0fd98c8d0` | **Fly-bian 0.4 Simple-AF** (2026-09-14). `fly-boot-display` enable/disable, split Grumpy vs Plymouth flags, kernel 6.18.52. |
+| `Releases/Fly-bian-1.0/Fly-Lite-2.1/Base/Fly-bian-1.0_Fly-Lite-2.1_Base.img.xz` | `37c5c33ad61880bf9670c64e24428edc41e655f5697abc9e6b2b85cc22033c1d` | **Fly-bian 1.0 Base.** Kernel 6.18.54, Cap TFT/GT911 defaults, SPI firmware. |
+| `Releases/Fly-bian-1.0/Fly-Lite-2.1/Simple-AF/Fly-bian-1.0_Fly-Lite-2.1_Simple-AF-0d21afe.img.xz` | `3523ba04239469a7654b9d3b5ce8d07d9bf0d138a92ea3c833cd38d0f7c9e470` | **Fly-bian 1.0 Simple-AF** (pellcorp `0d21afe`). How-to: [`howto-simpleaf.md`](howto-simpleaf.md). |
+| `Releases/Fly-bian-1.0/Fly-Lite-2.1/KIAUH/Fly-bian-1.0_Fly-Lite-2.1_KIAUH-v6.3.2.img.xz` | `0773a9323d02b09c7c3cd8da41c495fdadb59a6c59595749546f5641336f6d39` | **Fly-bian 1.0 KIAUH** (`v6.3.2`). How-to: [`howto-kiauh.md`](howto-kiauh.md). |
+| `Releases/Fly-bian-0.6/Fly-Lite-2.1/Simple-AF/Fly-bian-0.6_Fly-Lite-2.1_Simple-AF-0d21afe.img.xz` | `b1be15b826d5da2a57d6651b3cf25cbd961501e26f91a04cf95149623dda52c9` | **Fly-bian 0.6 Simple-AF** (pellcorp `0d21afe`). Fresh stack clone + KIAUH nginx/config seeds + MOTD fix. |
+| `Releases/Fly-bian-0.6/Fly-Lite-2.1/KIAUH/Fly-bian-0.6_Fly-Lite-2.1_KIAUH-v6.3.2.img.xz` | `f8fd6b5f04646c9badd5719b02f38069e4d3b3566e80d6fab8ec7416f92fa9a2` | **Fly-bian 0.6 KIAUH** (`v6.3.2`). |
+| `Releases/Fly-bian-0.6/Fly-Lite-2.1/Base/Fly-bian-0.6_Fly-Lite-2.1_Base.img.xz` | `ac2eb65b71a6203523e483c08348cc3c21829e4fe04d8aaf9090991c7e44dafb` | **Fly-bian 0.6 Base.** |
+| `Releases/Fly-bian-0.5/…/Simple-AF/Fly-bian-0.5_Fly-Lite-2.1_Simple-AF.img.xz` | (see Releases) | **Fly-bian 0.5 Simple-AF** — last bake without stack-rev in the filename. |
+| `Releases/Fly-bian-0.4/Fly-Lite-2.1/Simple-AF/Fly-bian-0.4_Fly-Lite-2.1_Simple-AF.img.xz` | `4b0b2eedda3747aa05dabf0e0d9e5819e5d7fbda66895eff34e6f2f0fd98c8d0` | **Fly-bian 0.4 Simple-AF** (2026-09-14). |
 | `Releases/Fly-bian-0.4/Fly-Lite-2.1/KIAUH/Fly-bian-0.4_Fly-Lite-2.1_KIAUH.img.xz` | `2495782c5a1df2fc3623b68186de05ea89f03872090c97e2ee3d0d286ae3244c` | **Fly-bian 0.4 KIAUH.** |
 | `Releases/Fly-bian-0.4/Fly-Lite-2.1/Base/Fly-bian-0.4_Fly-Lite-2.1_Base.img.xz` | `9bb5142ba04bf376e2348481f0e8bd43bd8671fba029db856b9e04963014e806` | **Fly-bian 0.4 Base.** |
 | `Releases/Fly-bian-0.2/Fly-Lite-2.1/Simple-AF/Fly-bian-0.2_Fly-Lite-2.1_Simple-AF.img.xz` | `6168acb032b635045085f555529dd0ea7433f6687b90dfe2b0846b847dc68acd` | Fly-bian 0.2 Simple-AF (older). |

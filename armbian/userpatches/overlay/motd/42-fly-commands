@@ -1,24 +1,50 @@
 #!/bin/bash
 # Fly-bian MOTD Commands entries (same style as Armbian 41-commands).
 # Runs after 41-commands; does not repeat the "Commands:" header.
-set -euo pipefail
+#
+# Must never exit non-zero: pam_motd/run-parts prints
+#   ".../42-fly-commands exited with return code 1"
+# Do not `set -e` before sourcing /etc/default/armbian-motd — that file runs
+# `ip route | grep default`, which fails on first login before Wi-Fi is up.
+set +e
 
 THIS_SCRIPT="fly-commands"
-MOTD_DISABLE=""
-[[ -f /etc/default/armbian-motd ]] && . /etc/default/armbian-motd
-for f in ${MOTD_DISABLE}; do
-	[[ $f == "$THIS_SCRIPT" ]] && exit 0
-done
 
 # Prefer the patched Armbian Commands list (41) when fly-help is already there.
 if grep -q 'fly-help' /etc/update-motd.d/41-commands 2>/dev/null; then
 	exit 0
 fi
 
-list=(
-	"Help|fly-help"
-	"Install|fly-start"
-)
+MOTD_DISABLE=""
+# shellcheck disable=SC1091
+[[ -f /etc/default/armbian-motd ]] && . /etc/default/armbian-motd
+for f in ${MOTD_DISABLE}; do
+	[[ $f == "$THIS_SCRIPT" ]] && exit 0
+done
+
+flavor=""
+[[ -f /etc/fly-debian/stack-flavor ]] && flavor=$(tr -d '[:space:]' </etc/fly-debian/stack-flavor)
+
+case "$flavor" in
+	kiauh)
+		list=(
+			"Help|fly-help"
+			"KIAUH|fly-kiauh"
+			"Cameras|fly-crowsnest-add-cams"
+		)
+		;;
+	simpleaf)
+		list=(
+			"Help|fly-help"
+			"Install|fly-start"
+		)
+		;;
+	*)
+		list=(
+			"Help|fly-help"
+		)
+		;;
+esac
 
 # Match Armbian 41-commands width for the stock labels when present.
 name_len=13
@@ -26,12 +52,16 @@ output=()
 for l in "${list[@]}"; do
 	IFS='|' read -r name command <<<"$l"
 	if command -v "$command" >/dev/null 2>&1; then
-		(( ${#name} > name_len )) && name_len=${#name}
+		if (( ${#name} > name_len )); then
+			name_len=${#name}
+		fi
 		output+=("${name}|${command}")
 	fi
 done
 
-[[ ${#output[@]} -eq 0 ]] && exit 0
+if [[ ${#output[@]} -eq 0 ]]; then
+	exit 0
+fi
 
 # Append under Armbian's existing "Commands:" block (41-commands). No second header.
 for l in "${output[@]}"; do

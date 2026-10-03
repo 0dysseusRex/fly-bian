@@ -1,0 +1,92 @@
+#!/bin/bash
+# fly-kiauh — KIAUH image helper: start KIAUH or add USB cameras.
+set -euo pipefail
+
+die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
+log() { printf '%s\n' "$*"; }
+
+if [[ ${EUID:-0} -eq 0 ]]; then
+	die "Run as your sudo user (e.g. fly), not root."
+fi
+
+run_kiauh() {
+	for cand in \
+		"$HOME/kiauh/kiauh.sh" \
+		/opt/fly-kiauh/kiauh/kiauh.sh
+	do
+		if [[ -f $cand ]]; then
+			exec bash "$cand" "$@"
+		fi
+	done
+	die "KIAUH not found (expected ~/kiauh/kiauh.sh). Wait for first-boot bind, then try again."
+}
+
+run_cameras() {
+	log "=== USB cameras (Crowsnest) ==="
+	if command -v fly-crowsnest-add-cams >/dev/null 2>&1; then
+		fly-crowsnest-add-cams || log "WARN: fly-crowsnest-add-cams reported an error (cam may be missing)."
+	elif [[ -x /usr/local/bin/fly-crowsnest-add-cams ]]; then
+		/usr/local/bin/fly-crowsnest-add-cams || log "WARN: fly-crowsnest-add-cams reported an error (cam may be missing)."
+	else
+		die "fly-crowsnest-add-cams not installed"
+	fi
+	if systemctl cat crowsnest.service >/dev/null 2>&1; then
+		sudo systemctl enable --now crowsnest 2>/dev/null || true
+		sudo systemctl restart crowsnest 2>/dev/null || true
+	fi
+}
+
+# Direct modes: fly-kiauh cameras | fly-kiauh -- … (pass-through to kiauh.sh)
+case "${1:-}" in
+	cameras|camera|cams|cam)
+		run_cameras
+		exit 0
+		;;
+	-h|--help|help)
+		cat <<'EOF'
+fly-kiauh — KIAUH image helper
+
+  fly-kiauh              Interactive menu (Start KIAUH / Add USB cameras)
+  fly-kiauh cameras      Add USB cameras into Crowsnest
+  fly-kiauh [args…]      Pass remaining args to ~/kiauh/kiauh.sh
+EOF
+		exit 0
+		;;
+	"")
+		;;
+	*)
+		run_kiauh "$@"
+		;;
+esac
+
+cat <<'EOF'
+Fly-bian — fly-kiauh
+===================
+Klipper/Moonraker trees are pre-baked. Use KIAUH for printer.cfg and services.
+
+Choose:
+  1) Start KIAUH
+  2) Add USB cameras
+  3) Cancel
+EOF
+printf 'Enter choice [1-3]: '
+read -r choice || true
+case "$choice" in
+	1)
+		log ""
+		log "=== Start KIAUH ==="
+		run_kiauh
+		;;
+	2)
+		log ""
+		run_cameras
+		log "Done."
+		;;
+	3|""|q|Q)
+		log "Cancelled."
+		exit 0
+		;;
+	*)
+		die "Invalid choice: $choice"
+		;;
+esac

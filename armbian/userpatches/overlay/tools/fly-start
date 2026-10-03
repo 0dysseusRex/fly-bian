@@ -1,15 +1,21 @@
 #!/bin/bash
-# fly-start — interactive Simple-AF install/update using FLY-SETUP fly-start.txt
+# fly-start — interactive post-login menu from FLY-SETUP fly-start.txt
+# Simple-AF only: install / update / boot display / GrumpyScreen.
+# KIAUH images use fly-kiauh (this command is removed on those cards).
 set -euo pipefail
 
-LOGTAG=fly-start
-
-log() { printf '%s\n' "$*"; }
-
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
+log() { printf '%s\n' "$*"; }
 
 if [[ ${EUID:-0} -eq 0 ]]; then
 	die "Run as your sudo user (e.g. fly), not root."
+fi
+
+if [[ -f /etc/fly-debian/stack-flavor ]]; then
+	flavor=$(tr -d '[:space:]' </etc/fly-debian/stack-flavor)
+	if [[ $flavor == kiauh ]]; then
+		die "This is a KIAUH image — use fly-kiauh (or fly-kiauh cameras), not fly-start."
+	fi
 fi
 
 find_start_file() {
@@ -48,13 +54,11 @@ get_key() {
 	val=${val#\"}
 	val=${val%\'}
 	val=${val#\'}
-	# trim spaces
 	val=$(printf '%s' "$val" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 	printf '%s' "$val"
 }
 
 expand_home() {
-	# Expand leading ~/ only
 	local s=$1
 	case "$s" in
 		~/*) printf '%s%s' "$HOME" "${s:1}" ;;
@@ -97,7 +101,6 @@ run_boot_display() {
 }
 
 run_grumpy_rotate() {
-	# Optional arg: 0|1|2|3 — omit to show current.
 	if command -v fly-grumpy-rotate >/dev/null 2>&1; then
 		fly-grumpy-rotate "$@"
 	elif [[ -x /usr/local/bin/fly-grumpy-rotate ]]; then
@@ -108,23 +111,51 @@ run_grumpy_rotate() {
 	fi
 }
 
+run_cameras() {
+	log "=== USB cameras (Crowsnest) ==="
+	if command -v fly-crowsnest-add-cams >/dev/null; then
+		fly-crowsnest-add-cams || log "WARN: fly-crowsnest-add-cams reported an error (cam may be missing)."
+	else
+		log "WARN: fly-crowsnest-add-cams not installed."
+		return 1
+	fi
+	if systemctl cat crowsnest.service >/dev/null 2>&1; then
+		sudo systemctl enable --now crowsnest 2>/dev/null || true
+		sudo systemctl restart crowsnest 2>/dev/null || true
+	fi
+}
+
 SRC=$(find_start_file) || die "fly-start.txt not found (expected on FLY-SETUP / /boot)."
 WORK=$(mktemp)
 tr -d '\r' <"$SRC" >"$WORK"
 trap 'rm -f "$WORK"' EXIT
 
-INSTALL_CMD=$(get_key "$WORK" INSTALL_CMD)
 AUTO_CAMERAS=$(get_key "$WORK" AUTO_CAMERAS)
+
+# --- Simple-AF ---
+INSTALL_CMD=$(get_key "$WORK" INSTALL_CMD)
 ENABLE_GRUMPY=$(get_key "$WORK" ENABLE_GRUMPYSCREEN)
 BOOT_DISPLAY=$(get_key "$WORK" INSTALL_BOOT_DISPLAY)
-# Legacy: older fly-start.txt used INSTALL_BOOT_DISPLAY for GrumpyScreen.
-# If ENABLE_GRUMPYSCREEN is absent, do not treat INSTALL_BOOT_DISPLAY as Grumpy.
+GRUMPY_ROTATE=$(get_key "$WORK" GRUMPY_DISPLAY_ROTATE)
 
 [[ -n $INSTALL_CMD ]] || INSTALL_CMD='~/pellcorp/installer.sh --install --printer YourPrinter --probe YourProbe'
 
+apply_grumpy_rotate_from_start() {
+	case "${GRUMPY_ROTATE:-}" in
+		""|Your*) return 0 ;;
+		[0-3])
+			log "=== GRUMPY_DISPLAY_ROTATE=$GRUMPY_ROTATE → grumpyscreen.ini [ui] ==="
+			run_grumpy_rotate "$GRUMPY_ROTATE" || log "WARN: could not set GrumpyScreen rotation."
+			;;
+		*)
+			log "WARN: GRUMPY_DISPLAY_ROTATE='$GRUMPY_ROTATE' ignored (use 0, 1, 2, or 3)."
+			;;
+	esac
+}
+
 cat <<EOF
-Fly-bian — fly-start
-====================
+Fly-bian — fly-start (Simple-AF image)
+======================================
 Config: $SRC
 
 From fly-start.txt:
@@ -132,9 +163,11 @@ From fly-start.txt:
   AUTO_CAMERAS=$AUTO_CAMERAS
   ENABLE_GRUMPYSCREEN=$ENABLE_GRUMPY
   INSTALL_BOOT_DISPLAY=$BOOT_DISPLAY
+  GRUMPY_DISPLAY_ROTATE=$GRUMPY_ROTATE
 
   ENABLE_GRUMPYSCREEN  = touch UI on Fly-LCD after boot (not a splash)
   INSTALL_BOOT_DISPLAY = Plymouth early-boot logo (Simple-AF theme)
+  GRUMPY_DISPLAY_ROTATE = display_rotate in grumpyscreen.ini [ui] (0–3)
 
 Choose:
   1) Run Full Install Script
@@ -160,15 +193,12 @@ case "$choice" in
 		log ""
 		log "Installer finished."
 
-		# Moonraker PolKit (reboot/restart from Mainsail). Bind often fails
-		# here because set-policykit-rules needs interactive sudo.
 		if command -v fly-moonraker-polkit >/dev/null; then
 			log ""
 			log "=== Moonraker PolKit rules ==="
 			fly-moonraker-polkit "$(id -un)" || log "WARN: fly-moonraker-polkit failed."
 		fi
 
-		# Shake&Tune: bake ships the tree; ensure [shaketune] is linked into klippy extras.
 		if command -v fly-ensure-shaketune >/dev/null; then
 			log ""
 			log "=== Shake&Tune module link ==="
@@ -184,17 +214,7 @@ case "$choice" in
 		if yesish "$AUTO_CAMERAS"; then
 			log ""
 			log "=== AUTO_CAMERAS=Yes — adding USB cameras ==="
-			if command -v fly-crowsnest-add-cams >/dev/null; then
-				# Ensures ustreamer + enable --now restart so streams show immediately.
-				fly-crowsnest-add-cams || log "WARN: fly-crowsnest-add-cams reported an error (cam may be missing)."
-			else
-				log "WARN: fly-crowsnest-add-cams not installed."
-			fi
-			# Always kick crowsnest after install even if cams were already in conf.
-			if systemctl cat crowsnest.service >/dev/null 2>&1; then
-				sudo systemctl enable --now crowsnest 2>/dev/null || true
-				sudo systemctl restart crowsnest 2>/dev/null || true
-			fi
+			run_cameras || true
 		else
 			log "Skipping cameras (AUTO_CAMERAS is not Yes)."
 		fi
@@ -203,6 +223,7 @@ case "$choice" in
 			log ""
 			log "=== ENABLE_GRUMPYSCREEN=Yes ==="
 			enable_grumpyscreen
+			apply_grumpy_rotate_from_start
 		else
 			log ""
 			log "=== ENABLE_GRUMPYSCREEN is not Yes ==="

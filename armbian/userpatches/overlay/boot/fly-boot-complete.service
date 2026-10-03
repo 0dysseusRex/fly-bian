@@ -3,6 +3,8 @@ Description=Announce Fly-bian boot complete after multi-user
 Documentation=file:///usr/share/fly-debian/first-boot/README.txt
 # Pulled by default.target so After=multi-user.target is not a cycle.
 After=multi-user.target
+# Quit splash after we announce; plymouth-quit waits on us via drop-in.
+Before=plymouth-quit.service plymouth-quit-wait.service
 
 [Service]
 Type=oneshot

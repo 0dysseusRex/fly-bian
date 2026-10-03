@@ -14,20 +14,12 @@ flyos-artifacts/live/LATEST
 armbian/build/
 output/
 
+# Local bake helpers / scratch
+scripts/tmp-*.sh
+scripts/tmp-*.py
+scripts/tmp-*.txt
 /agent-tools/
 .DS_Store
 
-
-# Image blobs (may contain Wi-Fi / printer secrets)
-*.img
-*.img.gz
-*.img.xz
-*.img.zip
-flyos-artifacts/live/pull-*
-flyos-artifacts/live/LATEST
-
-# Armbian build output if compiled in-tree
-armbian/build/
-output/
-
-.DS_Store
+# Nested clone metadata (vendored KIAUH tree is tracked; its .git is not)
+armbian/userpatches/overlay/kiauh/.git/

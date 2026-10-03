@@ -1,0 +1,123 @@
+#!/bin/bash
+# fly-klipperscreen-prep — make a KlipperScreen install less likely to OOM/break dpkg
+# on Fly Lite 2.1 (512 MB). Run before KIAUH → Install → KlipperScreen.
+#
+# Recovers interrupted dpkg, syncs disks, prefers swap, installs missing apt
+# packages one-at-a-time (upstream install.sh installs them in big batches).
+set -euo pipefail
+
+die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
+log() { printf '%s\n' "$*"; }
+
+if [[ ${EUID:-0} -eq 0 ]]; then
+	die "Run as your sudo user (e.g. fly), not root."
+fi
+
+XSERVER="xinit xinput x11-xserver-utils xserver-xorg-input-evdev xserver-xorg-input-libinput xserver-xorg-legacy xserver-xorg-video-fbdev"
+PYGOBJECT="libgirepository1.0-dev gcc libcairo2-dev pkg-config python3-dev gir1.2-gtk-3.0"
+MISC="librsvg2-common libopenjp2-7 libdbus-glib-1-dev autoconf python3-venv"
+OPTIONAL="fonts-nanum fonts-ipafont libmpv-dev"
+
+need_pkg() {
+	local p=$1
+	# already installed?
+	dpkg-query -W -f='${Status}' "$p" 2>/dev/null | grep -q 'install ok installed' && return 1
+	return 0
+}
+
+free_mb() {
+	awk '/MemAvailable:/ {printf "%d", $2/1024}' /proc/meminfo 2>/dev/null || echo 0
+}
+
+log "=== fly-klipperscreen-prep ==="
+log "This board is 512 MB. KlipperScreen apt/X often OOMs and segfaults dpkg."
+log "This helper recovers apt and installs deps one package at a time."
+log ""
+
+log "--- disk sync + free pagecache (best-effort) ---"
+sync
+sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches' 2>/dev/null || true
+
+if [[ -f /swapfile ]] || swapon --show | grep -q .; then
+	log "Swap: $(swapon --show --noheadings 2>/dev/null | head -1 || echo present)"
+else
+	log "WARN: no swap active — first-boot swapfile may still be creating."
+fi
+
+log "MemAvailable: $(free_mb) MB"
+log ""
+
+log "--- recover interrupted dpkg (if any) ---"
+if ! sudo dpkg --configure -a; then
+	log "WARN: dpkg --configure -a reported errors; continuing with apt -f"
+fi
+sudo apt-get -f install -y || true
+sudo apt-get update
+
+install_one() {
+	local p=$1
+	if ! need_pkg "$p"; then
+		log "skip (installed): $p"
+		return 0
+	fi
+	local avail
+	avail=$(free_mb)
+	if (( avail < 40 )); then
+		log "WARN: only ${avail}MB free — syncing and waiting 10s before $p"
+		sync
+		sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches' 2>/dev/null || true
+		sleep 10
+	fi
+	log "apt install: $p  (MemAvailable=$(free_mb)MB)"
+	if ! sudo apt-get install -y --no-install-recommends "$p"; then
+		log "FAILED: $p — run: sudo dpkg --configure -a"
+		return 1
+	fi
+	sync
+	return 0
+}
+
+failed=0
+log ""
+log "--- X11 backend packages ---"
+# shellcheck disable=SC2086
+for p in $XSERVER; do
+	install_one "$p" || failed=1
+done
+
+log ""
+log "--- PyGObject / GTK build deps ---"
+# shellcheck disable=SC2086
+for p in $PYGOBJECT; do
+	install_one "$p" || failed=1
+done
+
+log ""
+log "--- misc ---"
+# shellcheck disable=SC2086
+for p in $MISC; do
+	install_one "$p" || failed=1
+done
+
+log ""
+log "--- optional (fonts + libmpv) — heaviest on 512 MB ---"
+# shellcheck disable=SC2086
+for p in $OPTIONAL; do
+	install_one "$p" || failed=1
+done
+
+log ""
+if [[ $failed -eq 1 ]]; then
+	die "Some packages failed. Fix with: sudo dpkg --configure -a && sudo apt -f install
+Then re-run: fly-klipperscreen-prep
+Or skip KlipperScreen and use Fluidd/Mainsail in a browser."
+fi
+
+log "Apt deps look ready. Next:"
+log "  1) fly-kiauh  → install KlipperScreen (choose X11 if asked)"
+log "  2) If dpkg dies again: sudo dpkg --configure -a && re-run this helper"
+log "  3) Prefer a power cycle a few minutes apart if the board hung"
+log ""
+log "Note: even with deps preinstalled, pip/PyGObject can still OOM."
+log "Next Fly-bian KIAUH images pre-bake these packages at image-build time."
+exit 0

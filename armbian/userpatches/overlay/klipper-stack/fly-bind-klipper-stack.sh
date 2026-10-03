@@ -4,7 +4,8 @@
 set -euo pipefail
 
 MARKER=/var/lib/fly-stack-bound
-FLAVOR_FILE=/etc/fly-debian/stack-flavo
+FLAVOR_FILE=/etc/fly-debian/stack-flavor
+FLAVOR_FILE_LEGACY=/etc/fly-debian/stack-flavo
 OPT_SAF=/opt/fly-simple-af
 OPT_KIAUH=/opt/fly-kiauh
 
@@ -15,7 +16,11 @@ if [[ -f $MARKER ]]; then
 fi
 
 flavor=""
-[[ -f $FLAVOR_FILE ]] && flavor=$(tr -d '\r\n' <"$FLAVOR_FILE")
+if [[ -f $FLAVOR_FILE ]]; then
+	flavor=$(tr -d '\r\n' <"$FLAVOR_FILE")
+elif [[ -f $FLAVOR_FILE_LEGACY ]]; then
+	flavor=$(tr -d '\r\n' <"$FLAVOR_FILE_LEGACY")
+fi
 
 user=""
 uid=""
@@ -86,6 +91,55 @@ apply_simpleaf_nginx() {
 	log "applied Simple-AF nginx sites for $user"
 }
 
+# KIAUH-style nginx: sites-available + sites-enabled (KIAUH menus open sites-available).
+apply_kiauh_nginx() {
+	local assets=/usr/share/fly-debian/kiauh/nginx
+	local tmpl name port rootf dest
+	[[ -d $assets ]] || return 0
+	install -d /etc/nginx/conf.d /etc/nginx/sites-available /etc/nginx/sites-enabled
+	chmod o+rx "$home" 2>/dev/null || true
+	[[ -f $assets/upstreams.conf ]] && cp "$assets/upstreams.conf" /etc/nginx/conf.d/
+	[[ -f $assets/common_vars.conf ]] && cp "$assets/common_vars.conf" /etc/nginx/conf.d/
+	tmpl=$assets/nginx_cfg
+	[[ -f $tmpl ]] || return 0
+
+	# Fluidd default :80, Mainsail default :4409 (KIAUH defaults).
+	for spec in "fluidd:80:$home/fluidd" "mainsail:4409:$home/mainsail"; do
+		IFS=: read -r name port rootf <<<"$spec"
+		[[ -d $rootf ]] || continue
+		dest=/etc/nginx/sites-available/$name
+		sed -e "s|%PORT%|$port|g" \
+			-e "s|%NAME%|$name|g" \
+			-e "s|%ROOT_DIR%|$rootf|g" \
+			"$tmpl" >"$dest"
+		ln -sfn "$dest" "/etc/nginx/sites-enabled/$name"
+	done
+	rm -f /etc/nginx/sites-enabled/default
+	if command -v nginx >/dev/null && nginx -t 2>/dev/null; then
+		systemctl enable nginx.service 2>/dev/null || true
+		systemctl restart nginx 2>/dev/null || systemctl reload nginx 2>/dev/null || true
+	fi
+	log "applied KIAUH nginx sites for $user"
+}
+
+seed_kiauh_printer_data() {
+	local cfg=/usr/share/fly-debian/kiauh/config
+	mkdir -p "$home/printer_data/config" "$home/printer_data/logs" "$home/printer_data/gcodes" \
+		"$home/printer_data/comms"
+	if [[ -d $cfg ]]; then
+		# Only seed missing files so KIAUH/user edits are kept.
+		[[ -f $home/printer_data/config/moonraker.conf ]] || \
+			cp "$cfg/moonraker.conf" "$home/printer_data/config/moonraker.conf"
+		[[ -f $home/printer_data/config/printer.cfg ]] || \
+			cp "$cfg/printer.cfg" "$home/printer_data/config/printer.cfg"
+	fi
+	# virtual_sdcard path in stub uses ~/printer_data/gcodes — expand for klippy.
+	if [[ -f $home/printer_data/config/printer.cfg ]]; then
+		sed -i "s|path: ~/printer_data/gcodes|path: $home/printer_data/gcodes|" \
+			"$home/printer_data/config/printer.cfg" 2>/dev/null || true
+	fi
+}
+
 # Moonraker machine/reboot APIs need PolKit rules for the real user.
 # Prefer fly-moonraker-polkit (root-safe). Fall back to upstream script.
 apply_moonraker_polkit() {
@@ -154,13 +208,19 @@ case "$flavor" in
 		;;
 	kiauh)
 		bind_tree "$OPT_KIAUH"
-		mkdir -p "$home/printer_data/config" "$home/printer_data/logs" "$home/printer_data/gcodes"
+		seed_kiauh_printer_data
 		install_unit /usr/share/fly-debian/kiauh/klipper.service \
 			/etc/systemd/system/klipper.service
 		install_unit /usr/share/fly-debian/kiauh/moonraker.service \
 			/etc/systemd/system/moonraker.service
+		apply_kiauh_nginx
+		apply_moonraker_polkit
 		systemctl daemon-reload
-		# Leave units disabled until KIAUH enables them.
+		# Enable API + web so KIAUH / companions see a Moonraker instance.
+		# Klipper stays off until the user sets a real MCU serial in printer.cfg.
+		systemctl enable moonraker.service nginx.service 2>/dev/null || true
+		systemctl restart moonraker.service 2>/dev/null || \
+			systemctl start moonraker.service 2>/dev/null || true
 		chown -R "$user:$user" "$home"
 		log "bound KIAUH tree for $user"
 		;;

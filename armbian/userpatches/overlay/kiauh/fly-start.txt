@@ -1,0 +1,58 @@
+# Fly-bian Project — first-boot setup (FLY-SETUP) — KIAUH image
+#
+# Edit this file BEFORE the first power-on. Notepad is fine (CRLF is OK).
+# Values that still say Your… are ignored. Fill a block to apply that part.
+#
+# For SSH with no serial cable, fill Wi-Fi + Root + User. Then boot, wait
+# several minutes (the card grows, then the radio joins), and:
+#
+#   ssh USER_NAME@THE.PRINTER.IP
+#   fly-help          # tips + custom commands
+#   fly-kiauh         # menu: Start KIAUH / Add USB cameras
+#   fly-kiauh cameras # add USB cams into Crowsnest (after Crowsnest exists)
+#
+# Find the IP on your router DHCP list, or:
+#   Windows: arp -a   /   nmap -sn 192.168.1.0/24
+#   macOS:   arp -a   /   dns-sd -B _ssh._tcp local.
+#   Linux:   ip neigh /   nmap -sn 192.168.1.0/24
+# Hostname is usually fly-lite-21. Full guide: README.txt here, or fly-help on the board.
+#
+# Locale examples: en_US.UTF-8  en_GB.UTF-8  de_DE.UTF-8
+# Timezone examples: America/Los_Angeles  Europe/London
+#
+# The Lite radio is 2.4 GHz only. Passwords here are plaintext. Do not share
+# the card image after editing. Leave placeholders to use the on-screen
+# first-run wizard instead (Type-C serial or HDMI + USB keyboard).
+
+# --- Wi-Fi ---
+WIFI_ENABLED=1
+WIFI_SSID=YourNetwork
+WIFI_PSK=YourPassword
+WIFI_COUNTRY=US
+
+# Optional static IPv4. Leave USE_STATIC=0 for DHCP.
+USE_STATIC=0
+STATIC_IP=192.168.1.50
+STATIC_MASK=255.255.255.0
+STATIC_GATEWAY=192.168.1.1
+STATIC_DNS=1.1.1.1 8.8.8.8
+
+# --- Location (same questions as first-run) ---
+SET_LANG_BASED_ON_LOCATION=n
+LOCALE=YourLocale
+TIMEZONE=YourTimezone
+
+# --- Root ---
+ROOT_PASSWORD=YourRootPassword
+ROOT_SSH_KEY=
+
+# --- User (sudo). Lowercase letters; this is the SSH login. ---
+USER_NAME=YourUser
+USER_PASSWORD=YourUserPassword
+USER_REALNAME=Your Name
+USER_SHELL=bash
+USER_SSH_KEY=
+
+# KIAUH notes (not used by any autorun here):
+# There is no Simple-AF INSTALL_CMD / boot-display / AUTO_CAMERAS on this image.
+# After login: fly-kiauh  or  fly-kiauh cameras

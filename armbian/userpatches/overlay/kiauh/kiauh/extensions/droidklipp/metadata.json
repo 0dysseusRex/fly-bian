@@ -1,0 +1,17 @@
+{
+  "metadata": {
+    "index": 15,
+    "module": "droidklipp_extension",
+    "maintained_by": "CodeMasterCody3D",
+    "display_name": "DroidKlipp",
+    "description": [
+      "Use an Android device as a KlipperScreen display via ADB and DroidKlipp APK / XServer XSDL integration",
+      "- Automatic USB ADB forwarding",
+      "- Optional WiFi fallback",
+      "- Starts and monitors KlipperScreen on the Android X server"
+    ],
+    "website": "https://github.com/CodeMasterCody3D/DroidKlipp-Android-APK/releases",
+    "repo": "https://github.com/CodeMasterCody3D/DroidKlipp",
+    "updates": true
+  }
+}

@@ -23,6 +23,7 @@ The **cpu-affinity** image is on the Lite and booting. After the USB3 reader dum
 - Users `root` and `fly` (sudo)
 - Serial: Windows **COM4**, CH340, 115200 8-N-1. Do **not** pulse DTR/RTS (it does not reset this board).
 - `reboot` often hangs; use a **5V power cycle**
+- Prefer power cycles a **few minutes apart**. Too-quick or back-to-back resets often cause hung boots or kernel oops (Simple-AF setup is otherwise solid when the board is given time between cycles).
 - Klipper is **not** installed. systemd drop-ins + generator pin future Klipper-family units to CPUs **1–3**.
 
 `/boot/armbianEnv.txt`:
@@ -79,11 +80,22 @@ Fix: drop `fly-lite-leds` from `user_overlays`. The Fly DTB already has:
 
 Heartbeat LED is confirmed running on the live board.
 
-### TFT (software only)
+### TFT (Fly TFT V2)
 
-Kernel 6.18 has no `FB_TFT_ST7796S`. Overlay `fly-lite-tft` uses `panel-mipi-dbi` + `ads7846`. Driver requires porches/sync = 0 (non-zero → `-EINVAL`). Firmware `/lib/firmware/ST7796S.bin`.
+Kernel 6.18 has no `FB_TFT_ST7796S`. Overlay `fly-lite-tft` uses `panel-mipi-dbi-spi` + firmware `/lib/firmware/ST7796S.bin` (porches/sync must be 0). Pins: DC **PA20**, reset **PA21**, CS0 **PC3**, CS1 **PA19**; backlight **PA6** is in the Fly base DTB. Autoload via `/etc/modules-load.d/fly-tft.conf` (`panel-mipi-dbi`) — modalias `spi:ST7796S` does not pull the module alone.
 
-Bound live: DRM `panel-mipi-dbi`, `/dev/fb0` 320×480 RGB565, touch `ADS7846` `/dev/input/event0`. **Physical panel is still in the mail** — no visual test yet.
+Touch DIP:
+
+| DIP | Overlay | Device |
+| --- | --- | --- |
+| **Cap** (default bake) | `fly-lite-tft` + `fly-lite-tft-c` | GT911 on **i2c2** (`1c2b400`) @ **0x14**, IRQ **PA3**, reset **PA2**. Disables SPI ADS7846. |
+| **Resi** | `fly-lite-tft` only (omit `fly-lite-tft-c`) | ADS7846 on SPI0 CS1, pendown **PA3** |
+
+Live Cap: `/dev/fb0` 320×480 RGB565 paints; `Goodix Capacitive TouchScreen` on `/dev/input/event0`. Optional missing `goodix_911_cfg.bin` is harmless (driver falls back). 16P FPC orientation can be reversed vs Pi harnesses — try flipping the cable if the panel stays blank with backlight on.
+
+Helper: `fly-tft-check`. Sources: `armbian/userpatches/overlay/tft/`, firmware in `from-golden/firmware/ST7796S.bin`.
+
+GrumpyScreen rotation (`fly-grumpy-rotate 0|1|2|3`) paints `/dev/fb0` (this TFT) and picks Cap touch via `fly-grumpy-evdev.sh` → `LVGL_EVDEV_DEV=/dev/input/event0` (Goodix). DT `rotation=<90>` in `fly-lite-tft.dts` is separate from UI `display_rotate`.
 
 ### Wi-Fi
 
@@ -151,6 +163,14 @@ On this 512 MB H3 board, **GrumpyScreen** is the supported touch UI:
 **Do not install KlipperScreen** on Fly Lite. Lab installs OOM mid-apt and have zeroed `/boot/uInitrd`, leaving the card stuck in U-Boot until `uInitrd` is rebuilt from `initrd.img-*`.
 
 ---
+
+## Low memory (OOM) and heavy installs
+
+512 MB is the hard limit. Big apt batches, `pip`/`clang` (Moonraker speedups), Docker, KlipperScreen’s X stack, and on-device companions (OctoEverywhere, etc.) trigger the **OOM killer**. Aftermath is often a **segfault in dpkg**, interrupted apt, or a wedged install — not a “bad” `.deb`.
+
+User-facing checklist (symptoms, `dmesg` checks, swap, `dpkg --configure -a`, finishing installs one component at a time):
+
+→ **[`docs/boards/fly-lite-2.1/oom.md`](boards/fly-lite-2.1/oom.md)** · board hardware: [`boards/fly-lite-2.1/README.md`](boards/fly-lite-2.1/README.md)
 
 ## Simple-AF and KIAUH (looks hung, still working)
 

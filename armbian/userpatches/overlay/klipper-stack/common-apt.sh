@@ -24,21 +24,33 @@ fly_klipper_stack_apt() {
 
 fly_git_clone() {
 	local url=$1 dest=$2
+	# Always take latest tip — rootfs cache / prior bake must not pin an old SHA.
 	if [[ -d $dest/.git ]]; then
-		echo "fly-bake: already cloned $dest"
-		return 0
+		echo "fly-bake: updating $dest"
+		git -C "$dest" fetch --depth=1 origin HEAD 2>/dev/null \
+			|| git -C "$dest" fetch --depth=1 origin 2>/dev/null \
+			|| true
+		# Prefer origin/HEAD, then origin/main, then origin/master.
+		local ref
+		ref=$(git -C "$dest" rev-parse --verify origin/HEAD 2>/dev/null || true)
+		[[ -n $ref ]] || ref=$(git -C "$dest" rev-parse --verify origin/main 2>/dev/null || true)
+		[[ -n $ref ]] || ref=$(git -C "$dest" rev-parse --verify origin/master 2>/dev/null || true)
+		if [[ -n $ref ]]; then
+			git -C "$dest" reset --hard "$ref" >/dev/null
+			echo "fly-bake: $dest @ $(git -C "$dest" rev-parse --short=7 HEAD)"
+			return 0
+		fi
+		echo "fly-bake: fetch failed for $dest; recloning"
 	fi
 	echo "fly-bake: clone $url -> $dest"
 	rm -rf "$dest"
 	git clone --depth=1 "$url" "$dest"
+	echo "fly-bake: $dest @ $(git -C "$dest" rev-parse --short=7 HEAD 2>/dev/null || echo unknown)"
 }
 
 fly_web_release() {
 	local url=$1 dest=$2 zip
-	if [[ -f $dest/index.html ]]; then
-		echo "fly-bake: already have web UI $dest"
-		return 0
-	fi
+	# Always refresh Fluidd/Mainsail zips so image tracks upstream latest.
 	echo "fly-bake: fetch $url -> $dest"
 	rm -rf "$dest"
 	mkdir -p "$dest"
@@ -73,4 +85,59 @@ fly_pip_reqs() {
 		"$venv/bin/pip" install --prefer-binary -r "$filtered"
 		rm -f "$filtered"
 	done
+}
+
+# After flavor bake: record stack identity for filenames / fly-help.
+# Simple-AF → pellcorp short SHA; KIAUH → git describe (tag) or short SHA.
+# Updates /etc/fly-debian/flybian-image and a host-visible meta file for staging.
+fly_sanitize_token() {
+	printf '%s' "$1" | tr -c 'A-Za-z0-9._-' '-' | sed -E 's/-+/-/g; s/^-+//; s/-+$//'
+}
+
+fly_set_stack_identity() {
+	local flavor=$1 repo=${2:-}
+	local ver device flavor_token rev stem meta
+	install -d /etc/fly-debian /boot
+	ver=$(tr -d '[:space:]' </etc/fly-debian/flybian-version 2>/dev/null || true)
+	[[ -n $ver ]] || ver=$(tr -d '[:space:]' <"${OVERLAY:-/tmp/overlay}/FLYBIAN_VERSION" 2>/dev/null || true)
+	[[ -n $ver ]] || ver=0.0
+	device=Fly-Lite-2.1
+	case "$flavor" in
+		simpleaf) flavor_token=Simple-AF ;;
+		kiauh) flavor_token=KIAUH ;;
+		*) flavor_token=Base ;;
+	esac
+
+	rev=""
+	if [[ -n $repo && -d $repo/.git ]]; then
+		if [[ $flavor == kiauh ]]; then
+			git -C "$repo" fetch --tags --depth=1 >/dev/null 2>&1 || true
+			rev=$(git -C "$repo" describe --tags --always 2>/dev/null || true)
+		fi
+		[[ -n $rev ]] || rev=$(git -C "$repo" rev-parse --short=7 HEAD 2>/dev/null || true)
+	fi
+	rev=$(fly_sanitize_token "${rev:-unknown}")
+
+	printf '%s\n' "$rev" >/etc/fly-debian/stack-rev
+	printf '%s\n' "$flavor" >/etc/fly-debian/stack-flavor
+	if [[ $flavor_token == Base ]]; then
+		stem="Fly-bian-${ver}_${device}_${flavor_token}"
+	else
+		stem="Fly-bian-${ver}_${device}_${flavor_token}-${rev}"
+	fi
+	printf '%s\n' "$stem" >/etc/fly-debian/flybian-image
+	printf '%s\n' "$stem" >/boot/flybian-image.txt
+
+	meta="flavor=${flavor}
+stack_rev=${rev}
+stem=${stem}
+"
+	for d in /armbian/output/images /output/images; do
+		if [[ -d $d ]]; then
+			printf '%s' "$meta" >"$d/flybian-meta-${flavor}.txt"
+			echo "fly-bake: wrote $d/flybian-meta-${flavor}.txt ($stem)"
+			break
+		fi
+	done
+	echo "fly-bake: stack identity $stem"
 }

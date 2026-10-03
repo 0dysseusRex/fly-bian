@@ -1,7 +1,7 @@
 #!/bin/bash
 # Fly-bian Project SSH splash. TAAG Breach Blue / TheDraw palette on black
 # (#5555FF, #0000AA, #AAAAAA) from patorjk ft=thedraw&fp=true.
-# fly-help / fly-start are listed under Armbian MOTD Commands (41/42), not here.
+# fly-help / fly-start / fly-kiauh are listed under Armbian MOTD Commands (41/42), not here.
 set -euo pipefail
 
 ART="${FLYBIAN_ART:-/usr/share/fly-debian/motd/flybian.txt}"

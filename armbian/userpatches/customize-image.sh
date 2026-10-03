@@ -26,11 +26,9 @@ fi
 printf 'Fly-bian-%s_%s_%s\n' "$FLYBIAN_VER" "$DEVICE_TOKEN" "$FLAVOR_TOKEN" \
   >/etc/fly-debian/flybian-image
 
-install -d /etc/systemd/system-generators
-if [[ -f $OVERLAY/cpu-affinity/fly-klipper-cpu-affinity ]]; then
-  install -m 0755 "$OVERLAY/cpu-affinity/fly-klipper-cpu-affinity" \
-    /etc/systemd/system-generators/fly-klipper-cpu-affinity
-fi
+# Static CPUAffinity drop-ins only — do NOT install a systemd generator.
+# fly-klipper-cpu-affinity as a generator OOMs this 512 MB board during early
+# boot (COMM truncates to fly-klipper-cpu; create_pipe2 / irqs disabled).
 if [[ -f $OVERLAY/cpu-affinity/50-fly-cpu-affinity.conf && -f $OVERLAY/cpu-affinity/units ]]; then
   while read -r unit; do
     [[ -z $unit || $unit == \#* ]] && continue
@@ -39,6 +37,8 @@ if [[ -f $OVERLAY/cpu-affinity/50-fly-cpu-affinity.conf && -f $OVERLAY/cpu-affin
       "/etc/systemd/system/${unit}.d/50-fly-cpu-affinity.conf"
   done <"$OVERLAY/cpu-affinity/units"
 fi
+# Remove a generator left from older images if the overlay still ships the file.
+rm -f /etc/systemd/system-generators/fly-klipper-cpu-affinity 2>/dev/null || true
 
 # FAT volume (BOOTFS_TYPE=fat → /boot is p1). Put fly-start.txt here so Windows
 # sees it after flash. fly-windows-bootfs also labels p1 FLY-SETUP.
@@ -107,13 +107,18 @@ if [[ -d $OVERLAY/hdmi ]]; then
     install -m 0644 "$f" "/boot/overlay-user/$(basename "$f")"
   done
 fi
+# TFT overlays (panel + Cap GT911 companion). Prefer overlay/tft sources.
+if [[ -d $OVERLAY/tft ]]; then
+  for f in "$OVERLAY/tft"/*; do
+    [[ -f $f ]] || continue
+    install -m 0644 "$f" "/boot/overlay-user/$(basename "$f")"
+  done
+fi
 if command -v dtc >/dev/null; then
   for dts in /boot/overlay-user/*.dts; do
     [[ -f $dts ]] || continue
     dtbo="${dts%.dts}.dtbo"
-    if [[ ! -f $dtbo ]]; then
-      dtc -@ -I dts -O dtb -o "$dtbo" "$dts" || true
-    fi
+    dtc -@ -I dts -O dtb -o "$dtbo" "$dts" || true
   done
 fi
 
@@ -121,6 +126,10 @@ if [[ -f $GOLDEN/firmware/ST7796S.bin ]]; then
   install -d /lib/firmware
   install -m 0644 "$GOLDEN/firmware/ST7796S.bin" /lib/firmware/ST7796S.bin
 fi
+
+# panel-mipi-dbi does not autoload from modalias spi:ST7796S; Cap needs goodix_ts.
+install -d /etc/modules-load.d
+printf '%s\n' panel-mipi-dbi goodix_ts >/etc/modules-load.d/fly-tft.conf
 
 if [[ -f $GOLDEN/sbin/load-8189fs ]]; then
   install -m 0755 "$GOLDEN/sbin/load-8189fs" /usr/local/sbin/load-8189fs
@@ -159,11 +168,12 @@ if [[ -f /boot/armbianEnv.txt ]]; then
   if ! grep -q '^console=' /boot/armbianEnv.txt; then
     echo 'console=serial' >>/boot/armbianEnv.txt
   fi
+  # fly-lite-tft-c: Cap DIP GT911 (disables ADS7846). Omit for Resi DIP.
   if grep -q '^user_overlays=' /boot/armbianEnv.txt; then
-    sed -i 's/^user_overlays=.*/user_overlays=mmc-broken-cd fly-lite-io fly-lite-tft fly-lite-hdmi/' \
+    sed -i 's/^user_overlays=.*/user_overlays=mmc-broken-cd fly-lite-io fly-lite-tft fly-lite-tft-c fly-lite-hdmi/' \
       /boot/armbianEnv.txt
   else
-    echo 'user_overlays=mmc-broken-cd fly-lite-io fly-lite-tft fly-lite-hdmi' >>/boot/armbianEnv.txt
+    echo 'user_overlays=mmc-broken-cd fly-lite-io fly-lite-tft fly-lite-tft-c fly-lite-hdmi' >>/boot/armbianEnv.txt
   fi
   if grep -q '^disp_mode=' /boot/armbianEnv.txt; then
     sed -i 's/^disp_mode=.*/disp_mode=800x480p60/' /boot/armbianEnv.txt
@@ -192,6 +202,8 @@ if command -v apt-get >/dev/null; then
   apt-get install -y --no-install-recommends polkitd || true
   # Plymouth for optional early-boot splash (Simple-AF theme baked in flavor bake).
   apt-get install -y --no-install-recommends plymouth plymouth-themes unzip || true
+  # Cap touch / TFT diagnostics (GT911 on i2c2).
+  apt-get install -y --no-install-recommends i2c-tools || true
 fi
 # Host keys must exist before first boot or ssh.service crash-loops.
 if command -v ssh-keygen >/dev/null; then
@@ -240,6 +252,14 @@ if [[ -f $OVERLAY/boot/fly-boot-complete.sh && -f $OVERLAY/boot/fly-boot-complet
     /usr/local/sbin/fly-boot-complete.sh
   install -m 0644 "$OVERLAY/boot/fly-boot-complete.service" \
     /etc/systemd/system/fly-boot-complete.service
+  if [[ -f $OVERLAY/boot/plymouth-quit-wait-fly.conf ]]; then
+    install -d /etc/systemd/system/plymouth-quit.service.d
+    install -d /etc/systemd/system/plymouth-quit-wait.service.d
+    install -m 0644 "$OVERLAY/boot/plymouth-quit-wait-fly.conf" \
+      /etc/systemd/system/plymouth-quit.service.d/wait-fly.conf
+    install -m 0644 "$OVERLAY/boot/plymouth-quit-wait-fly.conf" \
+      /etc/systemd/system/plymouth-quit-wait.service.d/wait-fly.conf
+  fi
   if command -v systemctl >/dev/null; then
     systemctl enable fly-boot-complete.service
   else
@@ -249,7 +269,7 @@ if [[ -f $OVERLAY/boot/fly-boot-complete.sh && -f $OVERLAY/boot/fly-boot-complet
   fi
 fi
 
-# SSH helpers: help, guided install, cameras, GrumpyScreen, boot display
+# SSH helpers: help, guided start, cameras, GrumpyScreen, boot display, KIAUH
 if [[ -f $OVERLAY/tools/fly-help ]]; then
   install -m 0755 "$OVERLAY/tools/fly-help" /usr/local/bin/fly-help
 fi
@@ -265,6 +285,9 @@ fi
 if [[ -f $OVERLAY/tools/fly-ensure-shaketune ]]; then
   install -m 0755 "$OVERLAY/tools/fly-ensure-shaketune" /usr/local/bin/fly-ensure-shaketune
 fi
+if [[ -f $OVERLAY/tools/fly-tft-check ]]; then
+  install -m 0755 "$OVERLAY/tools/fly-tft-check" /usr/local/bin/fly-tft-check
+fi
 if [[ -f $OVERLAY/crowsnest/fly-crowsnest-add-cams ]]; then
   install -m 0755 "$OVERLAY/crowsnest/fly-crowsnest-add-cams" \
     /usr/local/bin/fly-crowsnest-add-cams
@@ -273,9 +296,16 @@ if [[ -f $OVERLAY/crowsnest/fly-crowsnest-strip-placeholders ]]; then
   install -m 0755 "$OVERLAY/crowsnest/fly-crowsnest-strip-placeholders" \
     /usr/local/bin/fly-crowsnest-strip-placeholders
 fi
-if [[ -f $OVERLAY/simpleaf/fly-grumpy-rotate ]]; then
+# Rotate helper: tools/ first (all flavors), then simpleaf/ copy.
+if [[ -f $OVERLAY/tools/fly-grumpy-rotate ]]; then
+  install -m 0755 "$OVERLAY/tools/fly-grumpy-rotate" /usr/local/bin/fly-grumpy-rotate
+elif [[ -f $OVERLAY/simpleaf/fly-grumpy-rotate ]]; then
   install -m 0755 "$OVERLAY/simpleaf/fly-grumpy-rotate" \
     /usr/local/bin/fly-grumpy-rotate
+fi
+if [[ -f $OVERLAY/simpleaf/fly-grumpy-evdev.sh ]]; then
+  install -m 0755 "$OVERLAY/simpleaf/fly-grumpy-evdev.sh" \
+    /usr/local/sbin/fly-grumpy-evdev.sh
 fi
 
 # Fly-bian SSH splash (replaces Armbian-unofficial figlet in 10-armbian-header)
@@ -299,10 +329,6 @@ if [[ -f $OVERLAY/motd/patch-armbian-commands.py ]]; then
 fi
 if [[ -f $OVERLAY/motd/42-fly-commands ]]; then
   install -m 0755 "$OVERLAY/motd/42-fly-commands" /etc/update-motd.d/42-fly-commands
-fi
-if [[ -x /usr/share/fly-debian/motd/patch-armbian-commands.py ]]; then
-  python3 /usr/share/fly-debian/motd/patch-armbian-commands.py \
-    /etc/update-motd.d/41-commands || true
 fi
 if [[ -x /usr/share/fly-debian/motd/patch-armbian-header.py && -f /etc/update-motd.d/10-armbian-header ]]; then
   if ! python3 /usr/share/fly-debian/motd/patch-armbian-header.py; then
@@ -354,5 +380,11 @@ case "$FLAVOR" in
     source "$OVERLAY/kiauh/bake.sh"
     ;;
 esac
+
+# MOTD Commands after flavor so Simple-AF vs KIAUH labels are correct.
+if [[ -x /usr/share/fly-debian/motd/patch-armbian-commands.py ]]; then
+  python3 /usr/share/fly-debian/motd/patch-armbian-commands.py \
+    /etc/update-motd.d/41-commands "${FLAVOR:-base}" || true
+fi
 
 # Wizard must remain. Never create user fly here.

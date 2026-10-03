@@ -4,6 +4,9 @@
 #   flybian-require-new-version.sh           # fail if any flavor already staged for this ver
 #   flybian-require-new-version.sh <flavor>  # fail if that flavor's image already staged
 # Override: FLY_FORCE=1
+#
+# Simple-AF / KIAUH filenames include -<stack_rev>; any matching
+# Fly-bian-<ver>_<device>_<Flavor>*.img.xz counts as staged.
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -30,12 +33,14 @@ flavor_token() {
 }
 
 check_one() {
-	local fl=$1 stem path
+	local fl=$1 dir matches
 	fl=$(flavor_token "$fl")
-	stem="Fly-bian-${ver}_${device}_${fl}"
-	path="$releases/Fly-bian-${ver}/${device}/${fl}/${stem}.img.xz"
-	if [[ -f $path ]]; then
-		echo "ERROR: already staged: $path" >&2
+	dir="$releases/Fly-bian-${ver}/${device}/${fl}"
+	# Base is exact; Simple-AF/KIAUH may have -<rev> suffix.
+	matches=$(compgen -G "$dir/Fly-bian-${ver}_${device}_${fl}*.img.xz" || true)
+	if [[ -n $matches ]]; then
+		echo "ERROR: already staged under $dir:" >&2
+		printf '  %s\n' $matches >&2
 		return 1
 	fi
 	return 0

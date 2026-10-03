@@ -22,3 +22,8 @@ mkdir -p /etc/issue.d
 printf '%s\n\n' "$MSG" >/etc/issue.d/95-fly-boot-complete.issue
 chmod 0644 /etc/issue.d/95-fly-boot-complete.issue 2>/dev/null || true
 echo "fly-boot-complete: $MSG"
+
+# Keep the splash up through Boot Complete, then hand HDMI to getty/Grumpy.
+if command -v plymouth >/dev/null 2>&1; then
+	plymouth quit 2>/dev/null || true
+fi

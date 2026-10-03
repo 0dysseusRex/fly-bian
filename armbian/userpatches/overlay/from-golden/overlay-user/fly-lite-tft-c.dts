@@ -1,0 +1,55 @@
+/dts-v1/;
+/plugin/;
+
+/*
+ * Fly TFT V2 capacitive touch (Cap DIP): Goodix GT911 on H3 i2c2 @ 0x14.
+ * Load after fly-lite-tft. Disables SPI ADS7846 so PA2/PA3 are free.
+ * INT=PA3, RESET=PA2 (same touch GPIO pair as the resistive overlay).
+ */
+
+/ {
+	compatible = "allwinner,sun8i-h3";
+
+	fragment@0 {
+		target-path = "/soc/spi@1c68000/touch@1";
+		__overlay__ {
+			status = "disabled";
+		};
+	};
+
+	fragment@1 {
+		target = <&pio>;
+		__overlay__ {
+			gt911_pins: gt911_pins {
+				pins = "PA2", "PA3";
+				function = "gpio_in";
+				bias-pull-up;
+			};
+		};
+	};
+
+	/* Prefer target-path: some Fly DTBs lack an i2c2 label (alias alone is not enough). */
+	fragment@2 {
+		target-path = "/soc/i2c@1c2b400";
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			gt911@14 {
+				compatible = "goodix,gt911";
+				reg = <0x14>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&gt911_pins>;
+				interrupt-parent = <&pio>;
+				interrupts = <0 3 2>;
+				irq-gpios = <&pio 0 3 0>;
+				reset-gpios = <&pio 0 2 0>;
+				touchscreen-size-x = <320>;
+				touchscreen-size-y = <480>;
+				touchscreen-inverted-x;
+				touchscreen-swapped-x-y;
+			};
+		};
+	};
+};

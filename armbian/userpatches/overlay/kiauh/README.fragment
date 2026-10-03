@@ -1,22 +1,43 @@
 
-
 4) After first login — this is a KIAUH image
 --------------------------------------------
 KIAUH and the usual component git trees / venvs are already on the card
 under /opt/fly-kiauh and are copied into your home on the first boot that
-has a real user.
+has a real user. Bind also seeds moonraker.conf, a printer.cfg stub, and
+nginx sites for Fluidd (:80) and Mainsail (:4409).
 
 Do not install Simple-AF (pellcorp) on this card.
+Ignore any Simple-AF INSTALL_CMD / boot-display / GrumpyScreen / AUTO_CAMERAS
+notes above — this image's fly-start.txt is Wi-Fi and accounts only.
 
 SSH in as the user you created, then:
 
-  ~/kiauh/kiauh.sh
+  fly-kiauh
+  # menu: Start KIAUH / Add USB cameras
+  # same as:  ~/kiauh/kiauh.sh
+  # cameras:  fly-kiauh cameras
+  #        or fly-crowsnest-add-cams
 
-Use KIAUH to write printer.cfg and enable services. Clones and most pip
-work should already be done. Skip Moonraker "speedups" / uvloop compile
-on this 512 MB board.
+Edit ~/printer_data/config/printer.cfg (MCU serial) before enabling Klipper.
+Skip Moonraker "speedups" / uvloop compile on this 512 MB board.
 
-If you install KlipperScreen:
+KlipperScreen is optional and fragile on 512 MB (dpkg can segfault). If you
+install it and apt breaks:
 
-  sudo systemctl disable --now greetd
-  sudo systemctl set-default multi-user.target
+  sudo dpkg --configure -a
+  fly-klipperscreen-prep    # then retry in KIAUH (X11)
+
+KIAUH community extensions — heavy on 512 MB (prefer phone/PC companions):
+  AVOID:  OctoEverywhere, OctoApp, Obico, OctoPrint, Spoolman (Docker),
+          DroidKlipp (needs KlipperScreen)
+  CAUTION: Mobileraker, Telegram Bot, Moongate (at most one)
+  OK:     SimplyPrint, KAMP, TMC Autotune, gcode_shell_cmd, themes,
+          PrettyGCode, Klipper-Backup
+
+Do NOT install OctoEverywhere on-device — use the companion app.
+Full list: docs/kiauh-fly-lite.md in the fly-debian repo.
+
+USB cameras (after Crowsnest exists):
+
+  fly-kiauh cameras
+  # or:  fly-crowsnest-add-cams

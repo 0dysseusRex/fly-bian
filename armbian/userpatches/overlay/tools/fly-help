@@ -1,6 +1,9 @@
 #!/bin/bash
-# fly-help — short Fly Lite / Simple-AF install tips and custom commands.
+# fly-help — short Fly Lite tips and custom commands (flavor-aware).
 set -euo pipefail
+
+flavor=""
+[[ -f /etc/fly-debian/stack-flavor ]] && flavor=$(tr -d '[:space:]' </etc/fly-debian/stack-flavor)
 
 cat <<'EOF'
 Fly-bian / Fly Lite 2.1 — help
@@ -11,8 +14,100 @@ First boot
 1. On the FLY-SETUP FAT volume, edit fly-start.txt (Wi-Fi, root, user).
 2. Boot the board; wait for resize + Wi-Fi (several minutes).
 3. SSH in:  ssh USER@BOARD_IP
-4. Run:     fly-start     (guided Simple-AF install / update)
-   or:      fly-help      (this text)
+4. Run:     fly-help      (this text)
+EOF
+
+if [[ $flavor == kiauh ]]; then
+	cat <<'EOF'
+            fly-kiauh     (KIAUH / cameras menu)
+
+KIAUH image
+-----------
+Trees are pre-baked under /opt/fly-kiauh and copied into your home on first
+user bind. There is no Simple-AF install script, fly-start menu, or Plymouth
+boot splash.
+
+  fly-kiauh
+  # or:  ~/kiauh/kiauh.sh
+  # cameras:  fly-kiauh cameras
+  #        or fly-crowsnest-add-cams
+
+Use KIAUH for printer.cfg and enabling services. Skip Moonraker "speedups" /
+uvloop compile on this 512 MB board. Do not install Simple-AF (pellcorp).
+KlipperScreen is optional but fragile (apt/X can OOM and break dpkg).
+If it fails: sudo dpkg --configure -a && sudo apt -f install, then
+fly-klipperscreen-prep (if present) before retrying. Prefer the
+OctoEverywhere companion app over installing OctoEverywhere on this board.
+
+512 MB OOM tips: free -h; dmesg | grep -i oom; confirm /swapfile via
+swapon --show; install one package at a time; stop crowsnest during heavy
+apt. Full guide: docs/boards/fly-lite-2.1/oom.md (Fly-bian repo).
+
+Community extensions — avoid on 512 MB: OctoEverywhere, OctoApp, Obico,
+OctoPrint, Spoolman (Docker), DroidKlipp. Caution: Mobileraker, Telegram
+Bot, Moongate. Usually OK: SimplyPrint, KAMP, TMC Autotune, themes,
+PrettyGCode, Klipper-Backup. See docs/kiauh-fly-lite.md.
+
+Hardware notes
+--------------
+Soft reboot often hangs — use a 5 V power cycle.
+Space power cycles / hard resets a few minutes apart. Cycling too quickly
+or too often often leads to hung boots or kernel oops.
+
+Web UIs (after services are up)
+-------------------------------
+  Fluidd    http://BOARD_IP/
+  Mainsail  http://BOARD_IP:4409
+  Camera    http://BOARD_IP/webcam/?action=stream
+
+Custom commands (this image)
+----------------------------
+  fly-help
+      This help text.
+
+  fly-kiauh
+      Menu: Start KIAUH / Add USB cameras.
+      Direct: fly-kiauh cameras
+
+  fly-crowsnest-add-cams [--dry-run]
+      Find USB cameras under /dev/v4l/by-id and append [cam …] sections
+      to ~/printer_data/config/crowsnest.conf, then restart Crowsnest.
+      Skips the H3 cedrus encoder (/dev/video0).
+
+  fly-moonraker-polkit [user]
+      Install Moonraker PolKit rules + set enable_packagekit: False
+      (clears Mainsail PolKit / PackageKit warnings on 512 MB).
+
+  fly-klipperscreen-prep
+      Recover dpkg and install KlipperScreen apt deps one package at a
+      time (512 MB). Run before KIAUH → Install → KlipperScreen.
+
+  fly-crowsnest-strip-placeholders
+      Remove stock [cam web] / /dev/video0 placeholders from a conf file.
+
+fly-start.txt (KIAUH)
+---------------------
+  Wi-Fi / locale / root / user only. No INSTALL_CMD, AUTO_CAMERAS,
+  INSTALL_BOOT_DISPLAY, or GrumpyScreen keys on this image.
+
+Image identity
+--------------
+  /etc/fly-debian/flybian-version
+  /etc/fly-debian/flybian-image     e.g. Fly-bian-0.6_Fly-Lite-2.1_KIAUH-v6.0.0
+  /etc/fly-debian/stack-rev
+  /etc/fly-debian/stack-flavor      kiauh
+
+Config file
+-----------
+  /boot/fly-start.txt   (FLY-SETUP FAT volume)
+
+Serial: 115200 8N1, Type-C. Do not pulse DTR/RTS.
+EOF
+	exit 0
+fi
+
+cat <<'EOF'
+            fly-start     (guided Simple-AF install / update)
 
 Simple-AF (Simple-AF image)
 ---------------------------
@@ -33,6 +128,22 @@ Update an existing install:
 Do not install KIAUH on a Simple-AF card (or Simple-AF on a KIAUH card).
 Do not install KlipperScreen on this 512 MB board — use GrumpyScreen.
 
+512 MB OOM tips: free -h; dmesg | grep -i oom; swapon --show; after a
+crash: sudo dpkg --configure -a && sudo apt -f install. Full guide:
+docs/boards/fly-lite-2.1/oom.md (Fly-bian repo / GitHub).
+
+Community / Moonraker add-ons — avoid on 512 MB: OctoEverywhere, OctoApp,
+Obico, OctoPrint, Spoolman (Docker), KlipperScreen. Caution: Mobileraker,
+Telegram Bot, Moongate. Usually OK: SimplyPrint, KAMP, TMC Autotune,
+themes, PrettyGCode, Klipper-Backup. Prefer the OctoEverywhere companion
+app over installing OctoEverywhere on this board.
+
+Hardware notes
+--------------
+Soft reboot often hangs — use a 5 V power cycle.
+Space power cycles / hard resets a few minutes apart. Cycling too quickly
+or too often often leads to hung boots or kernel oops.
+
 Web UIs (after install)
 -----------------------
   Fluidd    http://BOARD_IP/
@@ -44,10 +155,15 @@ Custom commands (this image)
   fly-help
       This help text.
 
+  fly-moonraker-polkit [user]
+      Install Moonraker PolKit rules + set enable_packagekit: False
+      (clears Mainsail PolKit / PackageKit warnings on 512 MB).
+
   fly-start
       Interactive menu driven by fly-start.txt on FLY-SETUP /boot:
         1) Run Full Install Script  — INSTALL_CMD, then optional:
-             AUTO_CAMERAS, ENABLE_GRUMPYSCREEN, INSTALL_BOOT_DISPLAY
+             AUTO_CAMERAS, ENABLE_GRUMPYSCREEN, INSTALL_BOOT_DISPLAY,
+             GRUMPY_DISPLAY_ROTATE
         2) Update Simple AF         — ~/pellcorp/installer.sh --update
         3) Enable boot display      — Plymouth Simple-AF splash
         4) Disable boot display     — text boot sequence (diagnostics)
@@ -67,9 +183,11 @@ Custom commands (this image)
       Skips the H3 cedrus encoder (/dev/video0).
 
   fly-grumpy-rotate [0|1|2|3]
-      Set GrumpyScreen rotation (0°/90°/180°/270°). Writes
-      ~/printer_data/config/grumpyscreen.ini and restarts GrumpyScreen.
-      No argument: show current rotation. Same as fly-start menu 5 / 6.
+      Set GrumpyScreen display_rotate in
+      ~/printer_data/config/grumpyscreen.ini [ui] and restart the UI.
+      Targets /dev/fb0 (Fly TFT V2 panel-mipi-dbi when fly-lite-tft is
+      loaded; otherwise HDMI). Touch: Fly-LCD, Goodix Cap, or ADS7846.
+      No argument: show current rotation + fb/touch. fly-start menu 5 / 6.
 
   fly-crowsnest-strip-placeholders
       Remove stock [cam web] / /dev/video0 placeholders from a conf file
@@ -87,16 +205,22 @@ Display options in fly-start.txt
       only enables or disables the splash (bootlogo=true|false).
       Toggle later with fly-boot-display / fly-start 3–4.
 
+  GRUMPY_DISPLAY_ROTATE=0|1|2|3
+      Writes display_rotate into ~/printer_data/config/grumpyscreen.ini
+      [ui] after a full install (0°/90°/180°/270°). Leave blank to skip.
+      Change later with fly-grumpy-rotate / fly-start 5–6.
+
 Image identity
 --------------
-  /etc/fly-debian/flybian-version   e.g. 0.4
-  /etc/fly-debian/flybian-image     e.g. Fly-bian-0.4_Fly-Lite-2.1_Simple-AF
+  /etc/fly-debian/flybian-version   e.g. 0.5
+  /etc/fly-debian/flybian-image     e.g. Fly-bian-0.5_Fly-Lite-2.1_Simple-AF-58e5c1d
+  /etc/fly-debian/stack-rev         e.g. 58e5c1d (Simple-AF) or KIAUH tag/SHA
 
 Config file
 -----------
   /boot/fly-start.txt   (FLY-SETUP FAT volume; also under first-boot/)
   Keys for fly-start: INSTALL_CMD, AUTO_CAMERAS,
-  ENABLE_GRUMPYSCREEN, INSTALL_BOOT_DISPLAY
+  ENABLE_GRUMPYSCREEN, INSTALL_BOOT_DISPLAY, GRUMPY_DISPLAY_ROTATE
 
 Serial: 115200 8N1, Type-C. Do not pulse DTR/RTS.
 EOF
