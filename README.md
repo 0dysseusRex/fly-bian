@@ -20,7 +20,7 @@ It exists so you can run a normal Debian system on Fly hardware: real `apt`, a u
 
 **Boards:** [Fly Lite 2.1](docs/boards/fly-lite-2.1/README.md) is supported first. [Fly Pi V3](docs/boards/fly-pi-v3/README.md) is next. Do not flash a Lite image onto a Pi V3 (or the reverse).
 
-**First-time flash guide (wiki):** [`docs/wiki/Getting-Started.md`](docs/wiki/Getting-Started.md) — download → burn → first boot, with board pages for [Fly Lite 2.1](docs/wiki/Fly-Lite-2.1.md) and [Fly Pi V3](docs/wiki/Fly-Pi-V3.md). Index: [`docs/wiki/Home.md`](docs/wiki/Home.md).
+**First-time flash guide:** [Wiki — Getting started](https://github.com/0dysseusRex/fly-bian/wiki/Getting-Started) — download → burn → first boot. Boards: [Fly Lite 2.1](https://github.com/0dysseusRex/fly-bian/wiki/Fly-Lite-2.1) · [Fly Pi V3](https://github.com/0dysseusRex/fly-bian/wiki/Fly-Pi-V3). Same pages also live under [`docs/wiki/`](docs/wiki/Home.md).
 
 ### The three images
 
