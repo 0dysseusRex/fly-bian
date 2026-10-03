@@ -2,17 +2,43 @@
 
 ![Fly-bian Project SSH splash (MOTD)](docs/assets/fly-bian-splash.png)
 
-Unofficial Armbian (Debian) firmware for [Mellow Fly](https://mellow.klipper.cn/en/docs/ProductDoc/SBC/fly-lite/lite2/) single-board hosts. **Not FlyOS**, not an official Mellow product. Normal apt, a normal user, and the board’s hardware.
+## What is Fly-bian?
 
-**Fly Lite 2.1 is first.** Fly Pi V3 is next. Other Mellow SBCs get notes until we pick one up.
+**Fly-bian** is unofficial [Armbian](https://www.armbian.com/) (Debian) firmware for [Mellow Fly](https://mellow.klipper.cn/en/docs/ProductDoc/SBC/fly-lite/lite2/) single-board computers used as Klipper hosts. It is **not FlyOS** and **not an official Mellow product**.
 
-**Per-board docs** (hardware-deep READMEs): [`docs/boards/`](docs/boards/README.md) — start with [`Fly Lite 2.1`](docs/boards/fly-lite-2.1/README.md).
+It exists so you can run a normal Debian system on Fly hardware: real `apt`, a user account you create, SSH, and the board’s Wi‑Fi, UART, HDMI/TFT, and USB — without being locked into FlyOS.
+
+**What it is for:** flash a MicroSD, boot the board, and run a Klipper stack (or install one later) with Fluidd/Mainsail over the network. Aimed at people who want Debian-class tooling on a Fly Lite / Fly Pi, not a closed appliance image.
+
+**How it works:**
+
+1. Download a named `.img.xz` from [GitHub Releases](https://github.com/0dysseusRex/fly-bian/releases).
+2. Write it to a MicroSD card (Pi Imager, Etcher, or `dd`).
+3. Edit the small **`FLY-SETUP`** volume (`fly-start.txt`) for Wi‑Fi and accounts — or use serial/HDMI for the first-run wizard.
+4. Boot: the rootfs expands, a swapfile is created, and (on stack images) Klipper trees are bound into your home.
+5. SSH in and finish printer setup with `fly-start` (Simple-AF) or `fly-kiauh` (KIAUH).
+
+**Boards:** [Fly Lite 2.1](docs/boards/fly-lite-2.1/README.md) is supported first. [Fly Pi V3](docs/boards/fly-pi-v3/README.md) is next. Do not flash a Lite image onto a Pi V3 (or the reverse).
+
+**First-time flash guide:** [`docs/wiki/Getting-Started.md`](docs/wiki/Getting-Started.md) (also on the [GitHub Wiki](https://github.com/0dysseusRex/fly-bian/wiki) once published) — download → burn → first boot for each board.
+
+### The three images
+
+Every release ships three flavors for the same board. Pick **one** — do not mix Simple-AF and KIAUH on the same card.
+
+| Image | What’s on the card | Who it’s for |
+| --- | --- | --- |
+| **Base** (`…_Base.img.xz`) | Armbian/Debian + Fly Lite hardware (DTB, Wi‑Fi, UART, TFT Cap/GT911, swap, first-boot helpers). **No** Klipper stack. | You want a clean Debian host and will install Simple-AF or KIAUH yourself later. |
+| **Simple-AF** (`…_Simple-AF-….img.xz`) | Everything in Base, plus [pellcorp Simple-AF](https://github.com/pellcorp/creality) (Klipper/Moonraker/UIs/pellcorp) pre-baked under `/opt`. After login: `fly-start`. Prefer **GrumpyScreen** on 512 MB. | You want the pellcorp / Creality-style installer path with printer macros and a guided `installer.sh`. Upstream RPi docs: [creality-wiki/rpi](https://pellcorp.github.io/creality-wiki/rpi/). How-to: [`docs/howto-simpleaf.md`](docs/howto-simpleaf.md). |
+| **KIAUH** (`…_KIAUH-….img.xz`) | Everything in Base, plus [KIAUH](https://github.com/dw-0/kiauh) and stock Klipper/Moonraker/Fluidd/Mainsail pre-baked under `/opt`. After login: `fly-kiauh`. | You prefer the classic KIAUH menu to enable components and write `printer.cfg`. How-to: [`docs/howto-kiauh.md`](docs/howto-kiauh.md). |
+
+Flashable images live only on **[Releases](https://github.com/0dysseusRex/fly-bian/releases)** (not in git). This repo holds the patches, overlays, and docs.
+
+Do **not** flash Raspberry Pi OS, Mainsail OS, or other Fly SBC / Gemini images onto the Lite.
 
 ## Support
 
 If Fly-bian helps your printer, you can [buy me a coffee on Ko-fi](https://ko-fi.com/0dysseusrex).
-
-This repository is the contract and the patches. Flashable `.img` files ship on **[GitHub Releases](https://github.com/0dysseusRex/fly-bian/releases)** (`Fly-bian-1.0` Base / Simple-AF / KIAUH), not in git. Bench dumps live at `C:\Users\udrdr\fly-lite-armbian-image` — see [`docs/images.md`](docs/images.md).
 
 ## How this project is built (AI-first)
 
@@ -25,18 +51,6 @@ Expect:
 - Mistakes caught by flashing and testing on real Fly hardware — treat AI output as draft until verified on a card
 
 If you contribute, AI-authored patches are welcome when they are reviewed on hardware the same way.
-
-## What you flash
-
-| Image | Who it is for |
-| --- | --- |
-| **Named Fly Lite 2.1 Armbian image** (`fly-lite-21`) | Hardware + wizard only. Install Simple-AF or KIAUH yourself later. |
-| **Simple-AF image** (`fly-lite-21-simpleaf`) | Same hardware, [pellcorp Simple-AF](https://github.com/pellcorp/creality) stack pre-baked under `/opt`. After login: `fly-start`. How-to: [`docs/howto-simpleaf.md`](docs/howto-simpleaf.md). Upstream RPi docs: [creality-wiki/rpi](https://pellcorp.github.io/creality-wiki/rpi/). Do not add KIAUH. On 512 MB use GrumpyScreen, not KlipperScreen. |
-| **KIAUH image** (`fly-lite-21-kiauh`) | Same hardware, [KIAUH](https://github.com/dw-0/kiauh) + stock Klipper/Moonraker/UIs pre-baked. After login: `fly-kiauh`. How-to: [`docs/howto-kiauh.md`](docs/howto-kiauh.md). Lab notes: [`docs/kiauh-fly-lite.md`](docs/kiauh-fly-lite.md). Do not add Simple-AF. |
-| Current lab dump `fly-lite-v2.1-armbian-cpu-affinity.img.gz` | Already-working card (full-size `dd`). Use only until the named image exists. |
-| Stock Orange Pi Lite Trixie from [armbian.com/orange-pi-lite](https://www.armbian.com/orange-pi-lite/) | Recovery / comparison. Single ext4, no Fly DTB, U-Boot card-detect is wrong on this PCB. |
-
-Do **not** flash Raspberry Pi OS, Mainsail OS, or Fly Gemini / Fly-Pi H5 community images onto the Lite.
 
 ## Fly Lite 2.1 in one page
 
