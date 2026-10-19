@@ -1,0 +1,57 @@
+--- a/drivers/net/phy/ac200-phy.c
++++ b/drivers/net/phy/ac200-phy.c
+@@ -5,7 +5,6 @@
+  * Copyright (c) 2019 Jernej Skrabec <jernej.skrabec@gmail.com>
+  */
+ 
+-#include <linux/clk.h>
+ #include <linux/kernel.h>
+ #include <linux/module.h>
+ #include <linux/phy.h>
+@@ -22,7 +21,7 @@
+ 	phy_write(phydev, 0x18, 0x0000);	/* PHYAFE TRX optimization */
+ 
+ 	phy_write(phydev, 0x1f, 0x0600);	/* Switch to Page 6 */
+-	phy_write(phydev, 0x14, 0x708f);	/* PHYAFE TX optimization */
++	phy_write(phydev, 0x14, 0x708b);	/* PHYAFE TX optimization */
+ 	phy_write(phydev, 0x13, 0xF000);	/* PHYAFE RX optimization */
+ 	phy_write(phydev, 0x15, 0x1530);
+ 
+@@ -38,22 +37,19 @@
+ 	phy_write(phydev, 0x1f, 0x0000);	/* switch to page 0 */
+ 	phy_clear_bits_mmd(phydev, 0x7, 0x3c, BIT(1));
+ 
+-	/* FIXME: This is probably H6 specific */
+-	phy_set_bits(phydev, 0x13, BIT(12));
++	return 0;
++}
+ 
++static int ac200_ephy_get_features(struct phy_device *phydev)
++{
++	/* BMSR omits 100baseT and autoneg. FlyOS forces basic features. */
++	linkmode_copy(phydev->supported, phy_basic_features);
+ 	return 0;
+ }
+ 
+ static int ac200_ephy_probe(struct phy_device *phydev)
+ {
+-	struct device *dev = &phydev->mdio.dev;
+-	struct clk *clk;
+-
+-	clk = devm_clk_get_optional_enabled(dev, NULL);
+-	if (IS_ERR(clk))
+-		return dev_err_probe(dev, PTR_ERR(clk),
+-				     "Failed to request clock\n");
+-
++	phydev_info(phydev, "AC200 ephy bound\n");
+ 	return 0;
+ }
+ 
+@@ -64,6 +60,7 @@
+ 		.name		= "Allwinner AC200 EPHY",
+ 		.soft_reset	= genphy_soft_reset,
+ 		.config_init	= ac200_ephy_config_init,
++		.get_features	= ac200_ephy_get_features,
+ 		.probe		= ac200_ephy_probe,
+ 		.suspend	= genphy_suspend,
+ 		.resume		= genphy_resume,

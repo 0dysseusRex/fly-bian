@@ -13,6 +13,13 @@ log() {
 	logger -t "$LOGTAG" -- "$1" 2>/dev/null || printf '%s\n' "$1"
 }
 
+# FLY-SETUP stays noauto so sysinit does not fsck or automount vfat.
+# Mount it from this oneshot, after local-fs, so fly-start.txt is visible
+# and the blacklisted Wi-Fi modules load only here.
+if ! grep -qs ' /boot ' /proc/mounts; then
+	timeout 15 mount /boot >/dev/null 2>&1 || log "mount /boot failed; Wi-Fi setup may be skipped"
+fi
+
 FILE=""
 for cand in \
 	/boot/fly-start.txt \
@@ -93,6 +100,8 @@ user_pw=$(get USER_PASSWORD)
 user_real=$(get USER_REALNAME)
 user_shell=$(get USER_SHELL)
 user_key=$(get USER_SSH_KEY)
+serial_console=$(get SERIAL_CONSOLE)
+spi_device=$(get SPI_DEVICE)
 
 wifi_ready=0
 if [ "${enabled:-1}" = 1 ] && ! is_placeholder "$ssid"; then
@@ -135,6 +144,154 @@ wait_wlan0() {
 		sleep 1
 	done
 	return 1
+}
+
+# Pi V3 / Gemini: mainline rtw88 can hang early boot (community lesson).
+# customize-image blacklists it for serial bring-up; load explicitly here.
+# Print SDIO ids on the serial console, and bound each modprobe so a stuck
+# rtw88_8821cs probe cannot hold this oneshot.
+say_console() {
+	printf '%s\n' "$1" >/dev/console 2>/dev/null || printf '%s\n' "$1"
+}
+
+show_sdio_ids() {
+	found=0
+	for dev in /sys/bus/sdio/devices/*; do
+		[ -e "$dev" ] || continue
+		found=1
+		vendor=$(cat "$dev/vendor" 2>/dev/null || printf '?')
+		device=$(cat "$dev/device" 2>/dev/null || printf '?')
+		say_console "fly-apply: sdio $(basename "$dev") vendor=$vendor device=$device"
+	done
+	if [ "$found" = 0 ]; then
+		say_console "fly-apply: no sdio device"
+	fi
+}
+
+load_one() {
+	name=$1
+	err=$(timeout 8 modprobe "$name" 2>&1) && rc=0 || rc=$?
+	if [ "$rc" -eq 0 ]; then
+		say_console "fly-apply: modprobe $name ok"
+		return 0
+	fi
+	say_console "fly-apply: modprobe $name failed ($rc): ${err:-no output}"
+	return "$rc"
+}
+
+load_aic8800() {
+	kver=$(uname -r)
+	dir=/lib/modules/$kver/kernel/drivers/net/wireless/aic8800
+	modprobe cfg80211 2>/dev/null || true
+	modprobe rfkill 2>/dev/null || true
+	if [ -f "$dir/aic8800_bsp.ko" ] && [ -f "$dir/aic8800_fdrv.ko" ]; then
+		err=$(timeout 8 insmod "$dir/aic8800_bsp.ko" 2>&1) && rc=0 || rc=$?
+		if [ "$rc" -eq 0 ]; then
+			say_console "fly-apply: insmod aic8800_bsp ok"
+		else
+			say_console "fly-apply: insmod aic8800_bsp failed ($rc): ${err:-no output}"
+		fi
+		err=$(timeout 8 insmod "$dir/aic8800_fdrv.ko" 2>&1) && rc=0 || rc=$?
+		if [ "$rc" -eq 0 ]; then
+			say_console "fly-apply: insmod aic8800_fdrv ok"
+		else
+			say_console "fly-apply: insmod aic8800_fdrv failed ($rc): ${err:-no output}"
+		fi
+		return 0
+	fi
+	load_one aic8800_bsp || true
+	load_one aic8800_fdrv || true
+}
+
+load_pi_v3_wifi() {
+	# AIC8800D80 (dual-band M2) is the radio this image has booted.
+	# An empty socket must not fall through into rtw88. A different SDIO id
+	# (the 2.4 GHz-only M2, not on the bench yet) is printed and left down
+	# until that id has a driver.
+	aic=0
+	other=0
+	for dev in /sys/bus/sdio/devices/*; do
+		[ -e "$dev/vendor" ] || continue
+		vendor=$(cat "$dev/vendor" 2>/dev/null || printf '')
+		device=$(cat "$dev/device" 2>/dev/null || printf '')
+		if [ "$vendor" = "0xc8a1" ]; then
+			aic=1
+		elif [ -n "$vendor" ]; then
+			other=1
+			say_console "fly-apply: sdio $vendor:$device left down; no driver for this id yet"
+		fi
+	done
+	if [ "$aic" = 1 ]; then
+		load_aic8800
+		return 0
+	fi
+	if [ "$other" = 1 ]; then
+		return 0
+	fi
+	say_console "fly-apply: no sdio radio, wifi skipped"
+}
+
+load_pi_v3_ethernet() {
+	# The jack PHY is the AC200 EPHY on i2c@5002c00. Coldplug is masked,
+	# so start its PWM clock and the AC200 before the MAC. The MAC still
+	# selects the external PHY and generates the RMII clock. A failure
+	# must not stop Wi-Fi or login.
+	grep -q '^BOARD=fly-pi-v3' /etc/armbian-release 2>/dev/null || return 0
+	load_one pwm-sunxi-enhance || true
+	# The module already in memory can be the ramdisk copy. Its probe
+	# returns -EIO, the device is dropped, and the PWM5 reference clock
+	# goes away before the MAC looks for a link. Unload that copy and
+	# load the rootfs module, which stays bound and holds the clock.
+	# Do this before dwmac so the PHY init still owns the EMAC reset.
+	held=$(dmesg 2>/dev/null | grep -c 'AC200 pwm clock held' || true)
+	modprobe -r ac200-phy 2>/dev/null || true
+	modprobe -r ac200-ephy-ctl 2>/dev/null || true
+	modprobe -r ac200 2>/dev/null || true
+	load_one ac200 || true
+	now=$(dmesg 2>/dev/null | grep -c 'AC200 pwm clock held' || true)
+	if [ "$now" -le "$held" ]; then
+		say_console "fly-apply: reloading ac200 to hold the clock"
+		held=$now
+		modprobe -r ac200-phy 2>/dev/null || true
+		modprobe -r ac200-ephy-ctl 2>/dev/null || true
+		modprobe -r ac200 2>/dev/null || true
+		load_one ac200 || true
+		now=$(dmesg 2>/dev/null | grep -c 'AC200 pwm clock held' || true)
+	fi
+	if [ "$now" -le "$held" ]; then
+		say_console "fly-apply: ac200 probe did not finish; loading dwmac anyway"
+	fi
+	load_one ac200-ephy-ctl || true
+	load_one ac200-phy || true
+	load_one dwmac-sun8i || true
+	# PH3 (100m_link) and PH2 (100m_spd) are active-low GPIO, default off.
+	# The PHY does not drive them. Link blinks with traffic; speed stays
+	# on at 100 Mbps.
+	modprobe ledtrig-netdev 2>/dev/null || true
+	if [ -d /sys/class/leds/100m_link ]; then
+		echo netdev > /sys/class/leds/100m_link/trigger || true
+		echo eth0 > /sys/class/leds/100m_link/device_name || true
+		echo 1 > /sys/class/leds/100m_link/link || true
+		echo 1 > /sys/class/leds/100m_link/rx || true
+		echo 1 > /sys/class/leds/100m_link/tx || true
+	fi
+	if [ -d /sys/class/leds/100m_spd ]; then
+		echo netdev > /sys/class/leds/100m_spd/trigger || true
+		echo eth0 > /sys/class/leds/100m_spd/device_name || true
+		echo 1 > /sys/class/leds/100m_spd/link_100 || true
+	fi
+}
+
+load_wifi_modules() {
+	show_sdio_ids
+	if grep -q '^BOARD=fly-pi-v3' /etc/armbian-release 2>/dev/null; then
+		load_pi_v3_ethernet
+		load_pi_v3_wifi
+		return 0
+	fi
+	for m in rtw88_core rtw88_sdio rtw88_8821cs 8189fs; do
+		load_one "$m" || true
+	done
 }
 
 disable_wlan1() {
@@ -205,6 +362,11 @@ apply_wifi_networkd() {
 		log "wpa_supplicant missing; skip Wi-Fi"
 		return 0
 	}
+	# Pi V3 bring-up masks networkd until serial login; undo for Wi-Fi apply.
+	for n in systemd-networkd.service systemd-resolved.service; do
+		systemctl unmask "$n" >/dev/null 2>&1 || true
+		systemctl enable "$n" >/dev/null 2>&1 || true
+	done
 	write_wpa_wlan0
 	write_networkd_wlan0
 	if [ -n "$country" ] && ! is_placeholder "$country" && command -v iw >/dev/null 2>&1; then
@@ -215,6 +377,8 @@ apply_wifi_networkd() {
 	if ! systemctl restart wpa_supplicant@wlan0.service >/dev/null 2>&1; then
 		wpa_supplicant -B -i wlan0 -c /etc/wpa_supplicant/wpa_supplicant-wlan0.conf >/dev/null 2>&1 || true
 	fi
+	systemctl start systemd-networkd.service >/dev/null 2>&1 || true
+	systemctl start systemd-resolved.service >/dev/null 2>&1 || true
 	if command -v networkctl >/dev/null 2>&1; then
 		networkctl reload >/dev/null 2>&1 || true
 		networkctl reconfigure wlan0 >/dev/null 2>&1 || true
@@ -264,8 +428,9 @@ apply_wifi_nmcli() {
 
 apply_wifi() {
 	[ "$wifi_ready" = 1 ] || return 0
+	load_wifi_modules
 	if ! wait_wlan0; then
-		log "wlan0 never appeared (8189fs?); skip Wi-Fi"
+		log "wlan0 never appeared (wifi modules?); skip Wi-Fi"
 		return 0
 	fi
 	disable_wlan1
@@ -433,6 +598,92 @@ finish_firstlogin() {
 	log "first-run complete; SSH should accept USER_NAME"
 }
 
+# SERIAL_CONSOLE=Yes keeps the Type-C login. No masks it once a real user
+# exists, and points Armbian's console= at the display on the next boot.
+# Empty (older fly-start.txt) leaves the image default alone.
+set_armbian_console() {
+	mode=$1
+	envf=/boot/armbianEnv.txt
+	[ -f "$envf" ] || return 0
+	if grep -q '^console=' "$envf"; then
+		sed -i "s/^console=.*/console=$mode/" "$envf"
+	else
+		printf 'console=%s\n' "$mode" >>"$envf"
+	fi
+}
+
+apply_serial_console() {
+	v=$(printf '%s' "${serial_console:-}" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+	case "$v" in
+		"") return 0 ;;
+		yes|y|1|true|on) want=on ;;
+		no|n|0|false|off|disable|disabled) want=off ;;
+		*)
+			log "SERIAL_CONSOLE=$serial_console ignored (use Yes or No)"
+			return 0
+			;;
+	esac
+	if [ "$want" = off ] && [ -f /root/.not_logged_in_yet ]; then
+		log "SERIAL_CONSOLE=No kept until root and user exist (wizard uses serial)"
+		return 0
+	fi
+	if [ "$want" = off ]; then
+		log "SERIAL_CONSOLE=No: serial login off; kernel console leaves the UART next boot"
+		systemctl disable --now serial-getty@ttyS0.service >/dev/null 2>&1 || true
+		systemctl mask serial-getty@ttyS0.service >/dev/null 2>&1 || true
+		systemctl disable --now serial-getty@ttyGS0.service >/dev/null 2>&1 || true
+		systemctl mask serial-getty@ttyGS0.service >/dev/null 2>&1 || true
+		set_armbian_console display
+		return 0
+	fi
+	systemctl unmask serial-getty@ttyS0.service >/dev/null 2>&1 || true
+	systemctl enable serial-getty@ttyS0.service >/dev/null 2>&1 || true
+	if ! systemctl is-active serial-getty@ttyS0.service >/dev/null 2>&1; then
+		systemctl start serial-getty@ttyS0.service >/dev/null 2>&1 || true
+	fi
+	set_armbian_console serial
+}
+
+# Fly Pi V3: TFT and the ADXL header share SPI1. Rewrite user_overlays for
+# the next boot. U-Boot has already applied whatever this boot started with.
+apply_spi_device() {
+	grep -q '^BOARD=fly-pi-v3' /etc/armbian-release 2>/dev/null || return 0
+	v=$(printf '%s' "${spi_device:-}" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+	case "$v" in
+		""|tft|panel) want=tft ;;
+		adxl|accel|rrf) want=adxl ;;
+		*)
+			log "SPI_DEVICE=$spi_device ignored (use tft or adxl)"
+			return 0
+			;;
+	esac
+	common="fly-pi-v3-uart1 fly-pi-v3-usb1 fly-pi-v3-rs232"
+	if [ "$want" = adxl ]; then
+		ov="$common fly-pi-v3-adxl"
+		printf '%s\n' spidev >/etc/modules-load.d/fly-adxl.conf
+		rm -f /etc/modules-load.d/fly-tft.conf
+	else
+		ov="fly-pi-v3-tft fly-pi-v3-tft-c $common"
+		printf '%s\n' panel-mipi-dbi goodix_ts >/etc/modules-load.d/fly-tft.conf
+		rm -f /etc/modules-load.d/fly-adxl.conf
+	fi
+	envf=/boot/armbianEnv.txt
+	[ -f "$envf" ] || {
+		log "SPI_DEVICE=$want not written; /boot/armbianEnv.txt missing"
+		return 0
+	}
+	cur=$(grep '^user_overlays=' "$envf" | head -n 1 | cut -d= -f2- || true)
+	if [ "$cur" = "$ov" ]; then
+		return 0
+	fi
+	if grep -q '^user_overlays=' "$envf"; then
+		sed -i "s|^user_overlays=.*|user_overlays=$ov|" "$envf"
+	else
+		printf 'user_overlays=%s\n' "$ov" >>"$envf"
+	fi
+	log "SPI_DEVICE=$want saved; unplug the other device and reboot"
+}
+
 apply_wifi
 if [ -f /root/.not_logged_in_yet ]; then
 	write_preset_fallback
@@ -447,4 +698,6 @@ if [ -f /root/.not_logged_in_yet ]; then
 		log "user/root still placeholders; wizard will run on serial or HDMI"
 	fi
 fi
+apply_serial_console
+apply_spi_device
 exit 0

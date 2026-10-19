@@ -1,0 +1,134 @@
+#!/bin/bash
+# Fly Lite: apt has no switch that unpacks one dependency at a time.
+# `apt-get install a b c` is a single dpkg run (unpack all, then configure
+# all) and that peak OOMs 512 MB. This wrapper, installed as apt and apt-get
+# on the Lite image, repeats the same install once per package.
+#
+# A package's own dependencies still arrive in that one transaction.
+# FLY_APT_BATCH=1 runs the real apt-get with the original arguments.
+# -f / --download-only / --simulate and shell globs are not split.
+set -euo pipefail
+
+real_get=${FLY_APT_GET:-/usr/bin/apt-get}
+real_apt=${FLY_APT_BIN:-/usr/bin/apt}
+invoked=$(basename "$0")
+
+passthrough() {
+	if [[ $invoked == apt ]]; then
+		exec "$real_apt" "$@" || exit 127
+	fi
+	exec "$real_get" "$@" || exit 127
+}
+
+if [[ ${FLY_APT_BATCH:-0} == 1 ]]; then
+	passthrough "$@"
+fi
+
+takes_arg() {
+	case "$1" in
+		-o|--option|-c|--config-file|-t|--target-release) return 0 ;;
+	esac
+	return 1
+}
+
+# These must stay one apt-get invocation. They are valid before or after
+# the install subcommand (apt-get -f install a b).
+no_split_flag() {
+	case "$1" in
+		-f|--fix-broken|--fix-missing|-d|--download-only|-s|--simulate|--just-print|--print-uris|--dry-run)
+			split=0
+			;;
+		-[^-]*)
+			case "$1" in
+				*f*|*d*|*s*) split=0 ;;
+			esac
+			;;
+	esac
+}
+
+before=()
+after=()
+pkgs=()
+seen=0
+split=1
+end_opts=0
+args=("$@")
+i=0
+n=${#args[@]}
+while [[ $i -lt $n ]]; do
+	a=${args[$i]}
+	if [[ $seen -eq 0 ]]; then
+		if [[ $a == install ]]; then
+			seen=1
+			i=$((i + 1))
+			continue
+		fi
+		before+=("$a")
+		no_split_flag "$a"
+		if takes_arg "$a" && [[ $a != *=* ]]; then
+			i=$((i + 1))
+			[[ $i -lt $n ]] && before+=("${args[$i]}")
+		fi
+		i=$((i + 1))
+		continue
+	fi
+	if [[ $end_opts -eq 0 && $a == -- ]]; then
+		end_opts=1
+		i=$((i + 1))
+		continue
+	fi
+	if [[ $end_opts -eq 0 && $a == -* ]]; then
+		no_split_flag "$a"
+		after+=("$a")
+		if takes_arg "$a" && [[ $a != *=* ]]; then
+			i=$((i + 1))
+			[[ $i -lt $n ]] && after+=("${args[$i]}")
+		fi
+		i=$((i + 1))
+		continue
+	fi
+	case "$a" in
+		*\**|*\?*) split=0 ;;
+	esac
+	pkgs+=("$a")
+	i=$((i + 1))
+done
+
+if [[ $seen -eq 0 || $split -eq 0 || ${#pkgs[@]} -lt 2 ]]; then
+	passthrough "$@"
+fi
+
+pause_if_tight() {
+	[[ ${FLY_APT_NO_SYNC:-0} == 1 ]] && return 0
+	sync 2>/dev/null || true
+	local avail=9999
+	if [[ -r /proc/meminfo ]]; then
+		avail=$(awk '/MemAvailable:/ {printf "%d", $2/1024}' /proc/meminfo)
+	fi
+	if [[ ${avail:-9999} -lt 48 ]]; then
+		echo 3 >/proc/sys/vm/drop_caches 2>/dev/null || true
+		sleep 5
+	fi
+}
+
+echo "fly-apt: ${#pkgs[@]} packages, one at a time (FLY_APT_BATCH=1 skips this)" >&2
+rc=0
+for p in "${pkgs[@]}"; do
+	cmd=("$real_get")
+	if [[ ${#before[@]} -gt 0 ]]; then
+		cmd+=("${before[@]}")
+	fi
+	cmd+=(install)
+	if [[ ${#after[@]} -gt 0 ]]; then
+		cmd+=("${after[@]}")
+	fi
+	cmd+=("$p")
+	echo "fly-apt: $p" >&2
+	if ! "${cmd[@]}"; then
+		rc=$?
+		echo "fly-apt: stopped on $p (exit $rc). Fix with: dpkg --configure -a" >&2
+		exit "$rc"
+	fi
+	pause_if_tight
+done
+exit 0

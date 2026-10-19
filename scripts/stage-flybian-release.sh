@@ -8,7 +8,7 @@ set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
 src=${FLY_ARMBIAN_IMAGES:-/home/rex/fly-build/armbian-build/output/images}
-releases=${FLY_RELEASES:-/mnt/c/Users/udrdr/fly-lite-armbian-image/Releases}
+releases=${FLY_RELEASES:-/mnt/f/Cursor/projects/fly-lite-armbian-image/Releases}
 device=${FLY_DEVICE:-Fly-Lite-2.1}
 ver=$(tr -d '[:space:]' <"$root/FLYBIAN_VERSION")
 
@@ -27,10 +27,11 @@ else
 fi
 
 armbian_glob_for() {
-	case "$1" in
-		base) printf '%s\n' 'Armbian-unofficial_*_Fly-lite-21_trixie_*_minimal.img.xz' ;;
-		simpleaf) printf '%s\n' 'Armbian-unofficial_*_Fly-lite-21-simpleaf_trixie_*_minimal.img.xz' ;;
-		kiauh) printf '%s\n' 'Armbian-unofficial_*_Fly-lite-21-kiauh_trixie_*_minimal.img.xz' ;;
+	case "${FLY_DEVICE:-Fly-Lite-2.1}:$1" in
+		Fly-Pi-V3:base) printf '%s\n' 'Armbian-unofficial_*_Fly-pi-v3_trixie_*_minimal.img.xz' ;;
+		*:base) printf '%s\n' 'Armbian-unofficial_*_Fly-lite-21_trixie_*_minimal.img.xz' ;;
+		*:simpleaf) printf '%s\n' 'Armbian-unofficial_*_Fly-lite-21-simpleaf_trixie_*_minimal.img.xz' ;;
+		*:kiauh) printf '%s\n' 'Armbian-unofficial_*_Fly-lite-21-kiauh_trixie_*_minimal.img.xz' ;;
 		*) return 1 ;;
 	esac
 }

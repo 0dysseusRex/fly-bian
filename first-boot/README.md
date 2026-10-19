@@ -4,7 +4,7 @@ The named Fly Lite image exposes a small **FAT32** partition labelled `FLY-SETUP
 
 | File | Role |
 | --- | --- |
-| [`fly-start.txt`](fly-start.txt) | Headless Wi-Fi, accounts, and (Simple-AF) options for `fly-start`. Placeholder values are ignored until edited. |
+| [`fly-start.txt`](fly-start.txt) | Base image: Wi-Fi, accounts, and `SERIAL_CONSOLE`. Simple-AF and KIAUH images ship their own sheet (install keys, or Wi-Fi/accounts only). Placeholders are ignored until edited. |
 | [`README.txt`](README.txt) | Plain-text setup for a new user (text file, serial, HDMI+keyboard). |
 
 `scripts/prepare-sd.sh` copies both onto a mounted FAT volume and, for stock Armbian, also writes `armbian_first_run.txt`.

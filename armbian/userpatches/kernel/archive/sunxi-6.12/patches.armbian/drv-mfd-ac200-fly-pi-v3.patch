@@ -1,0 +1,469 @@
+--- a/drivers/mfd/ac200.c
++++ b/drivers/mfd/ac200.c
+@@ -20,6 +20,12 @@
+ #include <linux/module.h>
+ #include <linux/nvmem-consumer.h>
+ #include <linux/of.h>
++#include <linux/interrupt.h>
++#include <linux/io.h>
++#include <linux/reset.h>
++#include <linux/platform_device.h>
++#include <linux/of_platform.h>
++#include <linux/pinctrl/consumer.h>
+ #include <linux/regmap.h>
+ 
+ struct ac200_dev {
+@@ -66,6 +72,358 @@
+ 	},
+ };
+ 
++static int ac200_twi_wait(void __iomem *twi, u32 *stat)
++{
++	int i;
++	u32 ctrl;
++
++	for (i = 0; i < 2000; i++) {
++		ctrl = readl(twi + 0x0c);
++		if (ctrl & (1u << 3)) {
++			udelay(1);
++			*stat = readl(twi + 0x10);
++			/* f8/f9 is idle status; the real code can land after the flag. */
++			if (*stat != 0xf8 && *stat != 0xf9)
++				return 0;
++		}
++		udelay(5);
++	}
++	*stat = readl(twi + 0x10);
++	return -ETIMEDOUT;
++}
++
++static int ac200_twi_mask(struct i2c_client *i2c)
++{
++	struct platform_device *pdev;
++	int irq;
++
++	pdev = to_platform_device(i2c->adapter->dev.parent);
++	irq = platform_get_irq(pdev, 0);
++	if (irq < 0)
++		return irq;
++	disable_irq(irq);
++	return irq;
++}
++
++static void ac200_twi_kick(void __iomem *twi, u32 bits)
++{
++	/* Latch the byte, then write the flag bit as 1 to clear it. */
++	writel(bits, twi + 0x0c);
++	writel(bits | (1u << 3), twi + 0x0c);
++}
++
++static void ac200_twi_stop(void __iomem *twi)
++{
++	writel((1u << 7) | (1u << 6) | (1u << 4), twi + 0x0c);
++	writel((1u << 7) | (1u << 6) | (1u << 3), twi + 0x0c);
++}
++
++static int ac200_twi_addr(struct i2c_client *i2c, void __iomem *twi,
++			  u32 readbit, u32 *stat)
++{
++	int ret;
++
++	u32 ctrl;
++
++	writel((1u << 7) | (1u << 6) | (1u << 5) | (1u << 2), twi + 0x0c);
++	ret = ac200_twi_wait(twi, stat);
++	ctrl = readl(twi + 0x0c);
++	if (ret) {
++		dev_warn(&i2c->dev, "AC200 twi start stat %02x ctrl %02x\n",
++			 *stat, ctrl);
++		return ret;
++	}
++	dev_info(&i2c->dev, "AC200 twi start stat %02x ctrl %02x\n",
++		 *stat, ctrl);
++	if (*stat == 0x18 || *stat == 0x20 || *stat == 0x40 || *stat == 0x48)
++		return 0;
++	if (*stat != 0x08 && *stat != 0x10)
++		return -EIO;
++	writel(((u32)(i2c->addr & 0x7f) << 1) | readbit, twi + 0x08);
++	ac200_twi_kick(twi, (1u << 7) | (1u << 6) | (1u << 2));
++	ret = ac200_twi_wait(twi, stat);
++	ctrl = readl(twi + 0x0c);
++	if (ret) {
++		dev_warn(&i2c->dev, "AC200 twi addr stat %02x ctrl %02x\n",
++			 *stat, ctrl);
++		return ret;
++	}
++	dev_info(&i2c->dev, "AC200 twi addr stat %02x ctrl %02x\n",
++		 *stat, ctrl);
++	return 0;
++}
++
++static int ac200_twi_write(void *context, const void *data, size_t count)
++{
++	struct i2c_client *i2c = context;
++	const u8 *buf = data;
++	void __iomem *twi;
++	u32 stat = 0;
++	size_t n;
++	int irq;
++	int ret = -EIO;
++
++	irq = ac200_twi_mask(i2c);
++	if (irq < 0)
++		return irq;
++	twi = ioremap(0x05002c00, 0x24);
++	if (!twi) {
++		enable_irq(irq);
++		return -ENOMEM;
++	}
++	ret = ac200_twi_addr(i2c, twi, 0, &stat);
++	if (ret)
++		goto out;
++	if (stat != 0x18) {
++		ret = -ENXIO;
++		goto out;
++	}
++	for (n = 0; n < count; n++) {
++		writel(buf[n], twi + 0x08);
++		ac200_twi_kick(twi, (1u << 7) | (1u << 2) | (1u << 6));
++		ret = ac200_twi_wait(twi, &stat);
++		if (ret || stat != 0x28) {
++			ret = ret ? ret : -EIO;
++			goto out;
++		}
++	}
++	ret = 0;
++out:
++	if (ret != -ETIMEDOUT)
++		ac200_twi_stop(twi);
++	else if (readl(twi + 0x0c) & (1u << 3))
++		writel((1u << 6) | (1u << 3), twi + 0x0c);
++	iounmap(twi);
++	enable_irq(irq);
++	return ret;
++}
++
++static int ac200_twi_read(void *context, const void *reg_buf, size_t reg_size,
++			  void *val_buf, size_t val_size)
++{
++	struct i2c_client *i2c = context;
++	const u8 *reg = reg_buf;
++	u8 *val = val_buf;
++	void __iomem *twi;
++	u32 stat = 0;
++	size_t n;
++	int irq;
++	int ret = -EIO;
++
++	irq = ac200_twi_mask(i2c);
++	if (irq < 0)
++		return irq;
++	twi = ioremap(0x05002c00, 0x24);
++	if (!twi) {
++		enable_irq(irq);
++		return -ENOMEM;
++	}
++	ret = ac200_twi_addr(i2c, twi, 0, &stat);
++	if (ret)
++		goto out;
++	if (stat != 0x18) {
++		ret = -ENXIO;
++		goto out;
++	}
++	for (n = 0; n < reg_size; n++) {
++		writel(reg[n], twi + 0x08);
++		ac200_twi_kick(twi, (1u << 7) | (1u << 2) | (1u << 6));
++		ret = ac200_twi_wait(twi, &stat);
++		if (ret || stat != 0x28) {
++			ret = ret ? ret : -EIO;
++			goto out;
++		}
++	}
++	ret = ac200_twi_addr(i2c, twi, 1, &stat);
++	if (ret)
++		goto out;
++	if (stat != 0x40) {
++		ret = -ENXIO;
++		goto out;
++	}
++	for (n = 0; n < val_size; n++) {
++		u32 bits = (1u << 7) | (1u << 6);
++
++		if (n + 1 < val_size)
++			bits |= (1u << 2);
++		ac200_twi_kick(twi, bits);
++		ret = ac200_twi_wait(twi, &stat);
++		if (ret)
++			goto out;
++		if (n + 1 < val_size) {
++			if (stat != 0x50) {
++				ret = -EIO;
++				goto out;
++			}
++		} else if (stat != 0x58) {
++			ret = -EIO;
++			goto out;
++		}
++		val[n] = readl(twi + 0x08) & 0xff;
++	}
++	ret = 0;
++out:
++	if (ret != -ETIMEDOUT)
++		ac200_twi_stop(twi);
++	else if (readl(twi + 0x0c) & (1u << 3))
++		writel((1u << 6) | (1u << 3), twi + 0x0c);
++	iounmap(twi);
++	enable_irq(irq);
++	return ret;
++}
++
++static const struct regmap_bus ac200_i2c_bus = {
++	.write = ac200_twi_write,
++	.read = ac200_twi_read,
++};
++
++
++static u32 ac200_mdio_read_reg(void __iomem *mac, u32 addr, u32 reg)
++{
++	u32 cmd;
++	int spins;
++
++	for (spins = 0; spins < 1000; spins++) {
++		if (!(readl(mac + 0x48) & 1u))
++			break;
++		udelay(10);
++	}
++	cmd = (3u << 20) | ((addr & 0x1fu) << 12) | ((reg & 0x1fu) << 4) | 1u;
++	writel(cmd, mac + 0x48);
++	for (spins = 0; spins < 1000; spins++) {
++		if (!(readl(mac + 0x48) & 1u))
++			break;
++		udelay(10);
++	}
++	return readl(mac + 0x4c);
++}
++
++static void ac200_mdio_write_reg(void __iomem *mac, u32 addr, u32 reg, u32 val)
++{
++	u32 cmd;
++	int spins;
++
++	for (spins = 0; spins < 1000; spins++) {
++		if (!(readl(mac + 0x48) & 1u))
++			break;
++		udelay(10);
++	}
++	cmd = (3u << 20) | ((addr & 0x1fu) << 12) | ((reg & 0x1fu) << 4) | 3u;
++	writel(val & 0xffffu, mac + 0x4c);
++	writel(cmd, mac + 0x48);
++	for (spins = 0; spins < 1000; spins++) {
++		if (!(readl(mac + 0x48) & 1u))
++			break;
++		udelay(10);
++	}
++}
++
++static void ac200_mdio_scan(struct i2c_client *i2c)
++{
++	struct device_node *emac;
++	struct platform_device *pdev = NULL;
++	struct pinctrl *pins = ERR_PTR(-ENODEV);
++	struct clk *bus;
++	struct reset_control *rst;
++	void __iomem *pwm, *mac = NULL, *ephy = NULL;
++	u32 per, pclk, ppr, was, hi, lo;
++	int addr, found = 0, held = 0;
++
++	pwm = ioremap(0x0300a000, 0x110);
++	if (!pwm) {
++		dev_warn(&i2c->dev, "AC200 pwm map failed\n");
++		return;
++	}
++	/* Read only. PCCR45 bit 6 stays set, so PWM5 remains the 24 MHz bypass. */
++	pclk = readl(pwm + 0x28);
++	per = readl(pwm + 0x40);
++	ppr = readl(pwm + 0x104);
++	dev_info(&i2c->dev, "AC200 pwm per %08x clk %08x ppr %08x\n",
++		 per, pclk, ppr);
++	iounmap(pwm);
++
++	emac = of_find_compatible_node(NULL, NULL, "allwinner,sunxi-gmac");
++	if (!emac) {
++		dev_warn(&i2c->dev, "AC200 emac node missing\n");
++		return;
++	}
++	bus = of_clk_get(emac, 0);
++	if (IS_ERR(bus)) {
++		dev_warn(&i2c->dev, "AC200 emac bus clk %ld\n", PTR_ERR(bus));
++		of_node_put(emac);
++		return;
++	}
++	clk_prepare_enable(bus);
++	rst = of_reset_control_get_exclusive(emac, "stmmaceth");
++	if (IS_ERR(rst))
++		dev_warn(&i2c->dev, "AC200 emac reset %ld\n", PTR_ERR(rst));
++	else
++		reset_control_deassert(rst);
++
++	ephy = ioremap(0x03000034, 0x4);
++	mac = ioremap(0x05030000, 0x100);
++	if (!ephy || !mac) {
++		dev_warn(&i2c->dev, "AC200 emac map failed\n");
++		goto out;
++	}
++	was = readl(ephy);
++	writel(0x00053fe1, ephy);
++	dev_info(&i2c->dev, "AC200 emac clk %08x was %08x\n",
++		 readl(ephy), was);
++	pdev = of_find_device_by_node(emac);
++	if (!pdev) {
++		dev_info(&i2c->dev, "AC200 pins node\n");
++		goto out;
++	}
++	pins = pinctrl_get_select_default(&pdev->dev);
++	if (IS_ERR(pins)) {
++		dev_info(&i2c->dev, "AC200 pins %ld\n", PTR_ERR(pins));
++		goto out;
++	}
++	dev_info(&i2c->dev, "AC200 pins ok\n");
++	msleep(50);
++	ac200_mdio_write_reg(mac, 0x10, 0, 0x1f83);
++	ac200_mdio_write_reg(mac, 0x10, 0, 0x1fb7);
++	ac200_mdio_write_reg(mac, 0x10, 5, 0xa819);
++	ac200_mdio_write_reg(mac, 0x10, 6, 0x0000);
++	msleep(1000);
++	hi = ac200_mdio_read_reg(mac, 0x10, 6);
++	hi &= ~(0xfu << 12);
++	hi |= ((0x03u + 0x0506u) & 0xfu) << 12;
++	hi |= (1u << 11) | (1u << 1);
++	ac200_mdio_write_reg(mac, 0x10, 6, hi);
++	dev_info(&i2c->dev, "AC200 mdio en 10 rmii %04x\n",
++		 ac200_mdio_read_reg(mac, 0x10, 6));
++	held = 1;
++	for (addr = 0; addr < 32; addr++) {
++		hi = ac200_mdio_read_reg(mac, addr, 2);
++		lo = ac200_mdio_read_reg(mac, addr, 3);
++		if (!hi && !lo)
++			continue;
++		found = 1;
++		dev_info(&i2c->dev, "AC200 mdio %02x id %08x %08x\n",
++			 addr, hi, lo);
++	}
++	if (!found)
++		dev_info(&i2c->dev, "AC200 mdio none\n");
++out:
++	if (!IS_ERR(pins))
++		pinctrl_put(pins);
++	if (pdev)
++		platform_device_put(pdev);
++	if (mac)
++		iounmap(mac);
++	if (ephy)
++		iounmap(ephy);
++	if (!IS_ERR(rst))
++		reset_control_put(rst);
++	if (!held) {
++		clk_disable_unprepare(bus);
++		clk_put(bus);
++	}
++	of_node_put(emac);
++}
++
+ static int ac200_i2c_probe(struct i2c_client *i2c)
+ {
+ 	struct device *dev = &i2c->dev;
+@@ -86,44 +444,47 @@
+ 		return dev_err_probe(dev, PTR_ERR(ac200->clk),
+ 				     "Can't obtain the clock\n");
+ 
+-	ac200->regmap = devm_regmap_init_i2c(i2c, &ac200_regmap_config);
++	ac200->regmap = devm_regmap_init(dev, &ac200_i2c_bus, i2c,
++					 &ac200_regmap_config);
+ 	if (IS_ERR(ac200->regmap)) {
+ 		ret = PTR_ERR(ac200->regmap);
+ 		dev_err(dev, "Regmap init failed: %d\n", ret);
+ 		return ret;
+ 	}
+ 
++	/* Fly Pi V3 names its only cell "calibration", not "bandgap". */
++	bgval = 0;
+ 	bgcell = devm_nvmem_cell_get(dev, "bandgap");
+-	if (IS_ERR(bgcell))
+-		return dev_err_probe(dev, PTR_ERR(bgcell),
+-				     "Unable to find bandgap data!\n");
+-
+-	bgdata = nvmem_cell_read(bgcell, &bglen);
+-	if (IS_ERR(bgdata)) {
+-		dev_err(dev, "Unable to read bandgap data!\n");
+-		return PTR_ERR(bgdata);
+-	}
+-
+-	if (bglen != 2) {
+-		dev_err(dev, "Invalid nvmem bandgap length!\n");
++	if (!IS_ERR(bgcell)) {
++		bgdata = nvmem_cell_read(bgcell, &bglen);
++		if (IS_ERR(bgdata)) {
++			dev_err(dev, "Unable to read bandgap data!\n");
++			return PTR_ERR(bgdata);
++		}
++		if (bglen != 2) {
++			dev_err(dev, "Invalid nvmem bandgap length!\n");
++			kfree(bgdata);
++			return -EINVAL;
++		}
++		bgval = *bgdata;
+ 		kfree(bgdata);
+-		return -EINVAL;
+ 	}
+ 
+-	bgval = *bgdata;
+-	kfree(bgdata);
+-
+ 	ret = clk_prepare_enable(ac200->clk);
+ 	if (ret)
+ 		return ret;
+ 
+ 	/*
+-	 * There is no documentation on how long we have to wait before
+-	 * executing first operation. Vendor driver sleeps for 40 ms.
++	 * PWM5 on PA12 is the reference clock, and it starts here. An
++	 * unclocked AC200 can leave the I2C bus stuck, so recover it and
++	 * retry the first write.
+ 	 */
+ 	msleep(40);
+-
+-	ret = regmap_write(ac200->regmap, AC200_SYS_CONTROL, 0);
++	ac200_mdio_scan(i2c);
++	dev_info(&i2c->dev, "AC200 pwm clock held\n");
++	return 0;
++	if (ret)
++		dev_warn(dev, "AC200 reset write failed: %d\n", ret);
+ 	if (ret)
+ 		goto err;
+ 
+@@ -139,6 +500,17 @@
+ 			goto err;
+ 	}
+ 
++	{
++		struct device_node *ephy;
++
++		ephy = of_get_compatible_child(dev->of_node,
++					       "x-powers,ac200-ephy-sunxi");
++		if (ephy) {
++			ac200_cells[1].of_compatible = "x-powers,ac200-ephy-sunxi";
++			of_node_put(ephy);
++		}
++	}
++
+ 	ret = devm_mfd_add_devices(dev, PLATFORM_DEVID_NONE, ac200_cells,
+ 				   ARRAY_SIZE(ac200_cells), NULL, 0, NULL);
+ 	if (ret) {
+@@ -170,6 +542,7 @@
+ 
+ static const struct of_device_id ac200_of_match[] = {
+ 	{ .compatible = "x-powers,ac200" },
++	{ .compatible = "x-powers,ac200-sunxi" },
+ 	{ }
+ };
+ MODULE_DEVICE_TABLE(of, ac200_of_match);

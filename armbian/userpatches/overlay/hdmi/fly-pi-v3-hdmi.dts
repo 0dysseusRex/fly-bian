@@ -1,0 +1,35 @@
+/dts-v1/;
+/plugin/;
+
+/*
+ * Fly Pi V3 (H618): Micro HDMI + FPC-HDMI share one DW-HDMI block.
+ * fly-h618.dtb already marks HDMI okay; FlyOS boot.scr is what toggles
+ * it off for TFT-only boots. Keep HDMI + connector + DE enabled so
+ * Armbian first-boot wizard works on either physical port.
+ */
+/ {
+	compatible = "mellow,fly-os", "allwinner,sun50i-h618", "allwinner,sun50i-h616";
+
+	fragment@0 {
+		target-path = "/soc/hdmi@6000000";
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	fragment@1 {
+		target-path = "/display-engine";
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	fragment@2 {
+		target-path = "/connector";
+		__overlay__ {
+			compatible = "hdmi-connector";
+			type = "d";
+			status = "okay";
+		};
+	};
+};

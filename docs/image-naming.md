@@ -1,8 +1,10 @@
 # Fly-bian image naming
 
 Product releases use a **Fly-bian** version that is independent of the Armbian
-framework / kernel version string. Pre-1.0 builds are WIP; **1.0** is the first
-fully working release we are willing to call done.
+framework / kernel version string. Pre-1.0 builds are WIP lab/bring-up images;
+**1.0 and above** are the only **release candidates** published to GitHub Releases.
+Do **not** upload `< 1.0` artifacts with `gh release`. Local staging under
+`Releases/Fly-bian-<ver>/` is fine for flashing and testing.
 
 ## Filename
 
@@ -14,7 +16,7 @@ Fly-bian-<VERSION>_<DEVICE>_KIAUH-<KIAUH_REV>.img.xz
 
 | Part | Meaning | Examples |
 | --- | --- | --- |
-| `VERSION` | Fly-bian product version | `0.1`, `0.2`, … `1.0` |
+| `VERSION` | Fly-bian product version | pre-1.0 steps of **0.05** (`0.50`, `0.55`, … `1.0`) |
 | `DEVICE` | Board this image is for | `Fly-Lite-2.1`, later `Fly-Pi-V3` |
 | `FLAVOR` | Stack baked into the image | `Base`, `Simple-AF`, `KIAUH` |
 | `PELLCORP_SHA` | Short git HEAD of pellcorp/`creality` at bake | `58e5c1d` |
@@ -36,18 +38,18 @@ Rules:
 - Release **folders** stay `…/Simple-AF/` and `…/KIAUH/` (no rev in the directory name); only the **filename** carries the stack revision.
 - **Every new image publish bumps the version.** Before the next Base / Simple-AF /
   KIAUH bake (or any restage that replaces flashable artifacts), raise
-  `FLYBIAN_VERSION` in the repo root (`0.2` → `0.3` → … → `1.0`). Do not reuse a
-  version number for a new build. Use `scripts/bump-flybian-version.sh` or edit
-  the file by hand. Staging refuses to overwrite an existing
-  `Releases/Fly-bian-<ver>/…` flavor tree unless `FLY_FORCE=1`.
+  `FLYBIAN_VERSION` in the repo root. Pre-1.0: bump by **0.05** each build
+  (`0.50` → `0.55` → … → `1.0`) via `scripts/bump-flybian-version.sh`. Do not
+  reuse a version number for a new build. Staging refuses to overwrite an
+  existing `Releases/Fly-bian-<ver>/…` flavor tree unless `FLY_FORCE=1`.
 
 ## Flavors
 
 | Flavor token | Armbian `BOARD` (build only) | What it is |
 | --- | --- | --- |
-| `Base` | `fly-lite-21` | Hardware + first-boot; no Klipper installer bake |
-| `Simple-AF` | `fly-lite-21-simpleaf` | pellcorp / Simple-AF pre-bake |
-| `KIAUH` | `fly-lite-21-kiauh` | KIAUH pre-bake |
+| `Base` | `fly-lite-21` / `fly-pi-v3` | Hardware + first-boot; no Klipper installer bake |
+| `Simple-AF` | `fly-lite-21-simpleaf` | pellcorp / Simple-AF pre-bake (Lite today) |
+| `KIAUH` | `fly-lite-21-kiauh` | KIAUH pre-bake (Lite today) |
 
 Armbian still emits long `Armbian-unofficial_…` names during compile. Staging
 renames (or copies as) the Fly-bian product name above. Do not publish the

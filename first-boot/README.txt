@@ -30,14 +30,15 @@ cable, fill all three of Wi-Fi, Root, and User:
   USER_PASSWORD=that user's password
   USER_REALNAME=Your Name
 
-Optional helpers later used by `fly-start` over SSH (Simple-AF images):
+The base fly-start.txt is Wi-Fi, location, root, user, and SERIAL_CONSOLE.
+The Simple-AF image's file also has keys later used by `fly-start`:
 
   INSTALL_CMD=…
   AUTO_CAMERAS=Yes
   ENABLE_GRUMPYSCREEN=Yes
   INSTALL_BOOT_DISPLAY=Yes
 
-KIAUH images keep Wi-Fi/accounts only in fly-start.txt (no AUTO_CAMERAS /
+KIAUH images keep Wi-Fi, accounts, and SERIAL_CONSOLE only (no AUTO_CAMERAS /
 install keys). After login use `fly-kiauh` (see section 4 if present).
 
 Leave USE_STATIC=0 unless you know you need a fixed IP.
@@ -79,6 +80,10 @@ stop autoboot.
 If fly-start.txt still has Your… placeholders, answer the on-screen questions
 (root password, your user, location, Wi-Fi). If you already filled those
 fields, you can log in with that user; you do not need to repeat the wizard.
+
+SERIAL_CONSOLE=Yes (the default) keeps this login. Set SERIAL_CONSOLE=No
+only after SSH or HDMI works, then reboot. No is ignored while root and
+user are still Your…, so the wizard can still run here.
 
 
 3) Keyboard and screen

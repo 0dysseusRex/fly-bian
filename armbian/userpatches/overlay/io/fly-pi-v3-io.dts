@@ -1,0 +1,36 @@
+/dts-v1/;
+/plugin/;
+
+/*
+ * Fly Pi V3 board pinmux (FlyOS boot.scr board=fly-pi-v3):
+ *   uart1 + uart3 + uart4 okay
+ * SPI1 CS2 (spidev1.2 / ADXL-RRF) stays off while TFT overlays own SPI1;
+ * enable it only on HDMI-only builds that drop the TFT user overlays.
+ */
+/ {
+	compatible = "mellow,fly-os", "allwinner,sun50i-h618", "allwinner,sun50i-h616";
+
+	/* uart1 — already okay in DTB; pin it. */
+	fragment@0 {
+		target-path = "/soc/serial@5000400";
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	/* uart3 */
+	fragment@1 {
+		target-path = "/soc/serial@5000c00";
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	/* uart4 */
+	fragment@2 {
+		target-path = "/soc/serial@5001000";
+		__overlay__ {
+			status = "okay";
+		};
+	};
+};

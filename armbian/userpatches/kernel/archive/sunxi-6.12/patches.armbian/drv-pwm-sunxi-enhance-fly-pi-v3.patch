@@ -1,0 +1,13 @@
+--- a/drivers/pwm/pwm-sunxi-enhance.c
++++ b/drivers/pwm/pwm-sunxi-enhance.c
+@@ -699,6 +699,10 @@
+     value = SET_BITS(reg_shift, 1, value, 1);
+     sunxi_pwm_writel(chip, reg_offset, value);
+ 
++    get_pccr_reg_offset(index, &reg_offset);
++    dev_info(pwmchip_parent(chip), "PWM%u clock register %08x\n",
++             index, sunxi_pwm_readl(chip, reg_offset));
++
+     return 0;
+ }
+ 

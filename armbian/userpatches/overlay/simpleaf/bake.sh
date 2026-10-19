@@ -172,6 +172,12 @@ for f in patch-install-klipper.sh patch-config-helper.sh patch-installer-cleanup
 	[[ -f /usr/share/fly-debian/simpleaf/$f ]] && chmod 0755 "/usr/share/fly-debian/simpleaf/$f"
 done
 
+# Simple-AF fly-start.txt (INSTALL_CMD / GrumpyScreen). Base file is Wi-Fi only.
+if [[ -f $OVERLAY/simpleaf/fly-start.txt ]]; then
+	install -m 0644 "$OVERLAY/simpleaf/fly-start.txt" /usr/share/fly-debian/first-boot/fly-start.txt
+	install -m 0644 "$OVERLAY/simpleaf/fly-start.txt" /boot/fly-start.txt
+fi
+
 if [[ -f /boot/README.txt && -f $OVERLAY/simpleaf/README.fragment ]]; then
 	cat "$OVERLAY/simpleaf/README.fragment" >>/boot/README.txt
 	cp -a /boot/README.txt /usr/share/fly-debian/first-boot/README.txt 2>/dev/null || true

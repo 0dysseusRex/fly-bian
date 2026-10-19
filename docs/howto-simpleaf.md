@@ -27,7 +27,7 @@ On Fly Lite, prefer **GrumpyScreen**, not KlipperScreen (512 MB).
 
 1. Write the `.img.xz` with [Raspberry Pi Imager](https://www.raspberrypi.com/software/), balenaEtcher, or `xzcat … \| dd` (see main [README](../README.md)).
 2. Eject, unplug, replug the card so the small **`FLY-SETUP`** FAT volume appears.
-3. Edit `fly-start.txt`: Wi-Fi (2.4 GHz), locale/timezone, root password, sudo user.
+3. Edit `fly-start.txt`: Wi-Fi (2.4 GHz), locale/timezone, root password, sudo user. `SERIAL_CONSOLE=Yes` keeps the Type-C login; set `No` only after SSH or HDMI works.
 4. Optional keys for later `fly-start` (examples in the file):
    - `INSTALL_CMD=~/pellcorp/installer.sh --install --printer … --probe … --mount …`
    - `AUTO_CAMERAS=Yes`

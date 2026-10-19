@@ -67,13 +67,13 @@ Clone from the working **cpu-affinity** card, not from stock Orange Pi Lite auto
 | --- | --- |
 | DTB | `sun8i-h3-fly-lite.dtb` as `fdtfile` |
 | SD card-detect | PF6 is **not** CD on this PCB. Patch **U-Boot and Linux** (`broken-cd` / `mmc-broken-cd`). Autoboot must see `mmc0` without `gpio clear PF6`. |
-| Overlays | `uart1 usbhost0 usbhost2 usbhost3` plus user `mmc-broken-cd fly-lite-io fly-lite-tft fly-lite-tft-c fly-lite-hdmi` (or compiled into the DTB). `fly-lite-tft-c` is Cap DIP GT911 (omit for Resi). `fly-lite-hdmi` sets `&hdmi` okay — Fly’s DTB ships HDMI disabled, so Linux otherwise drops the HDMI5 after U-Boot. `disp_mode=800x480p60`. Do **not** load `fly-lite-leds` (duplicates Fly LED nodes → `-EBUSY`). |
+| Overlays | `uart1 usbhost0 usbhost2 usbhost3` plus user `mmc-broken-cd fly-lite-io fly-lite-hdmi fly-lite-board`. `fly-lite-board` disables the unused H3 EMAC and gives `vdd-cpux` its PA9 `gpios` property, clamped to 1.3 V so cpufreq cannot select 1.1 V. Add `fly-lite-tft fly-lite-tft-c` only when a Cap FPC-TFT is fitted; Resi is `fly-lite-tft` alone. `fly-lite-hdmi` sets `&hdmi` okay — Fly’s DTB ships HDMI disabled, so Linux otherwise drops the HDMI5 after U-Boot. `disp_mode=800x480p60`. Do **not** load `fly-lite-leds` (duplicates Fly LED nodes → `-EBUSY`). |
 | Wi-Fi | RTL8189FTV / `8189fs` on SDIO. Boot **`maxcpus=1`**, then online isolated CPUs 1–3 **after** 8189fs (`isolcpus=1-3 irqaffinity=0`). Same pattern as `fly-online-isolated-cpus.service`. Do not boot four cores from t=0. |
 | CPU affinity | Install `klipper/cpu-affinity/` so a later Klipper stack is `CPUAffinity=1-3`. Do not wrap installers. Do not install Klipper. |
 | Kernel cmdline extras | `nohz=off clocksource=timer cma=16M` plus the isolcpus set. `console=serial` (or serial+display if HDMI wizard needs it — wizard must work on Type-C UART at 115200). |
 | Packages | Freeze kernel, DTB, and U-Boot (`armbian-hold` / apt-mark) so a casual `apt upgrade` does not lose PF6 + Fly DTB. |
 | Swap | 2 GiB `/swapfile` on first boot **after** rootfs grow (`fly-swapfile.service`). Do not `fallocate` it at image-build time (that bloats the `.img` by 2 GiB). Stock zram (~226 Mi) is not enough for Moonraker `uvloop` / clang on 512 MB. |
-| Displays | TFT: `panel-mipi-dbi` + `/lib/firmware/ST7796S.bin` + `modules-load.d/fly-tft.conf`; Cap touch GT911 @ i2c2 `0x14` via `fly-lite-tft-c`. HDMI5 / FPC-HDMI: `fly-lite-hdmi` + `disp_mode=800x480p60` so the wizard has a DRM connector, not only U-Boot simplefb. |
+| Displays | TFT firmware stays on the card (`panel-mipi-dbi` + `/lib/firmware/ST7796S.bin`). The panel and touch overlays are not in the default `user_overlays` list, so a headless boot does not probe GT911. HDMI5 / FPC-HDMI: `fly-lite-hdmi` + `disp_mode=800x480p60` so the wizard has a DRM connector, not only U-Boot simplefb. |
 
 Type-C is a real UART (CH340 on Windows). Do not treat it as USB gadget-only. Do not pulse DTR/RTS in tests.
 

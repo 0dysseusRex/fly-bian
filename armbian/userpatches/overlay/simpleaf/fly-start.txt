@@ -1,0 +1,96 @@
+# Fly-bian Project — first-boot setup (FLY-SETUP) — Simple-AF image
+#
+# Edit this file BEFORE the first power-on. Notepad is fine (CRLF is OK).
+# Values that still say Your… are ignored. Fill a block to apply that part.
+#
+# For SSH with no serial cable, fill Wi-Fi + Root + User. Then boot, wait
+# several minutes (the card grows, then the radio joins), and:
+#
+#   ssh USER_NAME@THE.PRINTER.IP
+#   fly-help          # install tips + custom commands
+#   fly-start         # menu: install / update / boot display / cancel
+#
+# Find the IP on your router DHCP list, or:
+#   Windows: arp -a   /   nmap -sn 192.168.1.0/24
+#   macOS:   arp -a   /   dns-sd -B _ssh._tcp local.
+#   Linux:   ip neigh /   nmap -sn 192.168.1.0/24
+# Hostname is usually fly-lite-21. Full guide: README.txt here, or fly-help on the board.
+#
+# Locale examples: en_US.UTF-8  en_GB.UTF-8  de_DE.UTF-8
+# Timezone examples: America/Los_Angeles  Europe/London
+#
+# The Lite radio is 2.4 GHz only. Passwords here are plaintext. Do not share
+# the card image after editing. Leave placeholders to use the on-screen
+# first-run wizard instead (Type-C serial or HDMI + USB keyboard).
+
+# --- Wi-Fi ---
+WIFI_ENABLED=1
+WIFI_SSID=YourNetwork
+WIFI_PSK=YourPassword
+WIFI_COUNTRY=US
+
+# Optional static IPv4. Leave USE_STATIC=0 for DHCP.
+USE_STATIC=0
+STATIC_IP=192.168.1.50
+STATIC_MASK=255.255.255.0
+STATIC_GATEWAY=192.168.1.1
+STATIC_DNS=1.1.1.1 8.8.8.8
+
+# --- Location (same questions as first-run) ---
+SET_LANG_BASED_ON_LOCATION=n
+LOCALE=YourLocale
+TIMEZONE=YourTimezone
+
+# --- Root ---
+ROOT_PASSWORD=YourRootPassword
+ROOT_SSH_KEY=
+
+# --- User (sudo). Lowercase letters; this is the SSH login. ---
+USER_NAME=YourUser
+USER_PASSWORD=YourUserPassword
+USER_REALNAME=Your Name
+USER_SHELL=bash
+USER_SSH_KEY=
+
+# --- Serial console (Type-C UART, 115200 8N1) ---
+# Yes: kernel messages and a login stay on the Type-C port. Default.
+# No: after root and user exist, the serial login is turned off. The next
+# boot also stops sending the kernel console to that UART. Set No only when
+# SSH or HDMI already works. If root/user are still Your…, No is ignored so
+# the first-run wizard can still run on serial.
+# Yes/No
+SERIAL_CONSOLE=Yes
+
+# --- Simple-AF install (used by `fly-start` over SSH) ---
+# Full installer command for "Run Full Install Script". Edit printer/probe/mount.
+# Run as your sudo user (not root). Example for Creality K1 Max + BLTouch:
+INSTALL_CMD=~/pellcorp/installer.sh --install --printer creality-k1m-2023 --probe bltouch --mount Default
+
+# After a successful full install: discover USB cams into Crowsnest (Yes/No)
+AUTO_CAMERAS=No
+
+# --- Post-install display options (fly-start full install only) ---
+#
+# ENABLE_GRUMPYSCREEN — touch / status UI on the Fly-LCD (HDMI VT1) after the
+# OS is up. This is the lightweight KlipperScreen alternative for 512 MB.
+# It is NOT a Linux boot splash. Docs: fly-help / fly-grumpy-rotate.
+# Yes/No
+ENABLE_GRUMPYSCREEN=Yes
+#
+# INSTALL_BOOT_DISPLAY — Simple-AF Plymouth splash during early boot
+# (logo while the kernel/initramfs comes up), same idea as:
+#   https://pellcorp.github.io/creality-wiki/rpi_boot_display/
+# Simple-AF images bake plymouth + the simpleaf theme; this flag only
+# enables it (sets bootlogo=true). Toggle later without reinstall:
+#   fly-boot-display enable|disable|status
+#   (also fly-start menu 3 = enable, 4 = disable)
+# Optional; needs HDMI. Independent of GrumpyScreen. Default No (512 MB).
+# Yes/No
+INSTALL_BOOT_DISPLAY=No
+
+# GRUMPY_DISPLAY_ROTATE — write display_rotate into
+# ~/printer_data/config/grumpyscreen.ini [ui] after a full install
+# (survives Simple-AF reinstalls when the template also carries this key).
+# 0 = 0°, 1 = 90°, 2 = 180°, 3 = 270°. Leave blank to skip.
+# Change later: fly-grumpy-rotate 0|1|2|3  (or fly-start menu 5/6)
+GRUMPY_DISPLAY_ROTATE=0

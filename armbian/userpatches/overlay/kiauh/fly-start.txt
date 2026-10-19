@@ -53,6 +53,15 @@ USER_REALNAME=Your Name
 USER_SHELL=bash
 USER_SSH_KEY=
 
+# --- Serial console (Type-C UART, 115200 8N1) ---
+# Yes: kernel messages and a login stay on the Type-C port. Default.
+# No: after root and user exist, the serial login is turned off. The next
+# boot also stops sending the kernel console to that UART. Set No only when
+# SSH or HDMI already works. If root/user are still Your…, No is ignored so
+# the first-run wizard can still run on serial.
+# Yes/No
+SERIAL_CONSOLE=Yes
+
 # KIAUH notes (not used by any autorun here):
 # There is no Simple-AF INSTALL_CMD / boot-display / AUTO_CAMERAS on this image.
 # After login: fly-kiauh  or  fly-kiauh cameras

@@ -1,0 +1,104 @@
+/dts-v1/;
+/plugin/;
+
+/*
+ * Fly TFT V2 on Fly Pi V3 (H618): ST7796 SPI panel via panel-mipi-dbi on SPI1
+ * (spi@5011000), plus resistive ADS7846 on CS1. Capacitive GT911 uses
+ * fly-pi-v3-tft-c (disables ADS7846; Cap DIP frees PH4/PH10 for GT911).
+ *
+ * From fly-h618.dtb pitft@0 / fly_display_pins:
+ *   DC=PG11, RESET=PG13, Cap/Res INT=PH10, Cap RESET=PH4
+ *   SPI1 pins PH6/7/8, CS0=PH5, CS1=PH9
+ * DC and reset are GPIO requests only. A pinctrl claim on the same
+ * pins makes the panel probe fail with -EINVAL on PG13.
+ *
+ * Mutex: TFT owns SPI1 CS0/CS1 — disable OEM pitft (mellow,fly-tft-v2),
+ * spidev0/1/2, and leave the ZH1.5-7P ADXL/RRF path for HDMI-only boots.
+ * Firmware: /lib/firmware/ST7796S.bin
+ */
+
+/ {
+	compatible = "mellow,fly-os", "allwinner,sun50i-h618", "allwinner,sun50i-h616";
+
+	fragment@0 {
+		target-path = "/aliases";
+		__overlay__ {
+			spi1 = "/soc/spi@5011000";
+		};
+	};
+
+	fragment@1 {
+		target-path = "/soc/spi@5011000";
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			/* Proprietary FlyOS node — not in mainline. */
+			pitft@0 {
+				status = "disabled";
+			};
+
+			spidev@0 {
+				status = "disabled";
+			};
+
+			spidev@1 {
+				status = "disabled";
+			};
+
+			/* ADXL / RRF CS2 shares this SPI — off while TFT is bound. */
+			spidev@2 {
+				status = "disabled";
+			};
+
+			panel@0 {
+				compatible = "ST7796S", "panel-mipi-dbi-spi";
+				reg = <0>;
+				spi-max-frequency = <40000000>;
+				spi-cpha;
+				spi-cpol;
+				write-only;
+				dc-gpios = <&pio 6 11 0>;
+				reset-gpios = <&pio 6 13 0>;
+				rotation = <90>;
+				format = "r5g6b5";
+				firmware-name = "ST7796S.bin";
+				width-mm = <49>;
+				height-mm = <74>;
+				status = "okay";
+
+				panel-timing {
+					clock-frequency = <0>;
+					hactive = <320>;
+					vactive = <480>;
+					hfront-porch = <0>;
+					hback-porch = <0>;
+					hsync-len = <0>;
+					vfront-porch = <0>;
+					vback-porch = <0>;
+					vsync-len = <0>;
+				};
+			};
+
+			touch@1 {
+				compatible = "ti,ads7846";
+				reg = <1>;
+				spi-max-frequency = <1000000>;
+				interrupt-parent = <&pio>;
+				interrupts = <7 10 2>;
+				pendown-gpio = <&pio 7 10 0>;
+				ti,keep-vref-on;
+				wakeup-source;
+				touchscreen-inverted-x;
+				touchscreen-swapped-x-y;
+				status = "okay";
+			};
+
+			/* OEM resistive node name — keep disabled; we use touch@1 above. */
+			touch-r@1 {
+				status = "disabled";
+			};
+		};
+	};
+};

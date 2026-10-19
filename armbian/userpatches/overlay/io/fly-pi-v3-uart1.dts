@@ -1,0 +1,18 @@
+/dts-v1/;
+/plugin/;
+
+/*
+ * Fly Pi V3 serial-screen UART (XH2.54-4P), FlyOS Moon2UART /dev/ttyS1.
+ * uart1 is PG6 (TX) and PG7 (RX). Leave uart0 (ttyS0, Type-C console on
+ * PH0/PH1) alone. uart3/uart4 are the RS232 headers; do not enable them here.
+ */
+/ {
+	compatible = "mellow,fly-os", "allwinner,sun50i-h618", "allwinner,sun50i-h616";
+
+	fragment@0 {
+		target-path = "/soc/serial@5000400";
+		__overlay__ {
+			status = "okay";
+		};
+	};
+};

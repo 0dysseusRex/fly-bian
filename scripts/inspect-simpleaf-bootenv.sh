@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-imgxz='/mnt/c/Users/udrdr/fly-lite-armbian-image/Releases/Fly-bian-0.1/Fly-Lite-2.1/Simple-AF/Fly-bian-0.1_Fly-Lite-2.1_Simple-AF.img.xz'
+imgxz='/mnt/f/Cursor/projects/fly-lite-armbian-image/Releases/Fly-bian-0.1/Fly-Lite-2.1/Simple-AF/Fly-bian-0.1_Fly-Lite-2.1_Simple-AF.img.xz'
 tmpdir=$(mktemp -d /tmp/flyimg.XXXXXX)
 trap 'sudo umount "$tmpdir/bootmnt" 2>/dev/null || true; sudo losetup -D 2>/dev/null || true; rm -rf "$tmpdir"' EXIT
 cd "$tmpdir"

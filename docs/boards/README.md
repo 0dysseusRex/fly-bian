@@ -6,7 +6,7 @@ Each supported or planned SBC has its **own README** with a deeper hardware over
 | --- | --- | --- |
 | **Fly Lite 2.1** | Supported (1.0) | [fly-lite-2.1/README.md](fly-lite-2.1/README.md) · [OOM / installs](fly-lite-2.1/oom.md) |
 | **Fly Pi V3** | Next | [fly-pi-v3/README.md](fly-pi-v3/README.md) |
-| **Other Mellow SBCs** | Notes only | [other-mellow/README.md](other-mellow/README.md) |
+| **Other Mellow SBCs** | Notes only | [other-mellow/README.md](other-mellow/README.md) · [community alternate firmware](../community-alternate-firmware.md) |
 
 ## README template (for new boards)
 

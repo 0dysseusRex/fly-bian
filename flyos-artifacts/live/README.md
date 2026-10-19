@@ -1,11 +1,14 @@
 # Live FlyOS dumps
 
-Nothing here yet. `192.168.1.147` is not reachable from the cloud workspace.
+| Pull | Status |
+| --- | --- |
+| [`m2ws-usb-pull/`](m2ws-usb-pull/) | **Done** — H618 v1.4.0 from M2WS USB gadget (`curated/` + REPORT.md) |
+| Lite SSH `192.168.1.147` | Not reachable from cloud workspace |
 
-From a PC on the same LAN as the Lite (FlyOS booted, Wi-Fi up, or serial-forwarded SSH):
+From a PC on the same LAN as a booted FlyOS board:
 
 ```bash
 FLYOS_HOST=192.168.1.147 ./scripts/pull-live-flyos.sh
 ```
 
-Each run creates `pull-<utc>/` and points `LATEST` at it. Review `klipper-config/` for secrets before committing.
+Each SSH run creates `pull-<utc>/` and points `LATEST` at it. Review `klipper-config/` for secrets before committing.

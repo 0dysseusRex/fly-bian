@@ -1,0 +1,140 @@
+--- a/drivers/net/ethernet/stmicro/stmmac/dwmac-sun8i.c
++++ b/drivers/net/ethernet/stmicro/stmmac/dwmac-sun8i.c
+@@ -89,6 +89,16 @@
+ 	.msb = 31,
+ };
+ 
++/* H616 EMAC1 clock word is the device's second reg, at 0x03000034.
++ * The system-control window stops before that address, so the field
++ * offset is 0 within the 4-byte mapping.
++ */
++static const struct reg_field sun8i_syscon_reg_field_emac1 = {
++	.reg = 0,
++	.lsb = 0,
++	.msb = 31,
++};
++
+ /* EMAC clock register @ 0x164 in the CCU address range */
+ static const struct reg_field sun8i_ccu_reg_field = {
+ 	.reg = 0x164,
+@@ -157,6 +167,17 @@
+ 	.tx_delay_max = 7,
+ };
+ 
++static const struct emac_variant emac_variant_h616_emac1 = {
++	/* Power-on value: internal PHY selected, 24 MHz, shut down. */
++	.default_syscon_value = 0x58000,
++	.syscon_field = &sun8i_syscon_reg_field_emac1,
++	/* Jack PHY is external. The MAC generates the RMII clock. */
++	.soc_has_internal_phy = false,
++	.support_rmii = true,
++	.rx_delay_max = 31,
++	.tx_delay_max = 7,
++};
++
+ #define EMAC_BASIC_CTL0 0x00
+ #define EMAC_BASIC_CTL1 0x04
+ #define EMAC_INT_STA    0x08
+@@ -941,7 +962,7 @@
+ 	struct sunxi_priv_data *gmac = plat->bsp_priv;
+ 	struct device_node *node = dev->of_node;
+ 	int ret;
+-	u32 reg, val;
++	u32 reg, val, was;
+ 
+ 	ret = regmap_field_read(gmac->regmap_field, &val);
+ 	if (ret) {
+@@ -950,12 +971,16 @@
+ 	}
+ 
+ 	reg = gmac->variant->default_syscon_value;
++	was = val;
+ 	if (reg != val)
+ 		dev_warn(dev,
+ 			 "Current syscon value is not the default %x (expect %x)\n",
+ 			 val, reg);
+ 
+-	if (gmac->variant->soc_has_internal_phy) {
++	if (gmac->variant == &emac_variant_h616_emac1) {
++		/* External RMII. Keep shutdown and the 24 MHz select. */
++		reg &= ~H3_EPHY_SELECT;
++	} else if (gmac->variant->soc_has_internal_phy) {
+ 		if (of_property_read_bool(node, "allwinner,leds-active-low"))
+ 			reg |= H3_EPHY_LED_POL;
+ 		else
+@@ -1040,6 +1065,8 @@
+ 		return -EINVAL;
+ 	}
+ 
++	if (gmac->variant == &emac_variant_h616_emac1)
++		dev_info(dev, "EMAC1 clock register %08x (was %08x)\n", reg, was);
+ 	regmap_field_write(gmac->regmap_field, reg);
+ 
+ 	return 0;
+@@ -1185,6 +1212,15 @@
+ 		return -EINVAL;
+ 	}
+ 
++	/* Vendor EMAC1 node clocks this as emac-25m. Optional elsewhere. */
++	{
++		struct clk *clk25 = devm_clk_get_optional_enabled(dev, "emac-25m");
++
++		if (IS_ERR(clk25))
++			return dev_err_probe(dev, PTR_ERR(clk25),
++					     "Failed to enable emac-25m clock\n");
++	}
++
+ 	/* Optional regulator for PHY */
+ 	gmac->regulator_phy = devm_regulator_get(dev, "phy");
+ 	if (IS_ERR(gmac->regulator_phy))
+@@ -1214,14 +1250,33 @@
+ 	 * To support old device trees, we fall back to using the syscon
+ 	 * interface if possible.
+ 	 */
+-	regmap = sun8i_dwmac_get_syscon_from_dev(pdev->dev.of_node);
+-	if (IS_ERR(regmap))
+-		regmap = syscon_regmap_lookup_by_phandle(pdev->dev.of_node,
+-							 "syscon");
+-	if (IS_ERR(regmap)) {
+-		ret = PTR_ERR(regmap);
+-		dev_err(&pdev->dev, "Unable to map syscon: %d\n", ret);
+-		return ret;
++	if (gmac->variant == &emac_variant_h616_emac1) {
++		void __iomem *clkreg;
++		static const struct regmap_config emac1_clkreg = {
++			.reg_bits = 32,
++			.val_bits = 32,
++			.reg_stride = 4,
++			.max_register = 0,
++		};
++
++		clkreg = devm_platform_ioremap_resource(pdev, 1);
++		if (IS_ERR(clkreg))
++			return dev_err_probe(dev, PTR_ERR(clkreg),
++					     "Failed to map EMAC1 clock register\n");
++		regmap = devm_regmap_init_mmio(dev, clkreg, &emac1_clkreg);
++		if (IS_ERR(regmap))
++			return dev_err_probe(dev, PTR_ERR(regmap),
++					     "Failed to init EMAC1 clock regmap\n");
++	} else {
++		regmap = sun8i_dwmac_get_syscon_from_dev(pdev->dev.of_node);
++		if (IS_ERR(regmap))
++			regmap = syscon_regmap_lookup_by_phandle(pdev->dev.of_node,
++								 "syscon");
++		if (IS_ERR(regmap)) {
++			ret = PTR_ERR(regmap);
++			dev_err(&pdev->dev, "Unable to map syscon: %d\n", ret);
++			return ret;
++		}
+ 	}
+ 
+ 	syscon_field = *gmac->variant->syscon_field;
+@@ -1356,6 +1411,8 @@
+ 		.data = &emac_variant_h6 },
+ 	{ .compatible = "allwinner,sun50i-h616-emac",
+ 		.data = &emac_variant_h6 },
++	{ .compatible = "allwinner,sunxi-gmac",
++		.data = &emac_variant_h616_emac1 },
+ 	{ }
+ };
+ MODULE_DEVICE_TABLE(of, sun8i_dwmac_match);

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Promote the just-built Fly-bian-0.1 staged images to Fly-bian-0.2 names.
 set -euo pipefail
-releases=/mnt/c/Users/udrdr/fly-lite-armbian-image/Releases
+releases=/mnt/f/Cursor/projects/fly-lite-armbian-image/Releases
 src=$releases/Fly-bian-0.1/Fly-Lite-2.1
 dst=$releases/Fly-bian-0.2/Fly-Lite-2.1
 device=Fly-Lite-2.1

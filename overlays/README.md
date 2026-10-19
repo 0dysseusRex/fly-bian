@@ -13,4 +13,4 @@ sudo armbian-add-overlay overlays/sdio-wifi-rtl8189.dts
 | `usb-otg-peripheral.dts` | Type-C serial works on FlyOS, not on Debian, and you already have another login |
 | `fly-tft-spi-candidate.dts` | Only after a FlyOS DTB dump confirms the GPIOs. Panel node is `disabled` on purpose. |
 
-Live board overlays live under `armbian/userpatches/overlay/tft/` and `from-golden/overlay-user/` (`fly-lite-tft` panel + ADS7846; `fly-lite-tft-c` Cap GT911). Do not add `fly-lite-leds` — it duplicates the Fly DTB LED nodes (`-EBUSY`). The candidate below is the old disabled stub.
+Live board overlays live under `armbian/userpatches/overlay/` (`board/fly-lite-board.dts` for the unused EMAC and CPU regulator; `tft/fly-lite-tft` panel + ADS7846; `tft/fly-lite-tft-c` Cap GT911). The TFT overlays are opt-in. Do not add `fly-lite-leds` — it duplicates the Fly DTB LED nodes (`-EBUSY`). The candidate below is the old disabled stub.

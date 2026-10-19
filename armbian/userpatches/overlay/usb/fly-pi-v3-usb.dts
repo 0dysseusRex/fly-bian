@@ -1,0 +1,74 @@
+/dts-v1/;
+/plugin/;
+
+/*
+ * Fly Pi V3 (H618): four USB-A host ports = EHCI/OHCI pairs on usb1..usb4.
+ * Type-C musb stays peripheral (gadget / power). fly-h618.dtb already has
+ * hosts okay; this overlay pins that so a later DTB refresh cannot drop them.
+ */
+/ {
+	compatible = "mellow,fly-os", "allwinner,sun50i-h618", "allwinner,sun50i-h616";
+
+	fragment@0 {
+		target-path = "/regulator-usb1-vbus";
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	fragment@1 {
+		target-path = "/soc/phy@5100400";
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	/* USB1 */
+	fragment@2 {
+		target-path = "/soc/usb@5101000";
+		__overlay__ { status = "okay"; };
+	};
+	fragment@3 {
+		target-path = "/soc/usb@5101400";
+		__overlay__ { status = "okay"; };
+	};
+
+	/* USB2 */
+	fragment@4 {
+		target-path = "/soc/usb@5200000";
+		__overlay__ { status = "okay"; };
+	};
+	fragment@5 {
+		target-path = "/soc/usb@5200400";
+		__overlay__ { status = "okay"; };
+	};
+
+	/* USB3 */
+	fragment@6 {
+		target-path = "/soc/usb@5310000";
+		__overlay__ { status = "okay"; };
+	};
+	fragment@7 {
+		target-path = "/soc/usb@5310400";
+		__overlay__ { status = "okay"; };
+	};
+
+	/* USB4 */
+	fragment@8 {
+		target-path = "/soc/usb@5311000";
+		__overlay__ { status = "okay"; };
+	};
+	fragment@9 {
+		target-path = "/soc/usb@5311400";
+		__overlay__ { status = "okay"; };
+	};
+
+	/* Type-C OTG block: keep peripheral so host ports stay on the A jacks. */
+	fragment@10 {
+		target-path = "/soc/usb@5100000";
+		__overlay__ {
+			status = "okay";
+			dr_mode = "peripheral";
+		};
+	};
+};

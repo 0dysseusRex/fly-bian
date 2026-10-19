@@ -8,7 +8,8 @@ nginx sites for Fluidd (:80) and Mainsail (:4409).
 
 Do not install Simple-AF (pellcorp) on this card.
 Ignore any Simple-AF INSTALL_CMD / boot-display / GrumpyScreen / AUTO_CAMERAS
-notes above — this image's fly-start.txt is Wi-Fi and accounts only.
+notes above — this image's fly-start.txt is Wi-Fi, accounts, and
+SERIAL_CONSOLE only.
 
 SSH in as the user you created, then:
 

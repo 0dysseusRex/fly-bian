@@ -146,6 +146,14 @@ EOF
 cmd_enable() {
 	echo "=== Enable Plymouth / Simple-AF boot display ==="
 	ensure_simpleaf_theme || true
+	# Base images mask these so Type-C serial is not stolen at boot.
+	for ply in plymouth-start.service plymouth-read-write.service \
+		plymouth-quit.service plymouth-quit-wait.service \
+		plymouth-reboot.service plymouth-poweroff.service \
+		plymouth-halt.service plymouth-kexec.service; do
+		need_sudo systemctl unmask "$ply" 2>/dev/null || true
+		need_sudo systemctl enable "$ply" 2>/dev/null || true
+	done
 	set_bootlogo true
 	echo "Done. Reboot to see the splash on HDMI."
 	echo "  sudo reboot"
@@ -161,6 +169,13 @@ cmd_disable() {
 			need_sudo plymouth-set-default-theme -R text || true
 		fi
 	fi
+	for ply in plymouth-start.service plymouth-read-write.service \
+		plymouth-quit.service plymouth-quit-wait.service \
+		plymouth-reboot.service plymouth-poweroff.service \
+		plymouth-halt.service plymouth-kexec.service; do
+		need_sudo systemctl disable "$ply" 2>/dev/null || true
+		need_sudo systemctl mask "$ply" 2>/dev/null || true
+	done
 	echo "Done. Reboot to watch the startup sequence on HDMI/serial."
 	echo "  sudo reboot"
 	echo "Re-enable later with: fly-boot-display enable"

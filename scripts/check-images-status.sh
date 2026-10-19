@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 out=/home/rex/fly-build/armbian-build/output/images
-rel='/mnt/c/Users/udrdr/fly-lite-armbian-image/Releases/26.11.0-trunk_trixie_6.18.51/Fly Lite 2.1'
+rel='/mnt/f/Cursor/projects/fly-lite-armbian-image/Releases/26.11.0-trunk_trixie_6.18.51/Fly Lite 2.1'
 
 echo '=== build output ==='
 ls -lh "$out"/*.xz
@@ -12,7 +12,7 @@ echo
 echo '=== Releases tree ==='
 if [[ ! -d $rel ]]; then
 	echo "MISSING: $rel"
-	ls -la /mnt/c/Users/udrdr/fly-lite-armbian-image/Releases/ || true
+	ls -la /mnt/f/Cursor/projects/fly-lite-armbian-image/Releases/ || true
 	exit 0
 fi
 for d in base simpleaf kiauh; do

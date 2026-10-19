@@ -16,7 +16,7 @@ Official FAST login: `root` / `mellow`. Prefer a key (`FLYOS_SSH_IDENTITY`) if y
 
 | Path | What it is |
 | --- | --- |
-| `live/` | Output of `scripts/pull-live-flyos.sh`. Empty until you run it. |
+| `live/` | Live pulls. Includes `m2ws-usb-pull/` (H618 M2WS USB gadget). SSH pulls via `scripts/pull-live-flyos.sh`. |
 | `extracted/` | Output of `scripts/extract-flyos.sh` against an official H3 `.img`. |
 | `reference/sun8i-h3-orangepi-lite.dts` | Closest public mainline DTB (H3, 512 MB, no Ethernet, SDIO Wi-Fi). |
 | `reference/official-urls.md` | Mellow / kernel URLs used to seed this tree. |

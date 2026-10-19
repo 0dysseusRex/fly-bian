@@ -1,10 +1,16 @@
 #!/bin/bash
-# First boot (after rootfs grow): 2 GiB /swapfile. Do not bake this into the
-# image file — that would add 2 GiB to every download.
+# First boot (after rootfs grow): create /swapfile. Do not bake it into the
+# image — that would bloat every download.
+# Size: FLY_SWAP_MIB from /etc/default/fly-swapfile (default 2048 for Lite).
 set -euo pipefail
 
 SWAPFILE=/swapfile
-SIZE_BYTES=$((2 * 1024 * 1024 * 1024))
+FLY_SWAP_MIB=2048
+if [[ -f /etc/default/fly-swapfile ]]; then
+  # shellcheck source=/dev/null
+  . /etc/default/fly-swapfile
+fi
+SIZE_BYTES=$((FLY_SWAP_MIB * 1024 * 1024))
 NEED=$((SIZE_BYTES + 256 * 1024 * 1024))
 
 avail=$(df -B1 --output=avail / | tail -n 1)
@@ -31,4 +37,4 @@ chmod 600 "$SWAPFILE"
 mkswap "$SWAPFILE"
 grep -q '^/swapfile ' /etc/fstab || echo '/swapfile none swap sw 0 0' >>/etc/fstab
 swapon "$SWAPFILE"
-echo "fly-swapfile: $SWAPFILE is $SIZE_BYTES bytes and on"
+echo "fly-swapfile: $SWAPFILE is ${FLY_SWAP_MIB} MiB ($SIZE_BYTES bytes) and on"

@@ -1,0 +1,38 @@
+/dts-v1/;
+/plugin/;
+
+/*
+ * Fly Pi V3 ZH1.5-7P ADXL345 / RRF header.
+ *   SPI1  spi@5011000  CLK PH6, MOSI PH7, MISO PH8
+ *   CS2   PI7         /dev/spidev1.2
+ * FlyOS board=fly-pi-v3 only flips spidev@2 to okay. The controller
+ * itself is disabled in fly-h618.dtb. PI7 is not a hardware SPI
+ * chip-select in the 6.12 pin table (that function is rejected), so
+ * CS2 is a GPIO select. CLK/MOSI/MISO stay PH6/PH7/PH8.
+ * Do not load with fly-pi-v3-tft or fly-pi-v3-tft-c. The panel owns
+ * this SPI controller (CS0/CS1).
+ */
+/ {
+	compatible = "mellow,fly-os", "allwinner,sun50i-h618", "allwinner,sun50i-h616";
+
+	fragment@0 {
+		target-path = "/aliases";
+		__overlay__ {
+			spi1 = "/soc/spi@5011000";
+		};
+	};
+
+	fragment@1 {
+		target-path = "/soc/spi@5011000";
+		__overlay__ {
+			pinctrl-names = "default";
+			pinctrl-0 = <&spi1_pins &spi1_cs0_pin &spi1_cs1_pin>;
+			cs-gpios = <0>, <0>, <&pio 8 7 1>;
+			status = "okay";
+
+			spidev@2 {
+				status = "okay";
+			};
+		};
+	};
+};

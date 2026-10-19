@@ -66,7 +66,7 @@ After flashing, **eject, unplug, and replug** the card so the small FAT volume a
 
 On that volume you will find:
 
-- `fly-start.txt` — Wi-Fi, locale/timezone, root, sudo user; Simple-AF also has install/boot-display/AUTO_CAMERAS keys; KIAUH is Wi-Fi/accounts only
+- `fly-start.txt` — Wi-Fi, locale/timezone, root, sudo user, `SERIAL_CONSOLE`; the Simple-AF image also has install/boot-display/AUTO_CAMERAS keys; KIAUH is Wi-Fi/accounts/`SERIAL_CONSOLE` only
 - `README.txt` — the same three setup paths, written for a first-time user
 
 Then put the card in the Lite, fit the IPEX antenna, and apply 5 V. First boot **expands the Debian partition** to fill the card and creates a 2 GB `/swapfile`. That can take several minutes.
@@ -79,7 +79,7 @@ Armbian’s wizard only runs on serial or HDMI, so Wi-Fi in the file by itself c
 2. Set `WIFI_SSID`, `WIFI_PSK`, `WIFI_COUNTRY`. Leave `USE_STATIC=0` unless you need a static IPv4.
 3. Set `LOCALE` / `TIMEZONE` (examples in the file).
 4. Set `ROOT_PASSWORD`, `USER_NAME` (lowercase login), `USER_PASSWORD`.
-5. Optionally set `INSTALL_CMD`, `AUTO_CAMERAS`, `ENABLE_GRUMPYSCREEN`, `INSTALL_BOOT_DISPLAY` for later `fly-start` (Simple-AF only).
+5. On the Simple-AF image only, optionally set `INSTALL_CMD`, `AUTO_CAMERAS`, `ENABLE_GRUMPYSCREEN`, `INSTALL_BOOT_DISPLAY` for later `fly-start`. The base file does not have those keys.
 6. Eject the volume. Card back in the Lite. Power on.
 7. Wait for resize + radio (often several minutes), then `ssh USER_NAME@THE.PRINTER.IP`.
 8. Run `fly-help`, then `fly-start` (Simple-AF) or `fly-kiauh` (KIAUH).
@@ -88,7 +88,7 @@ Leave root or user as `Your…` and the on-screen wizard still runs. 2.4 GHz onl
 
 ### 2. Serial
 
-Type-C to the PC, **115200 8N1**, no flow control. Data-capable cable. On Windows this is often **COM4**. Do **not** pulse DTR/RTS (it does not reset this board; it can drop you into U-Boot). Finish the wizard on the serial console.
+Type-C to the PC, **115200 8N1**, no flow control. Data-capable cable. On Windows this is often **COM4**. Do **not** pulse DTR/RTS (it does not reset this board; it can drop you into U-Boot). Finish the wizard on the serial console. `SERIAL_CONSOLE=Yes` is the default. Set `SERIAL_CONSOLE=No` only after SSH or HDMI works; it is ignored while root and user are still placeholders.
 
 ### 3. Keyboard and screen
 
@@ -165,6 +165,8 @@ Or set `INSTALL_BOOT_DISPLAY=Yes` in `fly-start.txt` (full install) / fly-start 
 | Fly Lite 2.1 | Now | This README. H3, MicroSD only. |
 | Fly Pi V3 | Next | H618, Ethernet, optional FLY M2WE eMMC. New board file, not a Lite respin. |
 | Fly Pi V2, MiniPad, Gemini | Later | Different SoCs. Same first-boot idea, different images. |
+
+Community Armbian / alternate host firmware for other Mellow boards (Gemini H5, upstream Fly-C5, etc.) is catalogued in [`docs/community-alternate-firmware.md`](docs/community-alternate-firmware.md). Those projects are **not** Fly-bian images.
 
 ## This repo
 

@@ -1,0 +1,59 @@
+/dts-v1/;
+/plugin/;
+
+/*
+ * Fly TFT V2 capacitive touch on Fly Pi V3 (H618): Goodix GT911 on
+ * i2c@5002000 @ 0x14. Load after fly-pi-v3-tft. Disables SPI ADS7846 so
+ * PH4/PH10 are free for Cap DIP wiring (OEM touch-c@14 pinout).
+ */
+
+/ {
+	compatible = "mellow,fly-os", "allwinner,sun50i-h618", "allwinner,sun50i-h616";
+
+	fragment@0 {
+		target-path = "/soc/spi@5011000/touch@1";
+		__overlay__ {
+			status = "disabled";
+		};
+	};
+
+	fragment@1 {
+		target-path = "/soc/spi@5011000/touch-r@1";
+		__overlay__ {
+			status = "disabled";
+		};
+	};
+
+	fragment@2 {
+		target-path = "/soc/i2c@5002000";
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			/* Prefer enabling the OEM node if present. */
+			touch-c@14 {
+				status = "disabled";
+			};
+
+			/*
+			 * IRQ and reset are GPIO requests only. A pinctrl claim on
+			 * the same pins makes the Goodix probe fail with -EBUSY.
+			 * Flags match the OEM node: GPIO_ACTIVE_LOW.
+			 */
+			gt911@14 {
+				compatible = "goodix,gt911";
+				reg = <0x14>;
+				interrupt-parent = <&pio>;
+				interrupts = <7 10 2>;
+				irq-gpios = <&pio 7 10 1>;
+				reset-gpios = <&pio 7 4 1>;
+				touchscreen-size-x = <320>;
+				touchscreen-size-y = <480>;
+				touchscreen-inverted-x;
+				touchscreen-swapped-x-y;
+				status = "okay";
+			};
+		};
+	};
+};

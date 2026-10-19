@@ -9,6 +9,12 @@ first-boot/fly-net.local.txt
 *.img.zip
 flyos-artifacts/live/pull-*
 flyos-artifacts/live/LATEST
+*.squashfs
+flyos-artifacts/live/m2ws-usb-pull/part*
+flyos-artifacts/live/m2ws-usb-pull/boot-extract/raw/
+flyos-artifacts/live/m2ws-usb-pull/rootfs-extract/
+flyos-artifacts/live/m2ws-usb-pull/mnt-boot/
+flyos-artifacts/live/m2ws-usb-pull/scan/
 
 # Armbian build output if compiled in-tree
 armbian/build/

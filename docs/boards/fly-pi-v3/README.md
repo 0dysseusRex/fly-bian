@@ -2,61 +2,165 @@
 
 ![Fly Pi V3 (Fly-PI3)](fly-pi-v3.jpg)
 
-**Status:** Next target (after Fly Lite 2.1 / Fly-bian 1.0)  
-**Vendor docs:** *(add Mellow Fly Pi V3 link when confirmed)*  
-**Armbian boards:** *(planned)* `fly-pi-v3`, `fly-pi-v3-simpleaf`, `fly-pi-v3-kiauh`  
-**DTB:** TBD
+**Status:** Base **0.1** bring-up bake (hardware test image)  
+**Vendor docs:** [FLY-Pi V3 Host Board](https://mellow.klipper.cn/en/docs/ProductDoc/SBC/fly-pi-v3/) · [FlyOS-FAST intro](https://mellow.klipper.cn/en/docs/ProductDoc/SBC/fly-pi-v3/host/)  
+**Armbian boards:** `fly-pi-v3` (Base); Simple-AF / KIAUH later  
+**DTB:** `fly-h618.dtb` (captured from FlyOS-FAST H618 v1.4.0 on M2WS)  
+**OEM OS:** FlyOS-FAST **H618** image, `board=fly-pi-v3`  
+**Bake:** `scripts/launch-pi-v3-base.sh` → `Fly-bian-0.1_Fly-Pi-V3_Base.img.xz`
 
-Unofficial Debian/Armbian for this PCB when bring-up lands — **not FlyOS**. Do **not** flash Fly-Lite-2.1 images onto a Pi V3.
+Unofficial Debian/Armbian for this PCB when bring-up lands — **not FlyOS**. Do **not** flash Fly-Lite-2.1 (H3) images onto a Pi V3.
 
 ---
 
 ## Hardware overview
 
-Fill in from the physical board and Mellow documentation during bring-up. Do not invent pinmux.
+From Mellow product docs (confirm pinmux on a live board / vendor DTB before overlays).
 
 | Item | Detail |
 | --- | --- |
-| SoC | TBD |
-| RAM | TBD |
-| Storage | TBD (eMMC? MicroSD?) |
-| Power | TBD — note MCU vs dedicated 5 V |
-| Wi-Fi / Ethernet | TBD (chip, antenna, driver) |
-| USB | TBD |
-| Debug / UART | TBD (connector, baud, CH340 vs other) |
-| Display | TBD (HDMI, DSI, FPC-TFT, etc.) |
-| Other I/O | TBD (CAN, SPI, I2C headers, ADCs) |
+| Form factor | Raspberry Pi–compatible standard-size host |
+| SoC | Allwinner **H618**, quad **Cortex-A53** 64-bit |
+| GPU | Arm **Mali-G31 MP2** |
+| RAM | **1 GB DDR4** |
+| Storage (as shipped) | **None** — must add onboard **MicroSD** and/or an official FLY **M2** module (see below) |
+| MicroSD (onboard reader) | TF slot, up to **128 GB** — optional bulk store for **gcode** + **timelapse** (see storage policy) |
+| M2 connector | Onboard **FLY private** socket — **official FLY modules only** (standard M.2 will damage the board) |
+| Onboard Wi-Fi | **No** — Wi-Fi comes from an M2 module (or USB Wi-Fi) |
+| Ethernet | **100 Mb** Eth x1 |
+| USB | **USB 2.0 x4** |
+| Display | **Micro HDMI** x1; **FPC-HDMI** x1 (25P reverse 0.5 mm); **FPC-TFT** x1 (**16P** reverse 0.5 mm — V3 requires 16P) |
+| UART | **XH2.54-4P** x1 (external serial screens / UART) |
+| SPI / RRF | **ZH1.5-7P** multiplexed (ADXL345 / RRF) — **shares SPI with FPC-TFT; do not use both** |
+| RS232 | **XH2.54-4P** x2 (toolboards; common ground required) |
+| Power | **DC 12–24 V** (`XH2.54-2P`) **or** Type-C **5 V / ≥2 A** (choose one) |
+| Fan | **ZH1.5-2P** always-on 5 V (**no PWM**) |
+| Power-loss HW | Supports print recovery + safe shutdown (OS config; **off by default**) |
+| Lab silkscreen | **Fly-PI3**; FAN; RESET; FLY-M2WE + ANT; supercap module on some units |
+
+### FLY M2 modules (three supported configs)
+
+All use the same private FLY M2 socket. Fly-bian images must boot and run with **any** of these (and with **no** M2 module + Ethernet-only).
+
+| Module | Radio | On-module storage | Notes |
+| --- | --- | --- | --- |
+| **M2 2.4G Wi-Fi** (Wi-Fi-only) | **2.4 GHz only** | None | Cheap Wi-Fi add-on; OS/rootfs still on onboard MicroSD (or other boot media) |
+| **M2WE** | **2.4 + 5 GHz** | **16 GB eMMC** | Can hold/boot the system image; IPEX1 antenna. OEM often ships FlyOS on the eMMC |
+| **M2WS** | **2.4 + 5 GHz** | **16 GB soldered TF** (module-local card, not the board slot) | Same H618 image family; USB gadget exposes boot+FlyOS-Conf+rootfs_A. DTB radio name **`rtl8821cs`** (see artifacts) |
+
+**Fly-bian requirement:** one image family must work for:
+
+1. Onboard MicroSD only (no M2)  
+2. Onboard MicroSD + Wi-Fi-only M2  
+3. M2WE eMMC boot (± onboard MicroSD present)  
+4. M2WS module TF boot (± onboard MicroSD present)  
+
+Do **not** assume eMMC/`mmcblk` numbering is identical across M2WE vs M2WS vs onboard SD — discover and document device nodes during bring-up.
+
+**One boot image only.** Do not flash Fly-bian onto both the onboard MicroSD and the M2 eMMC (or the M2WS module TF). U-Boot can load the kernel from one medium while the root UUID matches the other, so the board comes up on a mix of the two installs. A second card may sit in the slot for gcode and timelapse. It must not also contain this image. If the module already has FlyOS or another Fly-bian install, blank that medium or boot from it alone.
+
+**Wi-Fi band is a property of the module, not of the image.** The 2.4 GHz-only M2 has no 5 GHz radio. M2WE and M2WS do both. First boot must associate on 2.4 GHz for every module, and on 5 GHz when the module actually has that band. The lab AIC8800D80 path (5 GHz) does not cover the 2.4-only module. That module is not on the bench yet: `fly-apply` prints any other SDIO id and leaves the radio down, and the 2.4-only boot is tested when the module arrives.
+
+### Optional storage policy (gcode + timelapse)
+
+**Default image behavior:** keep OS, gcode, and timelapse on the boot medium the user chose (onboard MicroSD, M2WE eMMC, or M2WS module TF). Many users will prefer everything on the M2 module — that must remain a first-class, zero-config path.
+
+**Optional (documented, not forced):** when an onboard MicroSD is also present (common when booting from M2WE/M2WS), users may redirect **gcode** and **timelapse / camera video** to the onboard SD card reader so a 16 GB module is not filled with print data. Provide clear how-to instructions (Moonraker/Fluidd/Mainsail/`printer_data` paths or a bind-mount helper) so this is opt-in only.
+
+Exact mount path and helper (`fly-…` script or first-boot note) TBD in bring-up; capture this in the V3 getting-started wiki when images exist.
 
 ### Connectors (practical)
 
-- Document each user-facing connector, cable orientation traps, and “fit antenna first” style gotchas here.
+- **No factory storage** — need onboard MicroSD and/or an official M2 module before first boot.
+- **M2 socket** — private FLY protocol only; never insert a normal NVMe/M.2 card.
+- **FPC-TFT** — 16P reverse cable; conflicts with **SPI/RRF** accelerometer header.
+- **Ethernet** is the easy first-network path (Wi-Fi is optional hardware).
+- Power from **either** 12–24 V terminal **or** Type-C 5 V — not both paths as a mixed design assumption until verified.
 
 ### Power and reset behavior
 
-- Soft reboot behavior TBD  
-- Whether USB-UART DTR/RTS resets the SoC TBD  
+- Soft reboot / DTR-RTS behavior: **TBD** on Fly-bian (measure on FlyOS first).
+- Power-loss features need OS enablement; factory default disabled.
 
 ---
 
-## Boot / firmware map (planned)
+## OEM FlyOS-FAST (software map)
+
+Pi V3 uses the **H618** FlyOS-FAST image family (with FLY-C5 / C8P). **Do not** flash H3 (Lite) or H5 (older Pi/Gemini) images.
+
+| Area | OEM behavior |
+| --- | --- |
+| OS | FlyOS-FAST — SquashFS **A/B** slots, OTA slot switch |
+| Config partition | **FlyOS-Conf** on TF: `config.txt` for board / network / screen / print mode without entering Linux |
+| Persistence | Separate data partition for `/etc`, `/data`, `/root`, print-mode data |
+| Packages | **No apt/dpkg** — update via OTA / USB / full reflash only |
+| Account | **`root`** interactive management account |
+| Print mode | `printer=klipper` **or** `rrf` (not both) |
+| Web UI | `klipper_webui=fluidd` (default) or `mainsail` |
+| Local UI | KlipperScreen / FLY Screen optional; off by default; pick one |
+| Displays | HDMI, FLY-TFT, USB screens, serial (**Moon2UART**) |
+| Camera | Crowsnest opt-in; v1.4.0 also **GoCam** (mutually exclusive with Crowsnest) |
+| Network | Wired + Wi-Fi + SSH; from v1.3.9 Eth auto-detects PC-direct vs router |
+| Board key | **`board=fly-pi-v3`** (drives UART/SPI/screen) |
+| Host role | Standalone host — **external** printer MCU flashed separately (unlike C5/C8P onboard MCU maintain) |
+| Bundled stack | Klipper, Moonraker, Fluidd/Mainsail, numpy / input-shaping helpers, Katapult + MCU FW packs |
+| Docs baseline | Common features verified on **v1.3.10**; **v1.4.0** current release line |
+
+### `config.txt` controls (confirmed from host docs)
+
+| Key / area | Purpose |
+| --- | --- |
+| `board=fly-pi-v3` | Device model / pinmux profile |
+| `printer=` | `klipper` or `rrf` |
+| `klipper_webui=` | `fluidd` or `mainsail` |
+| Screen / KS / FLY Screen | Enable local UI + type/orientation (platform-specific values) |
+| Moon2UART | Serial screen device + baud |
+| Crowsnest / GoCam | Camera stack (defaults off; exclusive) |
+| Network / SSH / Wi-Fi | Pre-configure without login |
+| Power-loss options | Enable recovery / safe shutdown when desired |
+
+Captured from M2WS USB gadget (H618 v1.4.0): see [`flyos-artifacts/live/m2ws-usb-pull/`](../../../flyos-artifacts/live/m2ws-usb-pull/REPORT.md). Still set `board=fly-pi-v3` when the module is seated on a Pi V3 (stick was left at `board=none`).
+
+### FlyOS pull highlights (M2WS / H618 v1.4.0)
+
+| Item | Value |
+| --- | --- |
+| Image | FlyOS-FAST H618 **v1.4.0-g8b2869b1d9** |
+| DTB | `fly-h618.dtb`; overlays prefix `sun50i-h616` |
+| Kernel | **6.6.75** |
+| Console | **`ttyS0`, 115200** |
+| MMC0 / MMC1 / MMC2 | MicroSD / SDIO Wi-Fi (`wifi@1`) / eMMC |
+| Wi-Fi (DTB) | **`rtl8821cs`** — modules `rtw88_8821cs` + `rtw88_sdio`; firmware `rtw88/rtw8821c_fw.bin` |
+| Also shipped | **AIC8800** firmware + `.ko` (other M2/USB radios) |
+| `board=fly-pi-v3` | Enables **spidev1.2** (`spi@5011000/spidev@2`) |
+| TFT | `pitft@0` / `mellow,fly-tft-v2` on same SPI1; mutex with spidev1.0/1.1 |
+| Rootfs | SquashFS A/B (`p3` / `p5`); USB gadget only exposes A |
+
+---
+
+## Boot / firmware map (planned for Fly-bian)
 
 | Piece | Role |
 | --- | --- |
-| U-Boot / DTB | New board files — do not reuse Lite overlays blindly |
-| User overlays | Per-V3 pinmux only |
-| CPU / Wi-Fi policy | Revisit SMP rules if the radio differs from 8189fs |
+| U-Boot / DTB | Start from captured **`fly-h618.dtb`** + `boot.scr` policy — do not reuse Lite H3 overlays |
+| User overlays | Per-V3 pinmux only (TFT vs SPI/RRF exclusion); OEM overlay prefix `sun50i-h616` |
+| Network | Prefer Ethernet first; M2 SDIO Wi-Fi (`rtl8821cs` / possible AIC8800) second |
+| Storage | Support SD-only, SD+Wi-Fi-M2, M2WE eMMC, M2WS TF; **optional** gcode/timelapse → onboard SD (M2-only OK) |
+| CPU / affinity | OEM isolates CPU3 (`isolcpus=3`); revisit Lite 8189fs/CPU0 rules for `rtw88` / `aic8800` |
 
 ---
 
 ## Displays
 
-TBD — separate SPI TFT path from Lite if pinmux differs.
+- HDMI: Micro HDMI and/or FPC-HDMI (25P).
+- TFT: FPC 16P; Cap/resistive details TBD from FlyOS + live probe.
+- Document SPI mutex with ZH1.5-7P ADXL/RRF in every TFT how-to.
 
 ---
 
 ## Memory
 
-TBD — if RAM is still tight, link an `oom.md` sibling like Lite 2.1.
+**1 GB DDR4** — healthier than Lite 512 MB, still avoid stacking every Moonraker companion + KlipperScreen + cams blindly. Add an `oom.md` only if lab shows the same failure modes.
 
 ---
 
@@ -64,21 +168,43 @@ TBD — if RAM is still tight, link an `oom.md` sibling like Lite 2.1.
 
 | Setting | Value |
 | --- | --- |
-| Port | TBD |
-| Speed | TBD (often 115200 8N1) |
-| Flow control | TBD |
-| DTR/RTS | TBD |
+| OEM Type-C | Mellow [Basic Tutorial](https://mellow.klipper.cn/en/docs/DebugDoc/BasicTutorial/): Type-C data cable → Windows **CH340** COM @ **115200** |
+| Lab FlyOS (working) | Type-C **does** enumerate **CH340** `VID_1A86&PID_7523` → COM4 @ **115200**. Console shows boot + bilingual “Press ENTER twice to login as root”. Hold DTR/RTS idle; do not pulse |
+| Lab Fly-bian 0.1 | Same cable/board: **no** CH340/COM — gap to close (not a docs myth) |
+| UART header | Also **`ttyS0` @ 115200** on XH2.54-4P (pinout still TBD) |
+| Moon2UART | OEM default `/dev/ttyS1` @ 115200 (`config.txt`) |
+| HDMI | Micro HDMI + FPC-HDMI; `fly-pi-v3-hdmi` + `console=both` |
+| USB-A | Four hosts via `fly-pi-v3-usb` |
+| TFT SPI | FPC-TFT → SPI1; `fly-pi-v3-tft` + Cap `fly-pi-v3-tft-c` (mutex with ADXL/RRF) |
+
+### Lab learnings (FlyOS-FAST, `board=fly-pi-v3`, Wi‑Fi filled) — apply to Fly-bian
+
+| Observation | Apply to future builds |
+| --- | --- |
+| Type-C CH340 works on FlyOS, not on Fly-bian 0.1 | **Priority:** on a live FlyOS SSH session capture `lsusb -t`, `dmesg \| grep -i tty`, which tty the getty uses, and how CH340 is wired (hub vs musb). Mirror that in DTB/overlays — do not assume Lite Type-C = same as V3 |
+| First boot can print A/B layout on **`mmcblk1`** (M2WE eMMC) then go quiet for a long time | Expect long first-boot silence; keep serial open; don’t declare hang until minutes pass. Fly-bian resize/swap messaging should also hit serial |
+| Login waiter: “Press ENTER twice…” (not a classic `login:` prompt) | Serial automation must match FlyOS **or** use Armbian’s normal getty; don’t require double-Enter unless we ship that UX |
+| Wi‑Fi from FAT config → mDNS-ish name **`flyos-<suffix>`**, DHCP (lab: `192.168.1.98`) | Keep `FLY-SETUP` / `fly-start.txt` Wi‑Fi path; announce hostname on LAN (mDNS/`avahi`) so “new device” discovery works like OEM |
+| SSH up after Wi‑Fi (`root` / OEM `mellow`) | First-boot must create usable SSH creds (wizard or `fly-start.txt`) before claiming headless success |
+| Console is real UART data @ 115200 over the CH340 COM port | Keep `console=serial` or `both`; never rely on USB-C gadget CDC alone for V3 |
+| `capture_boot` flush can drop early boot lines | For bring-up logs prefer continuous `read` / ring replay; arm before power apply |
 
 ---
 
 ## Bring-up checklist
 
-1. Confirm SoC, RAM, storage, UART on a live board  
-2. Capture vendor DTB / FlyOS reference if available  
-3. Add Armbian `BOARD=fly-pi-v3` (+ flavor boards)  
-4. Prove SD/eMMC, network, then display/touch  
-5. Port helpers (`fly-help`, affinity pattern) only where they still apply  
-6. First public image: Base-only until Wi-Fi + Klipper path is verified  
+1. Flash official **H618** FlyOS-FAST; set `board=fly-pi-v3` in FlyOS-Conf  
+2. Capture `config.txt`, DTB, serial console, boot logs — **partially done** via M2WS USB (`flyos-artifacts/live/m2ws-usb-pull/`)  
+3. **Diagnose Type-C → CH340 @ 115200** (OEM docs vs lab: no COM on 0.1) — required before claiming serial-first-boot parity with Lite  
+3b. **U-Boot SPL MMC2 / eMMC** — 0.2 failed `MMC Device 1 not found`; 0.3+ enables `SLOT_EXTRA=2` + `&mmc2` (board_fly-pi-v3 patch)  
+3c. **LEDs** — use `fly-h618.dtb` gpio-leds + `ledtrig-netdev` (no LED overlay)  
+4. Prove boots: onboard MicroSD; M2WE eMMC; M2WS module TF; Wi-Fi-only M2 + SD  
+5. Map `mmcblk` / by-id nodes for onboard SD vs module storage  
+6. Ethernet + SSH; then Wi-Fi on each M2 radio type (2.4-only and dual-band)  
+7. Document **optional** gcode + timelapse on onboard SD (Moonraker paths / bind mount helper; leave M2-only as default)  
+8. HDMI, then TFT (with SPI conflict noted)  
+9. Add Armbian `BOARD=fly-pi-v3` (+ Simple-AF / KIAUH flavors)  
+10. First public Fly-bian image: **Base-only** until network + UART + all storage configs verified  
 
 ---
 
@@ -88,4 +214,7 @@ TBD — if RAM is still tight, link an `oom.md` sibling like Lite 2.1.
 | --- | --- |
 | [Board index](../README.md) | All boards |
 | [Main project README](../../../README.md) | Project overview |
-| [`../../fly-lite-armbian-notes.md`](../../fly-lite-armbian-notes.md) | Lite lessons (Wi-Fi/CPU patterns may or may not transfer) |
+| [Community alternate firmware](../../community-alternate-firmware.md) | Peer Armbian work (esp. upstream `mellowflyc5`) |
+| [`../../fly-lite-armbian-notes.md`](../../fly-lite-armbian-notes.md) | Lite lessons (patterns may not transfer) |
+| [Mellow FLY-Pi V3](https://mellow.klipper.cn/en/docs/ProductDoc/SBC/fly-pi-v3/) | OEM hardware |
+| [FlyOS-FAST](https://mellow.klipper.cn/en/docs/ProductDoc/SBC/fly-pi-v3/host/) | OEM software model |

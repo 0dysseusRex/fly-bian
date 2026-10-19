@@ -48,7 +48,7 @@ Unofficial Debian/Armbian for this PCB — **not FlyOS**. Flash only Fly-bian im
 | --- | --- |
 | U-Boot + Linux | Card-detect must treat SD as always present (`broken-cd` / `mmc-broken-cd`) — Orange Pi Lite’s **PF6 CD** is wrong on this PCB |
 | `fdtfile` | `sun8i-h3-fly-lite.dtb` |
-| User overlays (typical) | `mmc-broken-cd` `fly-lite-io` `fly-lite-tft` `fly-lite-tft-c` `fly-lite-hdmi` |
+| User overlays (typical) | `mmc-broken-cd` `fly-lite-io` `fly-lite-hdmi` `fly-lite-board` |
 | Kernel cmdline extras | `maxcpus=1` then online isolated CPUs; `isolcpus=1-3` `irqaffinity=0` `cma=16M` … |
 | Swap | **2 GiB `/swapfile`** created on first boot after rootfs grow |
 
@@ -99,8 +99,8 @@ Present in the Fly base DTB (do **not** load a duplicate `fly-lite-leds` overlay
 | Driver | `panel-mipi-dbi` + `/lib/firmware/ST7796S.bin` |
 | SPI pins | DC **PA20**, reset **PA21**, CS0 **PC3**, CS1 **PA19** |
 | Framebuffer | `/dev/fb0` when the module is loaded (`modules-load.d/fly-tft.conf`) |
-| Cap touch (default bake) | GT911 on **i2c2** @ **0x14**, IRQ **PA3**, reset **PA2** (`fly-lite-tft-c`) |
-| Resi touch | ADS7846 on SPI CS1 — omit `fly-lite-tft-c` from `user_overlays` |
+| Cap touch | Not probed unless the FPC-TFT is fitted. Add `fly-lite-tft fly-lite-tft-c` to `user_overlays` (GT911 on **i2c2** @ **0x14**, IRQ **PA3**, reset **PA2**) |
+| Resi touch | Add `fly-lite-tft` only (ADS7846 on SPI CS1). Do not also add `fly-lite-tft-c` |
 | Helper | `fly-tft-check` |
 | UI rotate | `fly-grumpy-rotate` (GrumpyScreen on `/dev/fb0`) |
 
@@ -142,6 +142,37 @@ Autoboot countdown is short — easy to miss after a USB re-enum.
 Common helpers: `fly-help`, `fly-crowsnest-add-cams`, `fly-grumpy-rotate`, `fly-tft-check`, `fly-boot-display`, `fly-moonraker-polkit`.
 
 ---
+
+## Benchmark (Fly-bian 1.05 base)
+
+[sbc-bench](https://github.com/ThomasKaiser/sbc-bench) 0.9.72, unattended, on an idle 1.05 base card. Kernel `6.18.57-current-sunxi`, 484 MB RAM, 2 GB swap on the SD card. `vdd-cpux` is held at 1.3 V. sbc-bench switched the cpufreq governor to `performance` for the run. Measured clocks were 1002 MHz at the 1008 MHz step, 811 MHz at 816, and 642 MHz at 648. No throttling. Die temperature at the start of the run was 53–55 °C. sbc-bench reported swapping during the run, and that swap sits on the SD card.
+
+sbc-bench’s comparison line, with scores rounded to the nearest 10. It named this board “Fly h3 Printer”. Cpuminer was not run.
+
+| Clock | Kernel | 7-Zip multi | 7-Zip single | AES-256 16 KB | memcpy | memset |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| 1008 MHz | 6.18 | 630 | 662 | 19220 | 700 MB/s | 2460 MB/s |
+
+7-Zip is p7zip 16.02, in MIPS. Single-threaded on CPU 0 scored **662**. The multi-thread runs used `-mmt=4` with CPUs 0–3 online:
+
+| Run | Compress | Decompress | Total |
+| --- | ---: | ---: | ---: |
+| 1 | 479 | 788 | 633 |
+| 2 | 479 | 788 | 633 |
+| 3 | 478 | 788 | 633 |
+
+The multi-thread total is lower than the single-thread total because `isolcpus=1-3` keeps those four threads on one core. That section took 21 minutes. The single-thread pass took 4 minutes.
+
+tinymembench on CPU 0: memcpy **697.1 MB/s**, memset **2455.8 MB/s**.
+
+OpenSSL `aes-*-cbc`, two runs, kB/s. The 16384-byte AES-256 column is what sbc-bench averages into **19220**.
+
+| Cipher | Run | 16 B | 64 B | 256 B | 1024 B | 8192 B | 16384 B |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| aes-128-cbc | 1 | 8055 | 21863 | 25041 | 25685 | 25930 | 25892 |
+| aes-128-cbc | 2 | 16536 | 21985 | 24849 | 25706 | 25933 | 25925 |
+| aes-256-cbc | 1 | 13513 | 17483 | 18447 | 19133 | 19472 | 19459 |
+| aes-256-cbc | 2 | 13518 | 17488 | 18677 | 18910 | 19472 | 18989 |
 
 ## Related docs
 

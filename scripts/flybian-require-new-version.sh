@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Guard Fly-bian version reuse.
 # usage:
-#   flybian-require-new-version.sh           # fail if any flavor already staged for this ver
+#   flybian-require-new-version.sh           # fail if any flavor already staged for this ve
 #   flybian-require-new-version.sh <flavor>  # fail if that flavor's image already staged
 # Override: FLY_FORCE=1
 #
@@ -10,7 +10,7 @@
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
-releases=${FLY_RELEASES:-/mnt/c/Users/udrdr/fly-lite-armbian-image/Releases}
+releases=${FLY_RELEASES:-/mnt/f/Cursor/projects/fly-lite-armbian-image/Releases}
 device=${FLY_DEVICE:-Fly-Lite-2.1}
 ver=$(tr -d '[:space:]' <"$root/FLYBIAN_VERSION")
 want=${1:-}

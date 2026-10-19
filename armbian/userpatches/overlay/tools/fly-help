@@ -15,6 +15,14 @@ First boot
 2. Boot the board; wait for resize + Wi-Fi (several minutes).
 3. SSH in:  ssh USER@BOARD_IP
 4. Run:     fly-help      (this text)
+
+SERIAL_CONSOLE in fly-start.txt (every image)
+---------------------------------------------
+  Yes  Type-C login stays on, 115200 8N1. Default.
+  No   After root and user exist, serial login is turned off. The next
+       boot also drops the kernel console from that UART. Set No only
+       when SSH or HDMI works. Ignored while the first-run wizard is
+       still waiting for a user.
 EOF
 
 if [[ $flavor == kiauh ]]; then
@@ -40,8 +48,9 @@ fly-klipperscreen-prep (if present) before retrying. Prefer the
 OctoEverywhere companion app over installing OctoEverywhere on this board.
 
 512 MB OOM tips: free -h; dmesg | grep -i oom; confirm /swapfile via
-swapon --show; install one package at a time; stop crowsnest during heavy
-apt. Full guide: docs/boards/fly-lite-2.1/oom.md (Fly-bian repo).
+swapon --show. apt-get install of several packages is already one package
+at a time (FLY_APT_BATCH=1 turns that off). Stop crowsnest during heavy apt.
+Full guide: docs/boards/fly-lite-2.1/oom.md (Fly-bian repo).
 
 Community extensions — avoid on 512 MB: OctoEverywhere, OctoApp, Obico,
 OctoPrint, Spoolman (Docker), DroidKlipp. Caution: Mobileraker, Telegram
@@ -87,8 +96,8 @@ Custom commands (this image)
 
 fly-start.txt (KIAUH)
 ---------------------
-  Wi-Fi / locale / root / user only. No INSTALL_CMD, AUTO_CAMERAS,
-  INSTALL_BOOT_DISPLAY, or GrumpyScreen keys on this image.
+  Wi-Fi / locale / root / user / SERIAL_CONSOLE. No INSTALL_CMD,
+  AUTO_CAMERAS, INSTALL_BOOT_DISPLAY, or GrumpyScreen keys on this image.
 
 Image identity
 --------------

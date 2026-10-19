@@ -1,5 +1,5 @@
 [Unit]
-Description=Fly Lite 2 GiB /swapfile (after first-boot resize)
+Description=Fly /swapfile after first-boot resize (size from /etc/default/fly-swapfile)
 Documentation=file:///usr/share/fly-debian/first-boot/README.txt
 After=local-fs.target armbian-resize-filesystem.service
 Before=fly-online-isolated-cpus.service fly-apply-fly-net.service

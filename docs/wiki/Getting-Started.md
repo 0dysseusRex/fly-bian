@@ -112,8 +112,9 @@ Notes:
 - `USER_NAME` must be lowercase (this is your SSH login).
 - Leave `USE_STATIC=0` unless you know you need a fixed IP.
 - Passwords in this file are **plaintext** - do not share the card after editing.
-- On **Simple-AF** you can also set `INSTALL_CMD`, `AUTO_CAMERAS`, `ENABLE_GRUMPYSCREEN`, `INSTALL_BOOT_DISPLAY` (see comments in the file).
-- On **KIAUH**, Wi-Fi/accounts are enough; finish Klipper with `fly-kiauh` after login.
+- `SERIAL_CONSOLE=Yes` keeps the Type-C login. Set `No` only after SSH or HDMI works; it is ignored while root and user are still `Your…`.
+- On **Simple-AF** the file also has `INSTALL_CMD`, `AUTO_CAMERAS`, `ENABLE_GRUMPYSCREEN`, `INSTALL_BOOT_DISPLAY` (see comments in that image's file). The base image does not.
+- On **KIAUH**, Wi-Fi/accounts/`SERIAL_CONSOLE` are enough; finish Klipper with `fly-kiauh` after login.
 
 Save the file. **Eject `FLY-SETUP` safely.**
 

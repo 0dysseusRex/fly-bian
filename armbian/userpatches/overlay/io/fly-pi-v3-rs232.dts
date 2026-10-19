@@ -1,0 +1,27 @@
+/dts-v1/;
+/plugin/;
+
+/*
+ * Fly Pi V3 RS232 headers (two XH2.54-4P toolboard ports).
+ *   uart3 ttyS3  serial@5000c00  PI9/PI10
+ *   uart4 ttyS4  serial@5001000  PI13/PI14
+ * RTS/CTS stays off: uart4's extra pins include PI16, the power LED.
+ * uart0 (ttyS0, Type-C console) is not touched.
+ */
+/ {
+	compatible = "mellow,fly-os", "allwinner,sun50i-h618", "allwinner,sun50i-h616";
+
+	fragment@0 {
+		target-path = "/soc/serial@5000c00";
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	fragment@1 {
+		target-path = "/soc/serial@5001000";
+		__overlay__ {
+			status = "okay";
+		};
+	};
+};

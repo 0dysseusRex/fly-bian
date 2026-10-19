@@ -24,6 +24,7 @@ test -f "$root/armbian/userpatches/overlay/tools/fly-help"
 test -f "$root/armbian/userpatches/overlay/tools/fly-start"
 test -f "$root/armbian/userpatches/overlay/tools/fly-kiauh"
 test -f "$root/armbian/userpatches/overlay/kiauh/fly-start.txt"
+test -f "$root/armbian/userpatches/overlay/simpleaf/fly-start.txt"
 test -f "$root/armbian/userpatches/overlay/tools/fly-boot-display"
 
 # Truncate master log so a new run is obvious

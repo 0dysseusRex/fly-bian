@@ -1,25 +1,36 @@
-# Lite 2.1 Armbian image dumps
+# Fly-bian image dumps
 
 **Named images** (Armbian `.img.xz`, not a 32 GB `dd`). Naming: [`image-naming.md`](image-naming.md). Build: [`build-named-image.md`](build-named-image.md).
 
-Product releases are versioned as **Fly-bian** (repo `FLYBIAN_VERSION`). From 0.6 onward, Simple-AF / KIAUH filenames include the stack revision (pellcorp short SHA / KIAUH tag). Naming: [`image-naming.md`](image-naming.md).
+Product versions are **Fly-bian** (repo `FLYBIAN_VERSION`). Only **1.0+** are GitHub Release candidates; pre-1.0 stays local under `Releases/`.
 
 ```
 C:\Users\udrdr\fly-lite-armbian-image\Releases\
   RELEASES.txt
+  Fly-bian-1.05\
+    Fly-Lite-2.1\    … GitHub Release v1.05
   Fly-bian-1.0\
-    Fly-Lite-2.1\
-      UPDATE-NOTES.txt
-      Base\          Fly-bian-1.0_Fly-Lite-2.1_Base.img.xz
-      Simple-AF\     Fly-bian-1.0_Fly-Lite-2.1_Simple-AF-0d21afe.img.xz
-      KIAUH\         Fly-bian-1.0_Fly-Lite-2.1_KIAUH-v6.3.2.img.xz
+    Fly-Lite-2.1\    … GitHub RC
+  Fly-bian-0.1\
+    Fly-Pi-V3\       … local bring-up only (not on GitHub Releases)
   lab-snapshots\     old full-card dd dumps
 ```
 
-Stage with: `scripts/stage-flybian-release.sh all`
+Stage with: `scripts/stage-flybian-release.sh` (set `FLY_DEVICE` for Pi V3).
+
+## Fly Pi V3 (local / pre-RC)
 
 | File | SHA256 | What it is |
 | --- | --- | --- |
+| `Releases/Fly-bian-0.1/Fly-Pi-V3/Base/Fly-bian-0.1_Fly-Pi-V3_Base.img.xz` | `b7897664d934dfd20adbe96bd0bbc3ea282b454801c611e2cc80a5926c127062` | **Fly-bian 0.1 Base** bring-up. Kernel 6.18.54, `fly-h618.dtb`, no Klipper stack. **Not** a GitHub Release. |
+
+## Fly Lite 2.1
+
+| File | SHA256 | What it is |
+| --- | --- | --- |
+| `Releases/Fly-bian-1.05/Fly-Lite-2.1/Base/Fly-bian-1.05_Fly-Lite-2.1_Base.img.xz` | `4fcabd93ee91408a84a58497743d960c6745955787c84c631256bdaa44ec2730` | **Fly-bian 1.05 Base.** Kernel 6.18.57. `fly-lite-board` holds `vdd-cpux` at 1.3 V and disables the unused EMAC. Apt installs one named package at a time. `SERIAL_CONSOLE` in `fly-start.txt`. |
+| `Releases/Fly-bian-1.05/Fly-Lite-2.1/Simple-AF/Fly-bian-1.05_Fly-Lite-2.1_Simple-AF-707e558.img.xz` | `2079250936b6359d91cc5f9400a5c44443fa77c5e3621149fc27ac87c2dbcbfd` | **Fly-bian 1.05 Simple-AF** (pellcorp `707e558`). How-to: [`howto-simpleaf.md`](howto-simpleaf.md). |
+| `Releases/Fly-bian-1.05/Fly-Lite-2.1/KIAUH/Fly-bian-1.05_Fly-Lite-2.1_KIAUH-v6.3.2.img.xz` | `e61afaa7d1743a1be18687ab952b06bf74abfa60c07686ceb92e0701cd443dd2` | **Fly-bian 1.05 KIAUH** (`v6.3.2`). How-to: [`howto-kiauh.md`](howto-kiauh.md). |
 | `Releases/Fly-bian-1.0/Fly-Lite-2.1/Base/Fly-bian-1.0_Fly-Lite-2.1_Base.img.xz` | `37c5c33ad61880bf9670c64e24428edc41e655f5697abc9e6b2b85cc22033c1d` | **Fly-bian 1.0 Base.** Kernel 6.18.54, Cap TFT/GT911 defaults, SPI firmware. |
 | `Releases/Fly-bian-1.0/Fly-Lite-2.1/Simple-AF/Fly-bian-1.0_Fly-Lite-2.1_Simple-AF-0d21afe.img.xz` | `3523ba04239469a7654b9d3b5ce8d07d9bf0d138a92ea3c833cd38d0f7c9e470` | **Fly-bian 1.0 Simple-AF** (pellcorp `0d21afe`). How-to: [`howto-simpleaf.md`](howto-simpleaf.md). |
 | `Releases/Fly-bian-1.0/Fly-Lite-2.1/KIAUH/Fly-bian-1.0_Fly-Lite-2.1_KIAUH-v6.3.2.img.xz` | `0773a9323d02b09c7c3cd8da41c495fdadb59a6c59595749546f5641336f6d39` | **Fly-bian 1.0 KIAUH** (`v6.3.2`). How-to: [`howto-kiauh.md`](howto-kiauh.md). |

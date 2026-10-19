@@ -1,0 +1,40 @@
+/dts-v1/;
+/plugin/;
+
+/*
+ * Fly Lite 2.1 fixes for sun8i-h3-fly-lite.dtb.
+ *
+ * The H3 EMAC is status=okay, but this PCB has no Ethernet jack. Opening
+ * eth0 fails with "Failed to reset the dma".
+ *
+ * vdd-cpux is a 1.1 V / 1.3 V switch on PA9. The DTB calls that pin
+ * enable-gpio. The 6.18 gpio-regulator driver only counts a "gpios"
+ * property; without one, gpiod_count is -ENOENT and the probe allocation
+ * fails with -ENOMEM, so cpufreq never registers. PA9 high is 1.3 V.
+ * U-Boot already runs the H3 near 1008 MHz, which needs at least 1.2 V.
+ * A two-level table lets cpufreq drive PA9 low (1.1 V) and the SoC locks
+ * up. Keep a single 1.3 V state so the clock can register and the pin
+ * cannot select 1.1 V. 648, 816, and 1008 MHz all allow 1.3 V.
+ */
+
+/ {
+	compatible = "allwinner,sun8i-h3";
+
+	fragment@0 {
+		target = <&emac>;
+		__overlay__ {
+			status = "disabled";
+		};
+	};
+
+	fragment@1 {
+		target-path = "/vdd-cpux-regulator";
+		__overlay__ {
+			gpios = <&pio 0 9 0>;
+			gpios-states = <1>;
+			states = <1300000 1>;
+			regulator-min-microvolt = <1300000>;
+			regulator-max-microvolt = <1300000>;
+		};
+	};
+};

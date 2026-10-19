@@ -21,8 +21,9 @@ Expand each into its own board directory when we have hardware in hand.
 
 | Product (vendor naming varies) | Notes for contributors |
 | --- | --- |
-| Fly Pi (earlier / non-V3) | Different SoC/layout than Lite 2.1 — confirm before any overlay reuse |
-| Fly Gemini / related hosts | Often community images exist elsewhere; not Fly-bian |
+| Fly Pi (earlier / non-V3, H5) | Different SoC/layout than Lite 2.1 — confirm before any overlay reuse. Community Armbian: [reemo3dp/mellowfly-geminipi-armbian](https://github.com/reemo3dp/mellowfly-geminipi-armbian) |
+| Fly Gemini / related hosts | Community Armbian + guides exist; **not** Fly-bian. See [community alternate firmware](../../community-alternate-firmware.md) |
+| Fly-C5 (H618) | Upstream Armbian board `mellowflyc5` — closest peer to Fly Pi V3; not a Fly-bian target |
 | Other Mellow SBCs | Add rows with SoC, RAM, storage, UART as discovered |
 
 ### Per-board stub template
@@ -33,6 +34,7 @@ When you open a new board directory, copy the structure from [Fly Pi V3](../fly-
 
 ## Related
 
+- [Community alternate firmware](../../community-alternate-firmware.md) — GitHub survey of unofficial host OS / Armbian work  
 - [Board index](../README.md)  
 - [Main project README](../../../README.md)  
 - [Fly Lite 2.1](../fly-lite-2.1/README.md) — only supported board at 1.0  

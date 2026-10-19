@@ -74,6 +74,8 @@ sudo apt -f install
 sudo apt-get update
 ```
 
+Lite images already split a multi-package `apt-get install` into one named package per dpkg run (`/usr/local/bin/apt-get`, `FLY_APT_BATCH=1` to skip). That does not shrink a single package's own dependency set: `apt-get install klipperscreen` still unpacks that package and everything it depends on together. apt has no setting for "one dependency at a time" inside one transaction. Downloads are also serialized (`Acquire::Queue-Mode "access"`).
+
 If a package keeps segfaulting in a big batch, install **one package at a time** with `--no-install-recommends`, then re-run the app installer.
 
 ```bash

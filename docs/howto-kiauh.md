@@ -17,7 +17,7 @@ Do **not** install Simple-AF / pellcorp on this card — the stacks conflict.
 1. Write the `.img.xz` (Pi Imager, Etcher, or `dd` — see main [README](../README.md)).
 2. Eject, unplug, replug so **`FLY-SETUP`** appears.
 3. Edit `fly-start.txt`: Wi-Fi (2.4 GHz), locale/timezone, root, sudo user.  
-   KIAUH images do **not** use Simple-AF `INSTALL_CMD` / GrumpyScreen keys — only network and accounts.
+   KIAUH images do **not** use Simple-AF `INSTALL_CMD` / GrumpyScreen keys — network, accounts, and `SERIAL_CONSOLE` only.
 4. Fit the IPEX antenna. Independent **5 V**. Wait for resize + swap + Wi-Fi.
 5. SSH: `ssh USER_NAME@THE.PRINTER.IP`.
 

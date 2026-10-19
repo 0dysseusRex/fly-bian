@@ -88,8 +88,8 @@ Touch DIP:
 
 | DIP | Overlay | Device |
 | --- | --- | --- |
-| **Cap** (default bake) | `fly-lite-tft` + `fly-lite-tft-c` | GT911 on **i2c2** (`1c2b400`) @ **0x14**, IRQ **PA3**, reset **PA2**. Disables SPI ADS7846. |
-| **Resi** | `fly-lite-tft` only (omit `fly-lite-tft-c`) | ADS7846 on SPI0 CS1, pendown **PA3** |
+| **Cap** | `fly-lite-tft` + `fly-lite-tft-c` | GT911 on **i2c2** (`1c2b400`) @ **0x14**, IRQ **PA3**, reset **PA2**. Disables SPI ADS7846. Not in the default overlay list. |
+| **Resi** | `fly-lite-tft` only | ADS7846 on SPI0 CS1, pendown **PA3** |
 
 Live Cap: `/dev/fb0` 320×480 RGB565 paints; `Goodix Capacitive TouchScreen` on `/dev/input/event0`. Optional missing `goodix_911_cfg.bin` is harmless (driver falls back). 16P FPC orientation can be reversed vs Pi harnesses — try flipping the cable if the panel stays blank with backlight on.
 
@@ -127,7 +127,7 @@ Persisted: `/usr/local/sbin/fly-online-isolated-cpus.sh` and `fly-online-isolate
 
 - Live-image first boot: `e2fsck -y /dev/mmcblk0p1` from initramfs if the journal is dirty, then `exit`.
 - Two Windows `serial-mcp` processes can steal COM4 after USB re-enum.
-- `gpio-regulator vdd-cpux-regulator` probe fails `-ENOMEM` (`-12`); board still runs.
+- `vdd-cpux` used to fail probe with `-ENOMEM` because PA9 was named `enable-gpio`. `fly-lite-board` adds `gpios` and keeps a single 1.3 V state. The stock 1.1 V / 1.3 V table lets cpufreq pull PA9 low while U-Boot has left the H3 near 1008 MHz, and the SoC locks up. The same overlay disables the H3 EMAC (no jack on this PCB).
 - Do not enable 4 CPUs at boot.
 - Do not stream a full-card `dd` of `mmcblk0` over `wlan0`.
 

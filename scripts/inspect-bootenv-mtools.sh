@@ -3,7 +3,7 @@ set -euo pipefail
 pkill -f inspect-simpleaf-bootenv 2>/dev/null || true
 sudo losetup -D 2>/dev/null || true
 
-imgxz='/mnt/c/Users/udrdr/fly-lite-armbian-image/Releases/Fly-bian-0.1/Fly-Lite-2.1/Simple-AF/Fly-bian-0.1_Fly-Lite-2.1_Simple-AF.img.xz'
+imgxz='/mnt/f/Cursor/projects/fly-lite-armbian-image/Releases/Fly-bian-0.1/Fly-Lite-2.1/Simple-AF/Fly-bian-0.1_Fly-Lite-2.1_Simple-AF.img.xz'
 workdir=/tmp/fly-bootenv-inspect
 rm -rf "$workdir"
 mkdir -p "$workdir"

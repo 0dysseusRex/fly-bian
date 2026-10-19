@@ -24,10 +24,31 @@ Visible on the PCB (for orientation only - pinmux and drivers still to be confir
 
 - Marked **Fly-PI3**
 - Ethernet + USB-A, fan header, reset
-- M.2-style **FLY-M2WE** wireless module with antenna connector
+- M.2-style **FLY M2** socket (private FLY modules only)
 - Large supercapacitor module on some units
 
-Fill-in hardware table, UART baud, storage (eMMC vs SD), and power rules will land in the board README during bring-up. Do not invent overlays from photos alone.
+### M2 module variants (all must work)
+
+| Module | Wi-Fi | Module storage |
+| --- | --- | --- |
+| M2 2.4G Wi-Fi only | 2.4 GHz | None (use onboard MicroSD for OS) |
+| **M2WE** | 2.4 + 5 GHz | 16 GB eMMC |
+| **M2WS** | 2.4 + 5 GHz | 16 GB soldered TF on the module |
+
+Fly-bian images must support SD-only, SD + Wi-Fi M2, M2WE boot, and M2WS boot. By default, gcode and timelapse stay on the boot medium (including everything on M2WE/M2WS if that is what the user wants). Optionally, users with an onboard MicroSD can redirect **gcode** and **timelapse** there - documented how-to, not forced.
+
+**Do not flash the image onto both the onboard MicroSD and the module eMMC (or M2WS TF).** One medium holds the OS. The other may be blank storage. Two bootable copies let U-Boot and the root filesystem come from different installs.
+
+The 2.4 GHz-only M2 cannot join a 5 GHz network. M2WE and M2WS can use either band. That 2.4-only module is not on the bench yet. Until it is, an SDIO id other than the AIC8800 (`0xc8a1`) is printed on the serial console and the radio is left down.
+
+### Captured from M2WS + FlyOS-FAST H618 v1.4.0
+
+- DTB: `fly-h618.dtb` (console **`ttyS0` @ 115200**)
+- SDIO Wi-Fi named **`rtl8821cs`** in the DTB; image also ships AIC8800 bits for other radios
+- MMC0 MicroSD / MMC1 Wi-Fi / MMC2 eMMC (live `mmcblk` order still needs a seated Pi V3)
+- Artifacts: [m2ws-usb-pull REPORT](https://github.com/0dysseusRex/fly-bian/blob/main/flyos-artifacts/live/m2ws-usb-pull/REPORT.md)
+
+Exact pinmux and dual-storage `mmcblk` mapping still need a board with `board=fly-pi-v3` booted.
 
 ## Until images exist
 

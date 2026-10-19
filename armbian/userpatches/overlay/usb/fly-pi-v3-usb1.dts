@@ -1,0 +1,25 @@
+/dts-v1/;
+/plugin/;
+
+/*
+ * Fly Pi V3 USB-A jack on PHY 0. EHCI/OHCI at 5101000/5101400 share that
+ * PHY with the Type-C musb block. Leave musb disabled so this jack is a
+ * host. USB2/USB3/USB4 are already okay in fly-h618.dtb.
+ */
+/ {
+	compatible = "mellow,fly-os", "allwinner,sun50i-h618", "allwinner,sun50i-h616";
+
+	fragment@0 {
+		target-path = "/soc/usb@5101000";
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	fragment@1 {
+		target-path = "/soc/usb@5101400";
+		__overlay__ {
+			status = "okay";
+		};
+	};
+};
