@@ -1,0 +1,2 @@
+921a2fb02316ae00a066ef01f11faca29920cdd574175859db3d783d3386ddbf  linux-dtb-current-sunxi_26.11.0-trunk+flybian1.06_armhf.deb
+87cf678002c347996f3c419669bb4e84cae3e4786d26c687441782f65d2628ed  linux-image-current-sunxi_26.11.0-trunk+flybian1.06_armhf.deb
