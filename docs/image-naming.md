@@ -81,7 +81,9 @@ Named images write at bake time:
 
 | Path | Example |
 | --- | --- |
-| `/etc/fly-debian/flybian-version` | `0.6` |
+| `/etc/fly-debian/flybian-version` | `0.6` (apt may later set this to the helper package version) |
+| `/etc/fly-debian/flybian-image-baked` | Same as version at flash; never overwritten by apt |
+| `/etc/fly-debian/flybian-apt-version` | Helper package set, if `flybian-release` is installed |
 | `/etc/fly-debian/flybian-image` | `Fly-bian-0.6_Fly-Lite-2.1_Simple-AF-58e5c1d` |
 | `/etc/fly-debian/stack-rev` | `58e5c1d` |
 | `/etc/fly-debian/stack-flavor` | `simpleaf` |

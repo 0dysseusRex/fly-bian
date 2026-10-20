@@ -178,8 +178,12 @@ if [[ -f $OVERLAY/simpleaf/fly-start.txt ]]; then
 	install -m 0644 "$OVERLAY/simpleaf/fly-start.txt" /boot/fly-start.txt
 fi
 
-if [[ -f /boot/README.txt && -f $OVERLAY/simpleaf/README.fragment ]]; then
-	cat "$OVERLAY/simpleaf/README.fragment" >>/boot/README.txt
+simpleaf_readme=$OVERLAY/simpleaf/README.fragment
+if [[ ${FLY_BOARD_FAMILY:-} == pi-v3 && -f $OVERLAY/pi-v3/README-simpleaf.fragment ]]; then
+	simpleaf_readme=$OVERLAY/pi-v3/README-simpleaf.fragment
+fi
+if [[ -f /boot/README.txt && -f $simpleaf_readme ]]; then
+	cat "$simpleaf_readme" >>/boot/README.txt
 	cp -a /boot/README.txt /usr/share/fly-debian/first-boot/README.txt 2>/dev/null || true
 fi
 

@@ -1,0 +1,14 @@
+[Unit]
+Description=Bind pre-baked KIAUH installer into the first user home
+After=fly-apply-fly-net.service fly-swapfile.service local-fs.target
+Wants=fly-swapfile.service
+ConditionPathExists=!/var/lib/fly-kiauh-bound
+ConditionPathExists=/opt/fly-kiauh/kiauh
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/fly-bind-kiauh-installer
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

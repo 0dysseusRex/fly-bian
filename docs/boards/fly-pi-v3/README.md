@@ -188,6 +188,7 @@ Captured from M2WS USB gadget (H618 v1.4.0): see [`flyos-artifacts/live/m2ws-usb
 | SSH up after Wi‑Fi (`root` / OEM `mellow`) | First-boot must create usable SSH creds (wizard or `fly-start.txt`) before claiming headless success |
 | Console is real UART data @ 115200 over the CH340 COM port | Keep `console=serial` or `both`; never rely on USB-C gadget CDC alone for V3 |
 | `capture_boot` flush can drop early boot lines | For bring-up logs prefer continuous `read` / ring replay; arm before power apply |
+| SD, eMMC, and SDIO Wi-Fi share `sunxi-mmc` | Next image enables `patches.armbian/drv-mmc-sunxi-one-xfer.patch` on the 6.12 kernel so only one of mmc0, mmc1, and mmc2 has a DMA transfer in flight (same fix as Lite 1.06) |
 
 ---
 
@@ -207,6 +208,44 @@ Captured from M2WS USB gadget (H618 v1.4.0): see [`flyos-artifacts/live/m2ws-usb
 10. First public Fly-bian image: **Base-only** until network + UART + all storage configs verified  
 
 ---
+
+## Benchmark (Fly-bian 0.70 base)
+
+[sbc-bench](https://github.com/ThomasKaiser/sbc-bench) 0.9.72, unattended, on the flashed 0.70 base image. Kernel `6.12.113-legacy-sunxi64`, 972 MB RAM. `isolcpus=3` leaves `nproc` at 3. The cpufreq governor was `ondemand` with a 1512 MHz ceiling. `vdd-cpu` was 1100 mV. No thermal zone was present, so the temperature column stayed empty. No throttling. Cpuminer was not run.
+
+The first pass had **no swap**. Multi-thread 7-Zip was OOM-killed three times (score **0**). Single-thread still scored **1165**. A second pass used a temporary **2 GiB** `/swapfile` on the eMMC so multi-thread could finish; sbc-bench reported light swapping. Next Fly-bian images enable the recipe’s **512 MiB** `fly-swapfile` after resize (not this 2 GiB bump).
+
+Scores below are from the second pass (2 GiB swap). Rounded to the nearest 10 where noted.
+
+| Clock | Kernel | 7-Zip multi | 7-Zip single | AES-256 16 KB | memcpy | memset |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| 1512 MHz | 6.12 | 2900 | 1170 | 704800 | 1360 MB/s | 5840 MB/s |
+
+7-Zip is p7zip 16.02, in MIPS. Single-threaded on CPU 0 scored **1167**. Multi-thread totals for the three runs: **2949**, **2866**, **2895** (average **2903**).
+
+tinymembench: libc memcpy **1358.2 MB/s**, libc memset **5841.1 MB/s**.
+
+OpenSSL `aes-*-cbc`, two runs, kB/s. The 16384-byte AES-256 average is about **704800**.
+
+| Cipher | Run | 16 B | 64 B | 256 B | 1024 B | 8192 B | 16384 B |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| aes-128-cbc | 1 | 99970 | 318336 | 680843 | 981036 | 1124270 | 1126018 |
+| aes-128-cbc | 2 | 100251 | 318509 | 680852 | 980997 | 1124355 | 1134761 |
+| aes-256-cbc | 1 | 93739 | 267424 | 495020 | 640258 | 700189 | 704774 |
+| aes-256-cbc | 2 | 94328 | 268971 | 496696 | 641404 | 700310 | 704834 |
+
+## Wi-Fi (Fly-bian 0.70 base)
+
+iperf3 3.18 on the board, 3.22 on a wired host at `192.168.1.131`. TCP, 15 s with 4 streams and 10 s with 1 stream. The host’s Ethernet is on the same LAN, so the measured path is the M2 radio. The 5 GHz BSS was 5320 MHz, about −70 dBm, 40 MHz HE. The other network name is also advertised on 5 GHz; the 2.4 GHz run was pinned to its 2462 MHz BSS (channel 11), about −50 dBm, 20 MHz HE.
+
+| Band | Direction | 4 streams | 1 stream |
+| --- | --- | ---: | ---: |
+| 5 GHz | board receives | 150 Mbit/s | 130 Mbit/s |
+| 5 GHz | board sends | 101 Mbit/s | 117 Mbit/s |
+| 2.4 GHz | board receives | 93 Mbit/s | 86 Mbit/s |
+| 2.4 GHz | board sends | 33 Mbit/s | 32 Mbit/s |
+
+The 4-stream 5 GHz send slowed down during the 15 s (220 retransmits). The 2.4 GHz send stayed near 33 Mbit/s.
 
 ## Related docs
 

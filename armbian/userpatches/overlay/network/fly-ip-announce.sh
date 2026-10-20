@@ -43,13 +43,16 @@ for _ in $(seq 1 "$TRIES"); do
 	sleep "$SLEEP_S"
 done
 
+# Hostname, so a Pi V3 card does not announce itself as fly-lite.
+board_name=$(hostname -s 2>/dev/null || true)
+[[ -n $board_name ]] || board_name=fly
 if [[ -n $ip_addr ]]; then
-	announce "fly-lite: $IFACE $ip_addr"
+	announce "$board_name: $IFACE $ip_addr"
 	echo "fly-ip-announce: $IFACE $ip_addr"
 else
 	# No Wi-Fi yet (placeholders, slow DHCP, radio down) is normal on first
 	# boot — announce and succeed so systemd does not paint [FAILED].
-	announce "fly-lite: $IFACE has no IPv4 yet"
+	announce "$board_name: $IFACE has no IPv4 yet"
 	echo "fly-ip-announce: $IFACE has no IPv4 yet"
 	exit 0
 fi

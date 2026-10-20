@@ -1,0 +1,6 @@
+# Lowest baked Fly-bian image that may install this package set.
+# Bump a line when an update cannot be applied on older cards (U-Boot,
+# partition layout, kernel ABI). Format: device  version
+# Rank is major*100 + minor, so 0.75=75, 1.0=100, 1.06=106.
+Fly-Lite-2.1	1.00
+Fly-Pi-V3	0.70

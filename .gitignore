@@ -16,6 +16,9 @@ flyos-artifacts/live/m2ws-usb-pull/rootfs-extract/
 flyos-artifacts/live/m2ws-usb-pull/mnt-boot/
 flyos-artifacts/live/m2ws-usb-pull/scan/
 
+# Generated Fly-bian apt repo / debs
+apt/out/
+
 # Armbian build output if compiled in-tree
 armbian/build/
 output/

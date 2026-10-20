@@ -1,0 +1,73 @@
+# Fly-bian Project — first-boot setup (FLY-SETUP) — Fly Pi V3 base image
+#
+# Edit this file BEFORE the first power-on. Notepad is fine (CRLF is OK).
+# Values that still say Your… are ignored. Fill a block to apply that part.
+#
+# For SSH with no serial cable, fill Wi-Fi + Root + User. Then boot, wait
+# several minutes (the card grows, then the radio joins), and:
+#
+#   ssh USER_NAME@THE.PRINTER.IP
+#   fly-help
+#
+# Find the IP on your router DHCP list, or:
+#   Windows: arp -a   /   nmap -sn 192.168.1.0/24
+#   macOS:   arp -a   /   dns-sd -B _ssh._tcp local.
+#   Linux:   ip neigh /   nmap -sn 192.168.1.0/24
+# Hostname is usually fly-pi-v3. Full guide: README.txt here, or fly-help on the board.
+#
+# Locale examples: en_US.UTF-8  en_GB.UTF-8  de_DE.UTF-8
+# Timezone examples: America/Los_Angeles  Europe/London
+#
+# Wi-Fi comes from the M2 module (2.4 GHz, or 2.4 and 5 GHz on M2WE / M2WS).
+# Passwords here are plaintext. Do not share the card image after editing.
+# Leave placeholders to use the on-screen first-run wizard instead
+# (Type-C serial or HDMI + USB keyboard).
+#
+# This base image does not install Klipper. Simple-AF keys (INSTALL_CMD,
+# GrumpyScreen, boot display, AUTO_CAMERAS) and the KIAUH menu are not on
+# this card.
+
+# --- Wi-Fi ---
+WIFI_ENABLED=1
+WIFI_SSID=YourNetwork
+WIFI_PSK=YourPassword
+WIFI_COUNTRY=US
+
+# Optional static IPv4. Leave USE_STATIC=0 for DHCP.
+USE_STATIC=0
+STATIC_IP=192.168.1.50
+STATIC_MASK=255.255.255.0
+STATIC_GATEWAY=192.168.1.1
+STATIC_DNS=1.1.1.1 8.8.8.8
+
+# --- Location (same questions as first-run) ---
+SET_LANG_BASED_ON_LOCATION=n
+LOCALE=YourLocale
+TIMEZONE=YourTimezone
+
+# --- Root ---
+ROOT_PASSWORD=YourRootPassword
+ROOT_SSH_KEY=
+
+# --- User (sudo). Lowercase letters; this is the SSH login. ---
+USER_NAME=YourUser
+USER_PASSWORD=YourUserPassword
+USER_REALNAME=Your Name
+USER_SHELL=bash
+USER_SSH_KEY=
+
+# --- Serial console (Type-C UART, 115200 8N1) ---
+# Yes: kernel messages and a login stay on the Type-C port. Default.
+# No: after root and user exist, the serial login is turned off. The next
+# boot also stops sending the kernel console to that UART. Set No only when
+# SSH or HDMI already works. If root/user are still Your…, No is ignored so
+# the first-run wizard can still run on serial.
+# Yes/No
+SERIAL_CONSOLE=Yes
+
+# --- SPI device (panel or ADXL header, not both) ---
+# tft: FPC panel. adxl: ZH1.5 header. Empty means tft.
+# U-Boot loads overlays before this file is read, so a change applies on
+# the next boot. Unplug the other device first.
+# tft / adxl
+SPI_DEVICE=tft

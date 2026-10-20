@@ -1,0 +1,12 @@
+# Fly-bian helpers (not Debian, not Armbian). Scripts, overlays, MOTD.
+# Does not replace kernel, DTB, or U-Boot (those stay apt-held).
+# Public repo is intended from Fly-bian 1.0 on GitHub Pages. Until that
+# URL serves Packages, `apt update` will fail — use dpkg -i from a
+# flybian-debs tarball instead (docs/howto-update.md).
+Types: deb
+URIs: https://0dysseusrex.github.io/fly-bian/apt
+Suites: trixie
+Components: main
+Architectures: all
+Trusted: yes
+Enabled: no

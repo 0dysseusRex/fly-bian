@@ -101,7 +101,8 @@ fly_set_stack_identity() {
 	ver=$(tr -d '[:space:]' </etc/fly-debian/flybian-version 2>/dev/null || true)
 	[[ -n $ver ]] || ver=$(tr -d '[:space:]' <"${OVERLAY:-/tmp/overlay}/FLYBIAN_VERSION" 2>/dev/null || true)
 	[[ -n $ver ]] || ver=0.0
-	device=Fly-Lite-2.1
+	device=$(tr -d '[:space:]' </etc/fly-debian/flybian-device 2>/dev/null || true)
+	[[ -n $device ]] || device=Fly-Lite-2.1
 	case "$flavor" in
 		simpleaf) flavor_token=Simple-AF ;;
 		kiauh) flavor_token=KIAUH ;;

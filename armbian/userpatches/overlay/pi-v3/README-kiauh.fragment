@@ -1,0 +1,22 @@
+
+4) After first login — this is a Fly Pi V3 KIAUH image
+-------------------------------------------------------
+KIAUH is already on the card under /opt/fly-kiauh. Klipper, Moonraker,
+Fluidd, Mainsail, and Crowsnest are not installed. Use KIAUH to add them
+after you log in.
+
+Do not install Simple-AF (pellcorp) on this card.
+Ignore any Simple-AF INSTALL_CMD / boot-display / GrumpyScreen / AUTO_CAMERAS
+notes. This image's fly-start.txt is Wi-Fi, accounts, SERIAL_CONSOLE, and
+SPI_DEVICE.
+
+SSH in as the user you created, then:
+
+  fly-kiauh
+  # same as:  ~/kiauh/kiauh.sh
+
+First boot copies KIAUH into ~/kiauh so it is owned by you. Do not run it
+from /opt/fly-kiauh (that tree is root-owned).
+
+The panel and the ADXL header share SPI. SPI_DEVICE in fly-start.txt picks
+one. The change applies on the next boot.

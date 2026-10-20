@@ -212,6 +212,20 @@ fly-crowsnest-add-cams
 
 ---
 
+## Keep printer data — update helpers without a new flash
+
+After the board is running, Fly-bian scripts and overlays can update over SSH. That does **not** replace the kernel, DTB, or U-Boot, and it does not rewrite `~/printer_data`.
+
+```bash
+sudo flybian-update
+```
+
+If a change really needs a new image (bootloader, partitions), that command **stops** and tells you to copy `printer_data` off, flash, then copy it back.
+
+Full how-to: [Update Fly-bian over SSH](https://github.com/0dysseusRex/fly-bian/blob/main/docs/howto-update.md).
+
+---
+
 ## Common mistakes
 
 | Mistake | What to do instead |

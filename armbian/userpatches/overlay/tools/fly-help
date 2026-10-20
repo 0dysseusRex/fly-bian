@@ -23,6 +23,16 @@ SERIAL_CONSOLE in fly-start.txt (every image)
        boot also drops the kernel console from that UART. Set No only
        when SSH or HDMI works. Ignored while the first-run wizard is
        still waiting for a user.
+
+Keep printer data (no reflash)
+------------------------------
+  Fly-bian helpers (fly-help, fly-kiauh, overlays) can update over SSH.
+  Kernel, DTB, and U-Boot stay held. printer.cfg and gcode stay put.
+
+    sudo flybian-update
+
+  If the update needs a new image burn, that command prints why and
+  stops. Copy ~/printer_data first. How-to: docs/howto-update.md
 EOF
 
 if [[ $flavor == kiauh ]]; then

@@ -9,15 +9,29 @@ if [[ ${EUID:-0} -eq 0 ]]; then
 	die "Run as your sudo user (e.g. fly), not root."
 fi
 
+# KIAUH writes kiauh.cfg and runs git in its own tree. The bake copy lives
+# under /opt as root; running that as the login user hits dubious-ownership
+# and PermissionError. Always use a home-owned copy.
+ensure_user_kiauh() {
+	local src=/opt/fly-kiauh/kiauh dest=$HOME/kiauh
+	if [[ -f $dest/kiauh.sh ]]; then
+		return 0
+	fi
+	[[ -d $src ]] || return 0
+	mkdir -p "$dest"
+	if command -v rsync >/dev/null 2>&1; then
+		rsync -rltD "$src/" "$dest/"
+	else
+		cp -a "$src/." "$dest/"
+	fi
+	chmod -R u+rwX "$dest" 2>/dev/null || true
+}
+
 run_kiauh() {
-	for cand in \
-		"$HOME/kiauh/kiauh.sh" \
-		/opt/fly-kiauh/kiauh/kiauh.sh
-	do
-		if [[ -f $cand ]]; then
-			exec bash "$cand" "$@"
-		fi
-	done
+	ensure_user_kiauh
+	if [[ -f $HOME/kiauh/kiauh.sh ]]; then
+		exec bash "$HOME/kiauh/kiauh.sh" "$@"
+	fi
 	die "KIAUH not found (expected ~/kiauh/kiauh.sh). Wait for first-boot bind, then try again."
 }
 
@@ -59,7 +73,8 @@ EOF
 		;;
 esac
 
-cat <<'EOF'
+if [[ -d $HOME/klipper || -d /opt/fly-kiauh/klipper ]]; then
+	cat <<'EOF'
 Fly-bian — fly-kiauh
 ===================
 Klipper/Moonraker trees are pre-baked. Use KIAUH for printer.cfg and services.
@@ -69,6 +84,19 @@ Choose:
   2) Add USB cameras
   3) Cancel
 EOF
+else
+	cat <<'EOF'
+Fly-bian — fly-kiauh
+===================
+KIAUH is on this image. Klipper, Moonraker, and the web UIs are not.
+Use KIAUH to install them.
+
+Choose:
+  1) Start KIAUH
+  2) Add USB cameras
+  3) Cancel
+EOF
+fi
 printf 'Enter choice [1-3]: '
 read -r choice || true
 case "$choice" in

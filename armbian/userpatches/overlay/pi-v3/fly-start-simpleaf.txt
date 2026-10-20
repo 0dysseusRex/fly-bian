@@ -1,0 +1,87 @@
+# Fly-bian Project — first-boot setup (FLY-SETUP) — Fly Pi V3 Simple-AF image
+#
+# Edit this file BEFORE the first power-on. Notepad is fine (CRLF is OK).
+# Values that still say Your… are ignored. Fill a block to apply that part.
+#
+# For SSH with no serial cable, fill Wi-Fi + Root + User. Then boot, wait
+# several minutes (the card grows, then the radio joins), and:
+#
+#   ssh USER_NAME@THE.PRINTER.IP
+#   fly-help          # install tips + custom commands
+#   fly-start         # menu: install / update / boot display / cancel
+#
+# Find the IP on your router DHCP list, or:
+#   Windows: arp -a   /   nmap -sn 192.168.1.0/24
+#   macOS:   arp -a   /   dns-sd -B _ssh._tcp local.
+#   Linux:   ip neigh /   nmap -sn 192.168.1.0/24
+# Hostname is usually fly-pi-v3. Full guide: README.txt here, or fly-help on the board.
+#
+# Locale examples: en_US.UTF-8  en_GB.UTF-8  de_DE.UTF-8
+# Timezone examples: America/Los_Angeles  Europe/London
+#
+# Wi-Fi comes from the M2 module (2.4 GHz, or 2.4 and 5 GHz on M2WE / M2WS).
+# Passwords here are plaintext. Do not share the card image after editing.
+# Leave placeholders to use the on-screen first-run wizard instead
+# (Type-C serial or HDMI + USB keyboard).
+
+# --- Wi-Fi ---
+WIFI_ENABLED=1
+WIFI_SSID=YourNetwork
+WIFI_PSK=YourPassword
+WIFI_COUNTRY=US
+
+# Optional static IPv4. Leave USE_STATIC=0 for DHCP.
+USE_STATIC=0
+STATIC_IP=192.168.1.50
+STATIC_MASK=255.255.255.0
+STATIC_GATEWAY=192.168.1.1
+STATIC_DNS=1.1.1.1 8.8.8.8
+
+# --- Location (same questions as first-run) ---
+SET_LANG_BASED_ON_LOCATION=n
+LOCALE=YourLocale
+TIMEZONE=YourTimezone
+
+# --- Root ---
+ROOT_PASSWORD=YourRootPassword
+ROOT_SSH_KEY=
+
+# --- User (sudo). Lowercase letters; this is the SSH login. ---
+USER_NAME=YourUser
+USER_PASSWORD=YourUserPassword
+USER_REALNAME=Your Name
+USER_SHELL=bash
+USER_SSH_KEY=
+
+# --- Serial console (Type-C UART, 115200 8N1) ---
+# Yes/No
+SERIAL_CONSOLE=Yes
+
+# --- SPI device (panel or ADXL header, not both) ---
+# tft / adxl. Empty means tft. Applies on the next boot.
+SPI_DEVICE=tft
+
+# --- Simple-AF install (used by `fly-start` over SSH) ---
+# Full installer command for "Run Full Install Script". Edit printer/probe/mount.
+# Run as your sudo user (not root). Example for Creality K1 Max + BLTouch:
+INSTALL_CMD=~/pellcorp/installer.sh --install --printer creality-k1m-2023 --probe bltouch --mount Default
+
+# After a successful full install: discover USB cams into Crowsnest (Yes/No)
+AUTO_CAMERAS=No
+
+# --- Post-install display options (fly-start full install only) ---
+#
+# ENABLE_GRUMPYSCREEN — touch / status UI on the Fly panel after the OS is up.
+# It is NOT a Linux boot splash. Docs: fly-help / fly-grumpy-rotate.
+# Yes/No
+ENABLE_GRUMPYSCREEN=Yes
+#
+# INSTALL_BOOT_DISPLAY — Simple-AF Plymouth splash during early boot.
+#   fly-boot-display enable|disable|status
+# Optional; needs HDMI. Independent of GrumpyScreen.
+# Yes/No
+INSTALL_BOOT_DISPLAY=No
+
+# GRUMPY_DISPLAY_ROTATE — 0 = 0°, 1 = 90°, 2 = 180°, 3 = 270°.
+# Change later: fly-grumpy-rotate 0|1|2|3
+GRUMPY_DISPLAY_ROTATE=0

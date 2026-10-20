@@ -29,8 +29,20 @@ case "$flavor" in
 		# FlyOS-aligned: sunxi64 legacy=6.12 (closest to OEM 6.6.75); not 6.18.
 		branch=legacy
 		;;
+	pi-v3-simpleaf|fly-pi-v3-simpleaf)
+		board=fly-pi-v3-simpleaf
+		flavor=simpleaf
+		device=Fly-Pi-V3
+		branch=legacy
+		;;
+	pi-v3-kiauh|fly-pi-v3-kiauh)
+		board=fly-pi-v3-kiauh
+		flavor=kiauh
+		device=Fly-Pi-V3
+		branch=legacy
+		;;
 	*)
-		echo "usage: $0 base|simpleaf|kiauh|pi-v3" >&2
+		echo "usage: $0 base|simpleaf|kiauh|pi-v3|pi-v3-simpleaf|pi-v3-kiauh" >&2
 		exit 1
 		;;
 esac
@@ -53,12 +65,15 @@ mkdir -p "$build/userpatches" "$build/config/boards"
 rsync -a "$root/armbian/userpatches/" "$build/userpatches/"
 printf '%s\n' "$flavor" >"$build/userpatches/overlay/fly-flavor"
 # Product version for /etc/fly-debian/flybian-version (see docs/image-naming.md).
-# Pi V3 stays 0.70 until its own Base is the benchmark. The repo file is the Lite line.
-if [[ $board == fly-pi-v3 ]]; then
-	printf '0.70\n' >"$build/userpatches/overlay/FLYBIAN_VERSION"
-else
-	cp -a "$root/FLYBIAN_VERSION" "$build/userpatches/overlay/FLYBIAN_VERSION"
-fi
+# Pi V3 product line is 0.75 after the 0.70 benchmark. The repo file is the Lite line.
+case "$board" in
+	fly-pi-v3|fly-pi-v3-simpleaf|fly-pi-v3-kiauh)
+		printf '0.75\n' >"$build/userpatches/overlay/FLYBIAN_VERSION"
+		;;
+	*)
+		cp -a "$root/FLYBIAN_VERSION" "$build/userpatches/overlay/FLYBIAN_VERSION"
+		;;
+esac
 cp -a "$root/armbian/userpatches/config/boards/"*.csc "$build/config/boards/"
 # Windows checkout often has CRLF; a lone CR line makes bash Error 127.
 find "$build/userpatches" "$build/config/boards" -type f \
@@ -153,12 +168,14 @@ if [[ $branch == legacy ]]; then
 			echo "fly-build: enabled $emac1_rel"
 		fi
 	fi
-	# AC200 on Fly Pi V3 uses the vendor compatible strings.
+	# Vendor AC200 strings, plus one in-flight sunxi-mmc DMA transfer
+	# across mmc0 (SD), mmc1 (SDIO Wi-Fi), and mmc2 (eMMC).
 	for ac_rel in \
 		patches.armbian/drv-mfd-ac200-fly-pi-v3.patch \
 		patches.armbian/drv-phy-ac200-ephy-fly-pi-v3.patch \
 		patches.armbian/drv-phy-ac200-phy-fly-pi-v3.patch \
-		patches.armbian/drv-pwm-sunxi-enhance-fly-pi-v3.patch
+		patches.armbian/drv-pwm-sunxi-enhance-fly-pi-v3.patch \
+		patches.armbian/drv-mmc-sunxi-one-xfer.patch
 	do
 		ac_src=$build/userpatches/kernel/archive/sunxi-6.12/$ac_rel
 		ac_dst=$build/patch/kernel/archive/sunxi-6.12/$ac_rel

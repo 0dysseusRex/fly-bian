@@ -37,8 +37,8 @@ export WT_SESSION="${WT_SESSION:-fly-bian-build}"
 export FLY_DEVICE=Fly-Pi-V3
 # Inherit FLY_FORCE from launcher (tmux worker is a fresh shell).
 export FLY_FORCE=__FLY_FORCE__
-# Pi V3 stays 0.70 until its own Base is the benchmark. The repo file is
-# the Lite line. Stamp this image 0.70, then put the repo file back.
+# Pi V3 stays 0.75 after the benchmarked 0.70 image. The repo file is
+# the Lite line. Stamp this image 0.75, then put the repo file back.
 repo_ver_file=$root/FLYBIAN_VERSION
 overlay_ver_file=$root/armbian/userpatches/overlay/FLYBIAN_VERSION
 saved_repo=$(tr -d '[:space:]' <"$repo_ver_file")
@@ -48,19 +48,19 @@ restore_versions() {
   printf '%s\n' "$saved_overlay" >"$overlay_ver_file"
 }
 trap restore_versions EXIT
-printf '0.70\n' >"$overlay_ver_file"
+printf '0.75\n' >"$overlay_ver_file"
 # stage-armbian-overlay.sh already copied the Lite version into the build tree.
 build_ver=/home/rex/fly-build/armbian-build/userpatches/overlay/FLYBIAN_VERSION
 if [[ -f $build_ver ]]; then
-  printf '0.70\n' >"$build_ver"
+  printf '0.75\n' >"$build_ver"
 fi
 {
-  echo "=== $(date -Is) START Fly-Pi-V3 Base ver=0.70 (repo $saved_repo left unchanged) ==="
+  echo "=== $(date -Is) START Fly-Pi-V3 Base ver=0.75 (repo $saved_repo left unchanged) ==="
   docker run --rm --privileged multiarch/qemu-user-static --reset -p yes || true
   if bash "$root/scripts/run-armbian-compile.sh" pi-v3; then
     echo "=== $(date -Is) OK Fly-Pi-V3 Base ==="
     # Local stage only. Pre-1.0 is not a GitHub Release candidate.
-    printf '0.70\n' >"$repo_ver_file"
+    printf '0.75\n' >"$repo_ver_file"
     FLY_DEVICE=Fly-Pi-V3 bash "$root/scripts/stage-flybian-release.sh" base || true
     echo "=== $(date -Is) staged locally; NOT uploading to GitHub Releases (<1.0) ==="
   else

@@ -61,7 +61,10 @@ function custom_kernel_config__fly_pi_v3_drop_broken_legacy_dtbs() {
 # Build the M2 AIC8800 modules against this kernel and ship them in linux-image.
 # fly-apply insmods them after boot; modprobe.d keeps udev from loading them early.
 function pre_package_kernel_image__fly_pi_v3_aic8800() {
-	[[ ${BOARD:-} == fly-pi-v3 ]] || return 0
+	case "${BOARD:-}" in
+		fly-pi-v3|fly-pi-v3-simpleaf|fly-pi-v3-kiauh) ;;
+		*) return 0 ;;
+	esac
 	local src=/fly-aic8800/src/SDIO/driver_fw/driver/aic8800
 	local dest cross
 	if [[ ! -d $src ]]; then

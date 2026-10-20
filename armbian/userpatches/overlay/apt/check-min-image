@@ -1,0 +1,86 @@
+#!/bin/bash
+# Fail if this card was baked below the package set's minimum image.
+# Used by flybian-update and package preinst scripts.
+set -euo pipefail
+
+TABLE="${FLYBIAN_MIN_IMAGE_FILE:-/usr/share/fly-debian/min-image}"
+DEVICE_FILE=/etc/fly-debian/flybian-device
+BAKED_FILE=/etc/fly-debian/flybian-image-baked
+# Cards baked before this file existed: fall back to product version.
+VERSION_FILE=/etc/fly-debian/flybian-version
+
+rank() {
+	local v maj min
+	v=$(printf '%s' "$1" | tr -d '[:space:]')
+	maj=${v%%.*}
+	if [[ $v == *.* ]]; then
+		min=${v#*.}
+		min=${min%%.*}
+	else
+		min=0
+	fi
+	maj=$((10#$maj))
+	min=$((10#$min))
+	printf '%s\n' $((maj * 100 + min))
+}
+
+if [[ ! -r $TABLE ]]; then
+	echo "flybian: min-image table missing ($TABLE)" >&2
+	exit 0
+fi
+
+device=""
+if [[ -r $DEVICE_FILE ]]; then
+	device=$(tr -d '[:space:]' <"$DEVICE_FILE")
+fi
+if [[ -z $device ]]; then
+	echo "flybian: /etc/fly-debian/flybian-device missing; cannot check min image." >&2
+	echo "This does not look like a Fly-bian card. Do not install these packages." >&2
+	exit 1
+fi
+
+baked=""
+if [[ -r $BAKED_FILE ]]; then
+	baked=$(tr -d '[:space:]' <"$BAKED_FILE")
+elif [[ -r $VERSION_FILE ]]; then
+	baked=$(tr -d '[:space:]' <"$VERSION_FILE")
+fi
+if [[ -z $baked ]]; then
+	echo "flybian: no baked image version on this card." >&2
+	exit 1
+fi
+
+min=""
+while read -r dev ver _; do
+	[[ -z ${dev:-} || $dev == \#* ]] && continue
+	if [[ $dev == "$device" ]]; then
+		min=$ver
+		break
+	fi
+done <"$TABLE"
+
+if [[ -z $min ]]; then
+	echo "flybian: no min-image line for device '$device'." >&2
+	echo "Reflash a current Fly-bian image for this board." >&2
+	exit 1
+fi
+
+if (($(rank "$baked") < $(rank "$min"))); then
+	cat >&2 <<EOF
+flybian: this card was baked as Fly-bian $baked ($device).
+These packages need a card baked at Fly-bian $min or newer.
+
+Your printer.cfg, gcode, and home directory cannot be upgraded in place
+for this change (bootloader, partitions, or kernel ABI).
+
+What to do:
+  1. Copy off ~/printer_data (and any configs you care about).
+  2. Flash the current Fly-bian image for $device.
+  3. Copy printer_data back after first boot.
+
+See: docs/howto-update.md
+EOF
+	exit 1
+fi
+
+exit 0

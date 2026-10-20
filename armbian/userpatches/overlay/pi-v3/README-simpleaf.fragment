@@ -1,0 +1,26 @@
+
+4) After first login — this is a Fly Pi V3 Simple-AF image
+----------------------------------------------------------
+Git trees and Python venvs are already on the card under /opt/fly-simple-af
+and are copied into your home on the first boot that has a real user.
+
+Do not install KIAUH on this card.
+
+SSH in as the user you created, then finish printer/probe only:
+
+  ~/pellcorp/installer.sh --install --printer <printer> --probe <probe> [--mount <mount>]
+
+Example: --printer creality-k1m-2023 --probe bltouch --mount Default
+
+Software clones and pip (Moonraker, Fluidd, Mainsail, nginx) should be
+skipped. The Klipper config step still runs so homing.cfg and macros are
+written for your printer. The baked git tree and venv are kept.
+
+Web UIs (bound on first user):
+
+  Fluidd   http://<board-ip>/
+  Mainsail http://<board-ip>:4409
+
+Touch UI: GrumpyScreen is enabled on first user bind when
+ENABLE_GRUMPYSCREEN=Yes. The panel and the ADXL header share SPI.
+SPI_DEVICE in fly-start.txt picks one. The change applies on the next boot.

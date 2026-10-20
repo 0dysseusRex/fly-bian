@@ -36,6 +36,18 @@ Flashable images live only on **[Releases](https://github.com/0dysseusRex/fly-bi
 
 Do **not** flash Raspberry Pi OS, Mainsail OS, or other Fly SBC / Gemini images onto the Lite.
 
+### Already running a card?
+
+You do not have to burn a new image to keep `printer.cfg`, gcode, and Wi-Fi. SSH in and run:
+
+```bash
+sudo flybian-update
+```
+
+That refreshes Fly-bian helpers (`fly-help`, `fly-kiauh`, overlays, MOTD). The kernel, DTB, and U-Boot stay held. Klipper itself still updates with `fly-start` / `installer.sh --update` or the KIAUH menu. If a change really needs a new flash (bootloader, partitions), `flybian-update` **stops** and tells you to copy `~/printer_data` off first.
+
+How-to: [`docs/howto-update.md`](docs/howto-update.md).
+
 ## Support
 
 If Fly-bian helps your printer, you can [buy me a coffee on Ko-fi](https://ko-fi.com/0dysseusrex).
@@ -104,7 +116,8 @@ fly-start                 # Simple-AF only — install/update / boot display men
 fly-kiauh                 # KIAUH only — Start KIAUH / Add USB cameras
 fly-kiauh cameras         # KIAUH — USB cams into Crowsnest (same as fly-crowsnest-add-cams)
 sudo apt update
-# Do not apt-upgrade kernel, DTB, or U-Boot until those are in a named rebuild.
+# Do not apt-upgrade kernel, DTB, or U-Boot.
+sudo flybian-update           # helpers only — see “Already running a card?” above
 ```
 
 On the **base** image, Klipper is optional — install Simple-AF or KIAUH later as your normal user. On the **Simple-AF** or **KIAUH** named images the git trees and venvs are already on the card; first boot copies them into your home. CPU affinity for those units is already on every flavor (`klipper/cpu-affinity/`).
@@ -176,6 +189,9 @@ Community Armbian / alternate host firmware for other Mellow boards (Gemini H5, 
 | `first-boot/` | `fly-start.txt` + `README.txt` that belong on `FLY-SETUP` |
 | `scripts/prepare-sd.sh` | Copy those files onto a mounted FAT volume |
 | `scripts/stage-flybian-release.sh` | Rename/copy Armbian output to Fly-bian product names |
+| `docs/howto-update.md` | Update helpers over SSH without a new flash |
+| `docs/apt-repo.md` | How helper packages are built and gated |
+| `scripts/build-flybian-apt.sh` | Build helper `.deb`s + local apt tree |
 | `docs/build-named-image.md` | How to **build** the named Lite 2.1 image (Armbian userpatches) |
 | `docs/image-naming.md` | Fly-bian release filename scheme |
 | `armbian/userpatches/` | Board file, customize hook, overlay for that build |

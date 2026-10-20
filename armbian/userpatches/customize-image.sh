@@ -30,6 +30,8 @@ if [[ -f $OVERLAY/FLYBIAN_VERSION ]]; then
   FLYBIAN_VER=$(tr -d '[:space:]' <"$OVERLAY/FLYBIAN_VERSION")
 fi
 printf '%s\n' "$FLYBIAN_VER" >/etc/fly-debian/flybian-version
+# Frozen at bake. flybian-version may move later via Fly-bian apt packages.
+printf '%s\n' "$FLYBIAN_VER" >/etc/fly-debian/flybian-image-baked
 FLAVOR_TOKEN=Base
 if [[ -f $OVERLAY/fly-flavor ]]; then
   case "$(tr -d '[:space:]' <"$OVERLAY/fly-flavor")" in
@@ -41,6 +43,24 @@ fi
 printf 'Fly-bian-%s_%s_%s\n' "$FLYBIAN_VER" "$DEVICE_TOKEN" "$FLAVOR_TOKEN" \
   >/etc/fly-debian/flybian-image
 printf '%s\n' "$DEVICE_TOKEN" >/etc/fly-debian/flybian-device
+
+# Fly-bian apt (helpers only). Source stays Disabled until the public
+# repo is published; flybian-update / docs/howto-update.md enable it.
+if [[ -f $OVERLAY/apt/flybian.sources ]]; then
+  install -d /etc/apt/sources.list.d /usr/lib/fly-debian /usr/share/fly-debian
+  install -m 0644 "$OVERLAY/apt/flybian.sources" \
+    /etc/apt/sources.list.d/flybian.sources
+fi
+if [[ -f $OVERLAY/apt/min-image ]]; then
+  install -m 0644 "$OVERLAY/apt/min-image" /usr/share/fly-debian/min-image
+fi
+if [[ -f $OVERLAY/apt/check-min-image ]]; then
+  install -m 0755 "$OVERLAY/apt/check-min-image" \
+    /usr/lib/fly-debian/check-min-image
+fi
+if [[ -f $OVERLAY/apt/flybian-update ]]; then
+  install -m 0755 "$OVERLAY/apt/flybian-update" /usr/sbin/flybian-update
+fi
 
 # Static CPUAffinity drop-ins (Lite 512 MB pattern). Safe no-op on Pi V3.
 # Do NOT install a systemd generator — OOMs Lite during early boot.
@@ -277,12 +297,10 @@ WantedBy=getty.target
 EOF
   # First boot grows the root filesystem. Leave armbian-resize-filesystem
   # enabled and do not write /root/.no_rootfs_resize.
-  # These three are started together right after local-fs, and the kernel
-  # locks before their start timeouts can fire. ttyS0 already exists, so a
-  # serial login does not need them. fly-swapfile lives in /etc, so the
-  # mask replaces that unit file; the source stays in overlay/swapfile.
-  rm -f /etc/systemd/system/multi-user.target.wants/fly-swapfile.service
-  ln -sfn /dev/null /etc/systemd/system/fly-swapfile.service
+  # fly-swapfile stays enabled: 512 MiB (FLY_SWAP_MIB above). Create after
+  # resize. The two units below still hang early on this board before their
+  # start timeouts fire; ttyS0 already exists so serial login does not need
+  # them. Mask via /etc so the vendor unit files stay unused.
   ln -sfn /dev/null /etc/systemd/system/systemd-binfmt.service
   ln -sfn /dev/null /etc/systemd/system/systemd-tmpfiles-setup.service
   # Community lesson (reemo3dp Gemini/Pi + mellowflyc5): mainline rtw88_8821cs
@@ -483,8 +501,8 @@ if command -v systemctl >/dev/null; then
     systemctl disable "$ply" 2>/dev/null || true
     systemctl mask "$ply" 2>/dev/null || true
   done
-  # Stock zram stalls sysinit after /boot mounts (Pi V3 0.60); swap is
-  # fly-swapfile.service instead (see docs/lite21-bringup.md).
+  # Stock zram stalls sysinit after /boot mounts (Pi V3 0.60). Swap is the
+  # 512 MiB fly-swapfile.service path instead (see docs/lite21-bringup.md).
   for z in armbian-zram-config.service armbian-ramlog.service; do
     systemctl disable "$z" 2>/dev/null || true
     systemctl mask "$z" 2>/dev/null || true
@@ -731,7 +749,7 @@ if command -v apt-mark >/dev/null; then
   if [[ $FLY_BOARD_FAMILY == pi-v3 ]]; then
     # Pi V3 ships BRANCH=legacy (6.12); hold legacy packages, not current.
     apt-mark hold linux-image-legacy-sunxi64 linux-dtb-legacy-sunxi64 \
-      linux-u-boot-fly-pi-v3-legacy 2>/dev/null || true
+      "linux-u-boot-${BOARD_ARG}-legacy" 2>/dev/null || true
   else
     apt-mark hold linux-image-current-sunxi linux-dtb-current-sunxi \
       linux-u-boot-fly-lite-21-current 2>/dev/null || true
@@ -747,12 +765,19 @@ if [[ -f $OVERLAY/fly-flavor ]]; then
 fi
 if [[ -z $FLAVOR ]]; then
   case "$BOARD_ARG" in
-    fly-lite-21-simpleaf) FLAVOR=simpleaf ;;
-    fly-lite-21-kiauh) FLAVOR=kiauh ;;
+    fly-lite-21-simpleaf|fly-pi-v3-simpleaf) FLAVOR=simpleaf ;;
+    fly-lite-21-kiauh|fly-pi-v3-kiauh) FLAVOR=kiauh ;;
   esac
 fi
 
-if [[ -n $FLAVOR && -f $OVERLAY/klipper-stack/fly-bind-klipper-stack.sh ]]; then
+# Pi V3 KIAUH ships the installer only. Do not bind a Klipper tree
+# that this image does not contain.
+if [[ $FLY_BOARD_FAMILY == pi-v3 && $FLAVOR == kiauh ]]; then
+  FLAVOR_BIND=0
+else
+  FLAVOR_BIND=1
+fi
+if [[ $FLAVOR_BIND == 1 && -n $FLAVOR && -f $OVERLAY/klipper-stack/fly-bind-klipper-stack.sh ]]; then
   install -m 0755 "$OVERLAY/klipper-stack/fly-bind-klipper-stack.sh" \
     /usr/local/sbin/fly-bind-klipper-stack
   install -m 0644 "$OVERLAY/klipper-stack/fly-bind-klipper-stack.service" \
@@ -769,9 +794,26 @@ case "$FLAVOR" in
     ;;
   kiauh)
     # shellcheck source=/dev/null
-    source "$OVERLAY/kiauh/bake.sh"
+    if [[ $FLY_BOARD_FAMILY == pi-v3 ]]; then
+      source "$OVERLAY/kiauh/bake-pi-v3.sh"
+    else
+      source "$OVERLAY/kiauh/bake.sh"
+    fi
     ;;
 esac
+
+# Pi V3 fly-start.txt is per flavor, same split as Lite (base / Simple-AF / KIAUH).
+if [[ $FLY_BOARD_FAMILY == pi-v3 ]]; then
+  case "${FLAVOR:-}" in
+    simpleaf) fly_start_src=$OVERLAY/pi-v3/fly-start-simpleaf.txt ;;
+    kiauh) fly_start_src=$OVERLAY/pi-v3/fly-start-kiauh.txt ;;
+    *) fly_start_src=$OVERLAY/pi-v3/fly-start.txt ;;
+  esac
+  if [[ -f $fly_start_src ]]; then
+    install -m 0644 "$fly_start_src" /usr/share/fly-debian/first-boot/fly-start.txt
+    install -m 0644 "$fly_start_src" /boot/fly-start.txt
+  fi
+fi
 
 # MOTD Commands after flavor so Simple-AF vs KIAUH labels are correct.
 if [[ -x /usr/share/fly-debian/motd/patch-armbian-commands.py ]]; then

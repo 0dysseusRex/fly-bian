@@ -12,6 +12,8 @@ Flash the **KIAUH** release (`Fly-bian-…_Fly-Lite-2.1_KIAUH-….img.xz`), not 
 
 Do **not** install Simple-AF / pellcorp on this card — the stacks conflict.
 
+To pick up Fly-bian helper fixes (`fly-kiauh`, overlays) without flashing: [`howto-update.md`](howto-update.md). That does not update the Klipper git trees; use the KIAUH menu for those.
+
 ## Flash and first boot
 
 1. Write the `.img.xz` (Pi Imager, Etcher, or `dd` — see main [README](../README.md)).

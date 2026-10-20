@@ -23,6 +23,8 @@ Use these for printer/probe choices, macros, and general Simple-AF behavior. Fly
 
 On Fly Lite, prefer **GrumpyScreen**, not KlipperScreen (512 MB).
 
+To pick up Fly-bian helper fixes (`fly-start`, overlays) without flashing: [`howto-update.md`](howto-update.md). That does not update pellcorp; use `fly-start` / `installer.sh --update` for the stack.
+
 ## Flash and first boot
 
 1. Write the `.img.xz` with [Raspberry Pi Imager](https://www.raspberrypi.com/software/), balenaEtcher, or `xzcat … \| dd` (see main [README](../README.md)).

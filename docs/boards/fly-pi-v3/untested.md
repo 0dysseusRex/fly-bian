@@ -10,6 +10,5 @@ Hold this list for the Fly-bian 1.0 release notes. It is the Fly-Pi-V3 bring-up 
 - **TFT touch alignment.** The GT911 reports finger events. Whether those coordinates line up with the 320×480 glass was not checked. One drag reported X values past 320.
 - **`systemd-udev-trigger`.** Still masked. On earlier kernels the console died after the second udev pass. That service has not been turned back on for the 6.12 image.
 - **Weekly fstrim and Sunday e2scrub.** The timers start. Neither job has been seen running.
-- **Root size on a fresh flash.** This card was grown by hand to 15 GB. The 0.70 image now leaves `armbian-resize-filesystem` enabled. That first-boot grow has not been watched yet.
 - **Other storage layouts.** This board booted from its eMMC. SD-only and the other M2 module layouts were not run on this image.
 - **HDMI audio.** Not tested.

@@ -2,7 +2,7 @@
 
 Debian-based images you can flash to a MicroSD card (and later to eMMC on boards that have it) for Mellow Fly hosts. Not FlyOS-FAST.
 
-How to **build** the Lite 2.1 named image: [`build-named-image.md`](build-named-image.md). How images are **named**: [`image-naming.md`](image-naming.md). How to **use** it: [`../README.md`](../README.md).
+How to **build** the Lite 2.1 named image: [`build-named-image.md`](build-named-image.md). How images are **named**: [`image-naming.md`](image-naming.md). How to **use** it: [`../README.md`](../README.md). Helper **apt** (keep printer data): [`howto-update.md`](howto-update.md), [`apt-repo.md`](apt-repo.md).
 
 ## Order of work
 
