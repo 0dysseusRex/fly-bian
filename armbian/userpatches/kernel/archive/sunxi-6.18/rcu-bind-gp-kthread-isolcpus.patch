@@ -1,0 +1,14 @@
+--- a/kernel/rcu/tree_plugin.h
++++ b/kernel/rcu/tree_plugin.h
+@@ -1366,7 +1366,8 @@
+  */
+ static void rcu_bind_gp_kthread(void)
+ {
+-	if (!tick_nohz_full_enabled())
+-		return;
+-	housekeeping_affine(current, HK_TYPE_RCU);
++	if (tick_nohz_full_enabled())
++		housekeeping_affine(current, HK_TYPE_RCU);
++	else if (housekeeping_enabled(HK_TYPE_DOMAIN))
++		housekeeping_affine(current, HK_TYPE_DOMAIN);
+ }

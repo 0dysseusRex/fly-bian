@@ -42,3 +42,19 @@ done
 mkdir -p /run/fly-debian
 echo "$(cat /sys/devices/system/cpu/online 2>/dev/null || echo '?')" \
 	>/run/fly-debian/cpus-online
+
+# isolcpus=1-3 does not bind the RCU grace-period kthread unless nohz_full
+# is on. After this hotplug it can sit on an idle isolated CPU and stop
+# running; callbacks then pile up and ping/SDIO look dead. The kernel
+# patch pins it at start. Pin again here in case hotplug widened the mask.
+if command -v taskset >/dev/null 2>&1; then
+	for p in /proc/[0-9]*; do
+		[ -r "$p/comm" ] || continue
+		name=$(cat "$p/comm" 2>/dev/null || true)
+		case "$name" in
+			rcu_sched|rcu_preempt)
+				taskset -pc 0 "${p#/proc/}" >/dev/null 2>&1 || true
+				;;
+		esac
+	done
+fi

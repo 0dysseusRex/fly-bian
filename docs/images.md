@@ -7,6 +7,8 @@ Product versions are **Fly-bian** (repo `FLYBIAN_VERSION`). Only **1.0+** are Gi
 ```
 C:\Users\udrdr\fly-lite-armbian-image\Releases\
   RELEASES.txt
+  Fly-bian-1.06\
+    Fly-Lite-2.1\    … GitHub Release v1.06
   Fly-bian-1.05\
     Fly-Lite-2.1\    … GitHub Release v1.05
   Fly-bian-1.0\
@@ -28,6 +30,9 @@ Stage with: `scripts/stage-flybian-release.sh` (set `FLY_DEVICE` for Pi V3).
 
 | File | SHA256 | What it is |
 | --- | --- | --- |
+| `Releases/Fly-bian-1.06/Fly-Lite-2.1/Base/Fly-bian-1.06_Fly-Lite-2.1_Base.img.xz` | `555e187347663010f363c2cf5800c897b9d5b384fa7974559882c5a818767e7b` | **Fly-bian 1.06 Base.** Kernel 6.18.57. One MMC transfer at a time so the SD card and the Wi-Fi chip do not unmap DMA together. The RCU grace-period thread stays on CPU 0. |
+| `Releases/Fly-bian-1.06/Fly-Lite-2.1/Simple-AF/Fly-bian-1.06_Fly-Lite-2.1_Simple-AF-ea7125a.img.xz` | `e1aa28d08138b511f235b51a4fc1852bcf08767ed7ac9a8fdb37307ddf8b8cd2` | **Fly-bian 1.06 Simple-AF** (pellcorp `ea7125a`). Moonraker `9e676eb`, pellcorp Klipper `2f08ab4`. How-to: [`howto-simpleaf.md`](howto-simpleaf.md). |
+| `Releases/Fly-bian-1.06/Fly-Lite-2.1/KIAUH/Fly-bian-1.06_Fly-Lite-2.1_KIAUH-v6.3.2.img.xz` | `d79cd6858a16dc54c1d5f474fa707dce6db4d8babbe3d1e76ff3f84def3296c8` | **Fly-bian 1.06 KIAUH** (`v6.3.2`, latest tag). Klipper `c63b295`, Moonraker `9e676eb`. How-to: [`howto-kiauh.md`](howto-kiauh.md). |
 | `Releases/Fly-bian-1.05/Fly-Lite-2.1/Base/Fly-bian-1.05_Fly-Lite-2.1_Base.img.xz` | `4fcabd93ee91408a84a58497743d960c6745955787c84c631256bdaa44ec2730` | **Fly-bian 1.05 Base.** Kernel 6.18.57. `fly-lite-board` holds `vdd-cpux` at 1.3 V and disables the unused EMAC. Apt installs one named package at a time. `SERIAL_CONSOLE` in `fly-start.txt`. |
 | `Releases/Fly-bian-1.05/Fly-Lite-2.1/Simple-AF/Fly-bian-1.05_Fly-Lite-2.1_Simple-AF-707e558.img.xz` | `2079250936b6359d91cc5f9400a5c44443fa77c5e3621149fc27ac87c2dbcbfd` | **Fly-bian 1.05 Simple-AF** (pellcorp `707e558`). How-to: [`howto-simpleaf.md`](howto-simpleaf.md). |
 | `Releases/Fly-bian-1.05/Fly-Lite-2.1/KIAUH/Fly-bian-1.05_Fly-Lite-2.1_KIAUH-v6.3.2.img.xz` | `e61afaa7d1743a1be18687ab952b06bf74abfa60c07686ceb92e0701cd443dd2` | **Fly-bian 1.05 KIAUH** (`v6.3.2`). How-to: [`howto-kiauh.md`](howto-kiauh.md). |
