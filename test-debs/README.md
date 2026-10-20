@@ -32,14 +32,11 @@ Do **not** use on Simple-AF or KIAUH until that combination is tested. Do **not*
 
 ## Install (testbench)
 
-Copy the two `.deb` files onto the board. 512 MB boards need extra swap to unpack the image package.
+Copy the two `.deb` files onto the board. Fly Lite / Mini already has a **2 GiB** swapfile from first boot (`swapon --show`). RAM is 512 MB; do **not** add another 512 MiB swap for this test.
 
 ```bash
-sudo fallocate -l 512M /swap-kernel-test || \
-  sudo dd if=/dev/zero of=/swap-kernel-test bs=1M count=512
-sudo chmod 600 /swap-kernel-test
-sudo mkswap /swap-kernel-test
-sudo swapon /swap-kernel-test
+swapon --show
+# expect ~2 GiB already
 
 sudo apt-mark unhold linux-image-current-sunxi linux-dtb-current-sunxi
 cd ~/test-debs
