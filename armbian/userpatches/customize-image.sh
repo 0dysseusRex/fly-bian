@@ -54,6 +54,10 @@ fi
 if [[ -f $OVERLAY/apt/min-image ]]; then
   install -m 0644 "$OVERLAY/apt/min-image" /usr/share/fly-debian/min-image
 fi
+if [[ -f $OVERLAY/apt/infer-identity ]]; then
+  install -m 0644 "$OVERLAY/apt/infer-identity" \
+    /usr/lib/fly-debian/infer-identity
+fi
 if [[ -f $OVERLAY/apt/check-min-image ]]; then
   install -m 0755 "$OVERLAY/apt/check-min-image" \
     /usr/lib/fly-debian/check-min-image

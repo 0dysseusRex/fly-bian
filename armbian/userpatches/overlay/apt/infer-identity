@@ -1,0 +1,105 @@
+# Shared identity helpers for Fly-bian apt (sourced; no shebang).
+# Cards before 1.05 have flybian-version + flybian-image, not flybian-device.
+
+flybian_infer_device() {
+	flybian_device=""
+	local v img board
+	if [[ -r /etc/fly-debian/flybian-device ]]; then
+		v=$(tr -d '[:space:]' </etc/fly-debian/flybian-device)
+		if [[ -n $v ]]; then
+			flybian_device=$v
+			return 0
+		fi
+	fi
+	if [[ -r /etc/fly-debian/flybian-image ]]; then
+		img=$(tr -d '[:space:]' </etc/fly-debian/flybian-image)
+		case "$img" in
+			*_Fly-Lite-2.1_*|*_Fly-Lite-2.1)
+				flybian_device=Fly-Lite-2.1
+				return 0
+				;;
+			*_Fly-Pi-V3_*|*_Fly-Pi-V3)
+				flybian_device=Fly-Pi-V3
+				return 0
+				;;
+		esac
+	fi
+	if [[ -r /etc/armbian-release ]]; then
+		# shellcheck disable=SC1091
+		board=$(. /etc/armbian-release; printf '%s' "${BOARD:-}")
+		case "$board" in
+			fly-lite-21*)
+				flybian_device=Fly-Lite-2.1
+				return 0
+				;;
+			fly-pi-v3*)
+				flybian_device=Fly-Pi-V3
+				return 0
+				;;
+		esac
+	fi
+	return 1
+}
+
+flybian_infer_baked() {
+	flybian_baked=""
+	local img
+	if [[ -r /etc/fly-debian/flybian-image-baked ]]; then
+		flybian_baked=$(tr -d '[:space:]' </etc/fly-debian/flybian-image-baked)
+		[[ -n $flybian_baked ]] && return 0
+	fi
+	if [[ -r /etc/fly-debian/flybian-version ]]; then
+		flybian_baked=$(tr -d '[:space:]' </etc/fly-debian/flybian-version)
+		[[ -n $flybian_baked ]] && return 0
+	fi
+	if [[ -r /etc/fly-debian/flybian-image ]]; then
+		img=$(tr -d '[:space:]' </etc/fly-debian/flybian-image)
+		if [[ $img == Fly-bian-*_* ]]; then
+			flybian_baked=${img#Fly-bian-}
+			flybian_baked=${flybian_baked%%_*}
+			[[ -n $flybian_baked ]] && return 0
+		fi
+	fi
+	return 1
+}
+
+flybian_infer_flavor() {
+	flybian_flavor=""
+	local img
+	if [[ -r /etc/fly-debian/stack-flavor ]]; then
+		flybian_flavor=$(tr -d '[:space:]' </etc/fly-debian/stack-flavor)
+		return 0
+	fi
+	if [[ -r /etc/fly-debian/flybian-image ]]; then
+		img=$(tr -d '[:space:]' </etc/fly-debian/flybian-image)
+		case "$img" in
+			*_Simple-AF*) flybian_flavor=simpleaf ;;
+			*_KIAUH*) flybian_flavor=kiauh ;;
+		esac
+	fi
+	return 0
+}
+
+flybian_persist_identity() {
+	install -d /etc/fly-debian
+	flybian_infer_device || true
+	flybian_infer_baked || true
+	if [[ -n ${flybian_device:-} && ! -e /etc/fly-debian/flybian-device ]]; then
+		printf '%s\n' "$flybian_device" >/etc/fly-debian/flybian-device
+	fi
+	if [[ -n ${flybian_baked:-} && ! -e /etc/fly-debian/flybian-image-baked ]]; then
+		printf '%s\n' "$flybian_baked" >/etc/fly-debian/flybian-image-baked
+	fi
+}
+
+flybian_missing_device_msg() {
+	cat >&2 <<'EOM'
+flybian-release: cannot tell which Fly-bian board this is.
+On Fly Lite 2.1 Base/Simple-AF/KIAUH:
+  echo Fly-Lite-2.1 | sudo tee /etc/fly-debian/flybian-device
+On Fly Pi V3:
+  echo Fly-Pi-V3 | sudo tee /etc/fly-debian/flybian-device
+Then retry. Install only the matching board package (not both), and skip
+KIAUH/Simple-AF helper debs on a Base image.
+EOM
+}

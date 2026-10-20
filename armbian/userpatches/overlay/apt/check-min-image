@@ -4,10 +4,15 @@
 set -euo pipefail
 
 TABLE="${FLYBIAN_MIN_IMAGE_FILE:-/usr/share/fly-debian/min-image}"
-DEVICE_FILE=/etc/fly-debian/flybian-device
-BAKED_FILE=/etc/fly-debian/flybian-image-baked
-# Cards baked before this file existed: fall back to product version.
-VERSION_FILE=/etc/fly-debian/flybian-version
+
+_lib=/usr/lib/fly-debian
+if [[ -f $_lib/infer-identity ]]; then
+	# shellcheck disable=SC1091
+	. "$_lib/infer-identity"
+elif [[ -f "$(dirname "$0")/infer-identity" ]]; then
+	# shellcheck disable=SC1091
+	. "$(dirname "$0")/infer-identity"
+fi
 
 rank() {
 	local v maj min
@@ -29,26 +34,18 @@ if [[ ! -r $TABLE ]]; then
 	exit 0
 fi
 
-device=""
-if [[ -r $DEVICE_FILE ]]; then
-	device=$(tr -d '[:space:]' <"$DEVICE_FILE")
-fi
-if [[ -z $device ]]; then
-	echo "flybian: /etc/fly-debian/flybian-device missing; cannot check min image." >&2
-	echo "This does not look like a Fly-bian card. Do not install these packages." >&2
+if ! flybian_infer_device; then
+	echo "flybian: cannot tell which board this is (no flybian-device / flybian-image)." >&2
+	flybian_missing_device_msg
 	exit 1
 fi
+device=$flybian_device
 
-baked=""
-if [[ -r $BAKED_FILE ]]; then
-	baked=$(tr -d '[:space:]' <"$BAKED_FILE")
-elif [[ -r $VERSION_FILE ]]; then
-	baked=$(tr -d '[:space:]' <"$VERSION_FILE")
-fi
-if [[ -z $baked ]]; then
+if ! flybian_infer_baked; then
 	echo "flybian: no baked image version on this card." >&2
 	exit 1
 fi
+baked=$flybian_baked
 
 min=""
 while read -r dev ver _; do

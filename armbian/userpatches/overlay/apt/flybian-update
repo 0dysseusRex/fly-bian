@@ -7,27 +7,37 @@ if [[ ${EUID:-0} -ne 0 ]]; then
 	exit 1
 fi
 
+if [[ -f /usr/lib/fly-debian/infer-identity ]]; then
+	# shellcheck disable=SC1091
+	. /usr/lib/fly-debian/infer-identity
+	flybian_persist_identity
+fi
+
 CHECK=/usr/lib/fly-debian/check-min-image
 if [[ -x $CHECK ]]; then
 	"$CHECK"
 fi
 
 device=""
-[[ -r /etc/fly-debian/flybian-device ]] && \
+if [[ -r /etc/fly-debian/flybian-device ]]; then
 	device=$(tr -d '[:space:]' </etc/fly-debian/flybian-device)
+fi
 
 board_pkg=""
 case "$device" in
 	Fly-Lite-2.1) board_pkg=flybian-board-fly-lite-21 ;;
 	Fly-Pi-V3) board_pkg=flybian-board-fly-pi-v3 ;;
+	*)
+		echo "Unknown Fly-bian board '${device:-unset}'. See docs/howto-update.md" >&2
+		exit 1
+		;;
 esac
 
 flavor=""
 [[ -r /etc/fly-debian/stack-flavor ]] && \
 	flavor=$(tr -d '[:space:]' </etc/fly-debian/stack-flavor)
 
-pkgs=(flybian-release flybian-common)
-[[ -n $board_pkg ]] && pkgs+=("$board_pkg")
+pkgs=(flybian-release flybian-common "$board_pkg")
 case "$flavor" in
 	kiauh) pkgs+=(flybian-kiauh-installer) ;;
 	simpleaf) pkgs+=(flybian-simpleaf-helpers) ;;

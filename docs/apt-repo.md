@@ -32,7 +32,7 @@ Fly-Lite-2.1	1.00
 Fly-Pi-V3	0.70
 ```
 
-`flybian-release` **preinst** compares `/etc/fly-debian/flybian-image-baked` (fallback: `flybian-version`) to that line. Rank is `major*100 + minor` (`0.75` → 75, `1.06` → 106). If the card is older, install fails with the reflash instructions in `howto-update.md`.
+`flybian-release` **preinst** infers the board from `flybian-device`, else `flybian-image` (`Fly-bian-1.0_Fly-Lite-2.1_Base`), else `/etc/armbian-release` `BOARD`. Baked version is `flybian-image-baked`, else `flybian-version`. Rank is `major*100 + minor` (`0.75` → 75, `1.0` → 100, `1.06` → 106). If the card is older than min-image, install fails with the reflash instructions in `howto-update.md`. 1.0 Lite cards are at the Lite floor and may update; they do not have `flybian-device` until postinst writes it.
 
 **Bump a min-image line** in the same commit as a change that cannot run on older cards:
 
@@ -93,4 +93,4 @@ On a running card that meets min-image:
 sudo /usr/lib/fly-debian/check-min-image && echo OK
 ```
 
-Install the matching board deb first if `flybian-device` is `Fly-Pi-V3` vs `Fly-Lite-2.1`.
+Install the matching board deb only (`Fly-Pi-V3` vs `Fly-Lite-2.1`). Base cards skip flavor helper debs.

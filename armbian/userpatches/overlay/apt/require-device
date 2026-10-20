@@ -2,11 +2,16 @@
 # preinst helper: only install this board package on the matching device.
 set -euo pipefail
 want=$1
-device=""
-[[ -r /etc/fly-debian/flybian-device ]] && \
-	device=$(tr -d '[:space:]' </etc/fly-debian/flybian-device)
-if [[ $device != "$want" ]]; then
-	echo "Package is for $want (this card is '${device:-unknown}')." >&2
+if [[ -f /usr/lib/fly-debian/infer-identity ]]; then
+	# shellcheck disable=SC1091
+	. /usr/lib/fly-debian/infer-identity
+fi
+if ! flybian_infer_device; then
+	flybian_missing_device_msg
+	exit 1
+fi
+if [[ $flybian_device != "$want" ]]; then
+	echo "Package is for $want (this card is '$flybian_device')." >&2
 	exit 1
 fi
 exit 0

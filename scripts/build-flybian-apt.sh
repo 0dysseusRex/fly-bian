@@ -48,21 +48,28 @@ EOF
 
 write_preinst_device() {
 	local dest=$1 want=$2
-	cat >"$dest" <<EOF
+	{
+		cat <<'EOF'
 #!/bin/bash
 set -euo pipefail
+EOF
+		cat "$overlay/apt/infer-identity"
+		cat <<EOF
 if [[ -x /usr/lib/fly-debian/check-min-image ]]; then
 	/usr/lib/fly-debian/check-min-image
 fi
 want='$want'
-device=""
-[[ -r /etc/fly-debian/flybian-device ]] && device=\$(tr -d '[:space:]' </etc/fly-debian/flybian-device)
-if [[ \$device != "\$want" ]]; then
-	echo "This package is for \$want (this card is '\${device:-unknown}')." >&2
+if ! flybian_infer_device; then
+	flybian_missing_device_msg
+	exit 1
+fi
+if [[ \$flybian_device != "\$want" ]]; then
+	echo "This package is for \$want (this card is '\$flybian_device')." >&2
 	exit 1
 fi
 exit 0
 EOF
+	} >"$dest"
 	chmod 0755 "$dest"
 }
 
@@ -101,14 +108,18 @@ install -d "$rel/DEBIAN" \
 	"$rel/etc/apt/sources.list.d" \
 	"$rel/etc/fly-debian"
 inst 0755 "$overlay/apt/check-min-image" "$rel/usr/lib/fly-debian/check-min-image"
+inst 0644 "$overlay/apt/infer-identity" "$rel/usr/lib/fly-debian/infer-identity"
 inst 0755 "$overlay/apt/flybian-update" "$rel/usr/sbin/flybian-update"
 inst 0644 "$overlay/apt/min-image" "$rel/usr/share/fly-debian/min-image"
 inst 0644 "$overlay/apt/flybian.sources" "$rel/etc/apt/sources.list.d/flybian.sources"
-# Release preinst inlines the new min-image table (preinst runs before unpack).
+# Release preinst inlines identity + min-image (preinst runs before unpack).
 {
 	cat <<'EOF'
 #!/bin/bash
 set -euo pipefail
+EOF
+	cat "$overlay/apt/infer-identity"
+	cat <<'EOF'
 rank() {
 	local v maj min
 	v=$(printf '%s' "$1" | tr -d '[:space:]')
@@ -123,19 +134,21 @@ rank() {
 	min=$((10#$min))
 	printf '%s\n' $((maj * 100 + min))
 }
-device=""
-[[ -r /etc/fly-debian/flybian-device ]] && device=$(tr -d '[:space:]' </etc/fly-debian/flybian-device)
-if [[ -z $device ]]; then
-	echo "flybian-release: not a Fly-bian card (missing flybian-device)." >&2
+if ! flybian_infer_device; then
+	if [[ -r /etc/fly-debian/flybian-version ]]; then
+		echo "flybian-release: Fly-bian card, but board id is missing." >&2
+	else
+		echo "flybian-release: not a Fly-bian card (no flybian-version)." >&2
+	fi
+	flybian_missing_device_msg
 	exit 1
 fi
-baked=""
-if [[ -r /etc/fly-debian/flybian-image-baked ]]; then
-	baked=$(tr -d '[:space:]' </etc/fly-debian/flybian-image-baked)
-elif [[ -r /etc/fly-debian/flybian-version ]]; then
-	baked=$(tr -d '[:space:]' </etc/fly-debian/flybian-version)
+device=$flybian_device
+if ! flybian_infer_baked; then
+	echo "flybian-release: no baked version." >&2
+	exit 1
 fi
-[[ -n $baked ]] || { echo "flybian-release: no baked version." >&2; exit 1; }
+baked=$flybian_baked
 min=""
 case "$device" in
 EOF
@@ -161,6 +174,11 @@ chmod 0755 "$rel/DEBIAN/preinst"
 cat >"$rel/DEBIAN/postinst" <<EOF
 #!/bin/bash
 set -euo pipefail
+if [[ -f /usr/lib/fly-debian/infer-identity ]]; then
+	# shellcheck disable=SC1091
+	. /usr/lib/fly-debian/infer-identity
+	flybian_persist_identity
+fi
 install -d /etc/fly-debian
 printf '%s\\n' '$ver' >/etc/fly-debian/flybian-apt-version
 if [[ -r /etc/fly-debian/flybian-version ]] && [[ ! -e /etc/fly-debian/flybian-image-baked ]]; then

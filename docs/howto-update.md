@@ -18,17 +18,26 @@ Simple-AF and KIAUH **stacks** still update with `~/pellcorp/installer.sh --upda
 ## Before you start
 
 ```bash
-# Who you are
+# Who you are (some of these are missing on 1.0 cards — that is OK)
+cat /etc/fly-debian/flybian-version
+cat /etc/fly-debian/flybian-image
 cat /etc/fly-debian/flybian-device
 cat /etc/fly-debian/flybian-image-baked
-cat /etc/fly-debian/flybian-version
 cat /etc/fly-debian/stack-flavor
 
 # Optional backup of printer data (on the card or scp off)
 tar -C "$HOME" -czf "$HOME/printer_data-backup.tgz" printer_data
 ```
 
-Cards baked before this feature exist only have `flybian-version` (no `flybian-image-baked`). `flybian-update` then uses `flybian-version` as the bake stamp.
+| File | Meaning |
+| --- | --- |
+| `flybian-version` | Product stamp. **1.0 Lite Base has this.** |
+| `flybian-image` | `Fly-bian-1.0_Fly-Lite-2.1_Base` — enough to identify the board |
+| `flybian-device` | `Fly-Lite-2.1` or `Fly-Pi-V3`. Missing before 1.05 |
+| `flybian-image-baked` | Frozen flash stamp. Missing before the apt helpers |
+| `stack-flavor` | `simpleaf` / `kiauh`. **Empty on Base** — do not install flavor debs |
+
+Lite **1.00** and newer may update in place. Use only the Lite board package on a Lite card. Base images skip KIAUH and Simple-AF helper debs.
 
 ## After the public apt repo is up (Fly-bian 1.0+)
 
@@ -63,20 +72,38 @@ On a PC, from this repo:
 bash scripts/build-flybian-apt.sh
 ```
 
-Copy `apt/out/flybian-debs-<ver>.tar.gz` to the board, then:
+Copy the tarball onto the board (use the real filename, not a glob that might miss), then unpack **in that directory**:
 
 ```bash
-mkdir -p ~/flybian-debs && tar -C ~/flybian-debs -xzf flybian-debs-*.tar.gz
+mkdir -p ~/flybian-debs
+tar -C ~/flybian-debs -xzf ~/flybian-debs-1.06.tar.gz
 cd ~/flybian-debs
-sudo dpkg -i --force-overwrite flybian-release_*.deb flybian-common_*.deb
-# board package (pick one):
-sudo dpkg -i --force-overwrite flybian-board-fly-pi-v3_*.deb
-# or: sudo dpkg -i --force-overwrite flybian-board-fly-lite-21_*.deb
-# flavor (if this is a stack image):
-sudo dpkg -i --force-overwrite flybian-kiauh-installer_*.deb
-# or: sudo dpkg -i --force-overwrite flybian-simpleaf-helpers_*.deb
+ls *.deb
+```
+
+Install **only** the packages for this card. Comments in older how-tos were not commands — do not install Pi V3 debs on Lite, and do not install KIAUH/Simple-AF helpers on Base.
+
+**Lite Base** (your `flybian-version` is `1.0`, no `stack-flavor`):
+
+```bash
+sudo dpkg -i --force-overwrite \
+  flybian-release_*.deb \
+  flybian-common_*.deb \
+  flybian-board-fly-lite-21_*.deb
 sudo apt-get install -f -y
 ```
+
+**Lite Simple-AF** — same three, plus `flybian-simpleaf-helpers_*.deb`.  
+**Lite KIAUH** — same three, plus `flybian-kiauh-installer_*.deb`.  
+**Pi V3** — use `flybian-board-fly-pi-v3_*.deb` instead of the Lite board package.
+
+If an **already-built** 1.06 `flybian-release` still says `missing flybian-device`, write the id once, then retry the Lite Base command above:
+
+```bash
+echo Fly-Lite-2.1 | sudo tee /etc/fly-debian/flybian-device
+```
+
+Newer helper debs infer `Fly-Lite-2.1` from `/etc/fly-debian/flybian-image` and do not need that tee.
 
 If `dpkg` prints the min-image error below, stop. Do not `--force` past it.
 
@@ -98,6 +125,8 @@ Typical causes: U-Boot/SPL, partition map, or a kernel the helpers cannot run on
 - Do not `apt-mark unhold` `linux-image-*`, `linux-dtb-*`, or `linux-u-boot-*`.
 - Do not `apt full-upgrade` and assume Fly-bian kernel packages from Armbian are safe.
 - Do not install Simple-AF helpers on a KIAUH card (or the reverse). The packages conflict.
+- Do not install `flybian-board-fly-pi-v3` on a Lite card, or Lite board debs on a Pi V3.
+- Do not install KIAUH or Simple-AF helper debs on a **Base** image.
 - Do not use this to skip a Debian release upgrade. That is still a new image.
 
 ## Maintainers
