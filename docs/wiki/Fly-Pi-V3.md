@@ -2,32 +2,38 @@
 
 ![Fly Pi V3](https://raw.githubusercontent.com/0dysseusRex/fly-bian/main/docs/boards/fly-pi-v3/fly-pi-v3.jpg)
 
-**Status:** Next target after Fly Lite 2.1. **No Fly-bian public image yet.**
+**Status:** Supported — use Fly-bian **1.0** images whose names contain `Fly-Pi-V3`. Product version is independent of the Lite line (Lite is 1.06).
 
 Board notes in the repo: [docs/boards/fly-pi-v3/README.md](https://github.com/0dysseusRex/fly-bian/blob/main/docs/boards/fly-pi-v3/README.md).
 
 ## Important
 
-**Do not flash Fly Lite 2.1 images** (`Fly-Lite-2.1` in the filename) onto a Fly Pi V3. Wrong SoC / boot / device tree - it will not work and can waste a lot of time.
+**Do not flash Fly Lite 2.1 images** (`Fly-Lite-2.1` in the filename) onto a Fly Pi V3. Wrong SoC / boot / device tree.
 
-When Pi V3 images ship, filenames will look like:
+Download from [Releases](https://github.com/0dysseusRex/fly-bian/releases/tag/v1.0-pi-v3):
 
-- `Fly-bian-*_Fly-Pi-V3_Base.img.xz`
-- `Fly-bian-*_Fly-Pi-V3_Simple-AF-*.img.xz`
-- `Fly-bian-*_Fly-Pi-V3_KIAUH-*.img.xz`
+- `Fly-bian-1.0_Fly-Pi-V3_Base.img.xz`
+- `Fly-bian-1.0_Fly-Pi-V3_Simple-AF-ea7125a.img.xz`
+- `Fly-bian-1.0_Fly-Pi-V3_KIAUH-v6.3.2.img.xz`
 
-...and the flash flow will match [Getting started](Getting-Started.md) (download -> burn MicroSD -> `FLY-SETUP` / wizard -> SSH -> `fly-start` or `fly-kiauh`).
+Flash flow matches [Getting started](Getting-Started.md): burn MicroSD (or M2WE eMMC) → `FLY-SETUP` / wizard → SSH → `fly-start` or `fly-kiauh`.
 
-## What we know from the board (bring-up TBD)
+## Quick facts
 
-Visible on the PCB (for orientation only - pinmux and drivers still to be confirmed in Fly-bian):
+| Item | Detail |
+| --- | --- |
+| SoC | Allwinner H618, quad Cortex-A53 |
+| RAM | **1 GB DDR4** |
+| Swap | **512 MiB** `fly-swapfile` after first-boot resize |
+| Kernel | **6.12.114** `legacy-sunxi64`, DTB `fly-h618.dtb` |
+| Storage | Onboard MicroSD and/or official FLY **M2** module (private socket) |
+| Ethernet | 100 Mb — easiest first network path |
+| Wi-Fi | From an M2 module (or USB). No onboard radio |
+| Power | DC 12–24 V **or** Type-C 5 V / ≥2 A (choose one) |
+| Debug | Type-C CH340 UART, **115200 8N1**, no flow control. Do not pulse DTR/RTS |
+| Display | FPC-HDMI (Fly HDMI cable 800×480) and/or micro HDMI; FPC-TFT 16P |
 
-- Marked **Fly-PI3**
-- Ethernet + USB-A, fan header, reset
-- M.2-style **FLY M2** socket (private FLY modules only)
-- Large supercapacitor module on some units
-
-### M2 module variants (all must work)
+## M2 module variants
 
 | Module | Wi-Fi | Module storage |
 | --- | --- | --- |
@@ -35,28 +41,41 @@ Visible on the PCB (for orientation only - pinmux and drivers still to be confir
 | **M2WE** | 2.4 + 5 GHz | 16 GB eMMC |
 | **M2WS** | 2.4 + 5 GHz | 16 GB soldered TF on the module |
 
-Fly-bian images must support SD-only, SD + Wi-Fi M2, M2WE boot, and M2WS boot. By default, gcode and timelapse stay on the boot medium (including everything on M2WE/M2WS if that is what the user wants). Optionally, users with an onboard MicroSD can redirect **gcode** and **timelapse** there - documented how-to, not forced.
+**Do not flash the image onto both the onboard MicroSD and the module eMMC (or M2WS TF).** One medium holds the OS.
 
-**Do not flash the image onto both the onboard MicroSD and the module eMMC (or M2WS TF).** One medium holds the OS. The other may be blank storage. Two bootable copies let U-Boot and the root filesystem come from different installs.
+The 2.4 GHz-only M2 cannot join a 5 GHz network. That module is not on the bench yet: an SDIO id other than the AIC8800 is printed on the serial console and the radio is left down.
 
-The 2.4 GHz-only M2 cannot join a 5 GHz network. M2WE and M2WS can use either band. That 2.4-only module is not on the bench yet. Until it is, an SDIO id other than the AIC8800 (`0xc8a1`) is printed on the serial console and the radio is left down.
+## Pi V3-specific tips
 
-### Captured from M2WS + FlyOS-FAST H618 v1.4.0
+1. **Ethernet first** if you have a cable. Wi-Fi needs an official M2 module and its antenna.
+2. **First boot is slow** — resize + 512 MiB swap. Keep serial open.
+3. Soft **`reboot` often hangs** after `[ OK ]` — use a 5 V (or 12–24 V) power cycle.
+4. Do **not** pulse DTR/RTS on the USB-UART.
+5. For GrumpyScreen, use the **Fly HDMI cable** (HDMI framebuffer + USB touch). The SPI TFT is a second framebuffer and stays blank.
+6. Do **not** unmask `systemd-udev-trigger`.
+7. Simple-AF / KIAUH after login: `fly-start` or `fly-kiauh`. KIAUH Spoolman needs Docker first — [spoolman.md](../boards/fly-pi-v3/spoolman.md).
 
-- DTB: `fly-h618.dtb` (console **`ttyS0` @ 115200**)
-- SDIO Wi-Fi named **`rtl8821cs`** in the DTB; image also ships AIC8800 bits for other radios
-- MMC0 MicroSD / MMC1 Wi-Fi / MMC2 eMMC (live `mmcblk` order still needs a seated Pi V3)
-- Artifacts: [m2ws-usb-pull REPORT](https://github.com/0dysseusRex/fly-bian/blob/main/flyos-artifacts/live/m2ws-usb-pull/REPORT.md)
+## After login
 
-Exact pinmux and dual-storage `mmcblk` mapping still need a board with `board=fly-pi-v3` booted.
+```bash
+fly-help
+fly-start          # Simple-AF image
+fly-kiauh          # KIAUH image
+fly-crowsnest-add-cams
+fly-grumpy-rotate  # Simple-AF / GrumpyScreen
+```
 
-## Until images exist
+## Known 1.0 limits
 
-- Follow Mellow's own docs/firmware for Pi V3 if you need a working printer today.
-- Watch [Releases](https://github.com/0dysseusRex/fly-bian/releases) for the first `Fly-Pi-V3` artifacts.
-- Same three-flavor model as the Lite: **Base**, **Simple-AF**, **KIAUH**.
+See [untested.md](../boards/fly-pi-v3/untested.md). Short list: RS232 not electrically tested, micro-HDMI jack as a monitor not plugged, ADXL/RRF header has no sensor attached, Type-C USB gadget and HDMI audio not tested, SD-only and 2.4-only M2 not labbed, `systemd-udev-trigger` stays masked.
+
+## Do not flash
+
+- Fly Lite 2.1 images
+- Raspberry Pi OS, Mainsail OS
+- FlyOS-FAST (different layout; keep a recovery copy if you want it)
 
 ## Related
 
-- [Getting started](Getting-Started.md) (Lite today; same pattern later for Pi V3)
-- [Fly Lite 2.1](Fly-Lite-2.1.md) - currently supported board
+- [Getting started](Getting-Started.md)
+- [Fly Lite 2.1](Fly-Lite-2.1.md)

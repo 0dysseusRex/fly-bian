@@ -18,7 +18,7 @@ It exists so you can run a normal Debian system on Fly hardware: real `apt`, a u
 4. Boot: the rootfs expands, a swapfile is created, and (on stack images) Klipper trees are bound into your home.
 5. SSH in and finish printer setup with `fly-start` (Simple-AF) or `fly-kiauh` (KIAUH).
 
-**Boards:** [Fly Lite 2.1](docs/boards/fly-lite-2.1/README.md) is supported first. [Fly Pi V3](docs/boards/fly-pi-v3/README.md) is next. Do not flash a Lite image onto a Pi V3 (or the reverse).
+**Boards:** [Fly Lite 2.1](docs/boards/fly-lite-2.1/README.md) (1.06) and [Fly Pi V3](docs/boards/fly-pi-v3/README.md) (1.0). Do not flash a Lite image onto a Pi V3 (or the reverse). Pick the filename that contains your board.
 
 **First-time flash guide:** [Wiki — Getting started](https://github.com/0dysseusRex/fly-bian/wiki/Getting-Started) — download → burn → first boot. Boards: [Fly Lite 2.1](https://github.com/0dysseusRex/fly-bian/wiki/Fly-Lite-2.1) · [Fly Pi V3](https://github.com/0dysseusRex/fly-bian/wiki/Fly-Pi-V3). Same pages also live under [`docs/wiki/`](docs/wiki/Home.md).
 
@@ -28,7 +28,7 @@ Every release ships three flavors for the same board. Pick **one** — do not mi
 
 | Image | What’s on the card | Who it’s for |
 | --- | --- | --- |
-| **Base** (`…_Base.img.xz`) | Armbian/Debian + Fly Lite hardware (DTB, Wi‑Fi, UART, TFT Cap/GT911, swap, first-boot helpers). **No** Klipper stack. | You want a clean Debian host and will install Simple-AF or KIAUH yourself later. |
+| **Base** (`…_Base.img.xz`) | Armbian/Debian + that board’s hardware (DTB, network, UART, display, swap, first-boot helpers). **No** Klipper stack. | You want a clean Debian host and will install Simple-AF or KIAUH yourself later. |
 | **Simple-AF** (`…_Simple-AF-….img.xz`) | Everything in Base, plus [pellcorp Simple-AF](https://github.com/pellcorp/creality) (Klipper/Moonraker/UIs/pellcorp) pre-baked under `/opt`. After login: `fly-start`. Prefer **GrumpyScreen** on 512 MB. | You want the pellcorp / Creality-style installer path with printer macros and a guided `installer.sh`. Upstream RPi docs: [creality-wiki/rpi](https://pellcorp.github.io/creality-wiki/rpi/). How-to: [`docs/howto-simpleaf.md`](docs/howto-simpleaf.md). |
 | **KIAUH** (`…_KIAUH-….img.xz`) | Everything in Base, plus [KIAUH](https://github.com/dw-0/kiauh) and stock Klipper/Moonraker/Fluidd/Mainsail pre-baked under `/opt`. After login: `fly-kiauh`. | You prefer the classic KIAUH menu to enable components and write `printer.cfg`. How-to: [`docs/howto-kiauh.md`](docs/howto-kiauh.md). |
 
@@ -175,8 +175,8 @@ Or set `INSTALL_BOOT_DISPLAY=Yes` in `fly-start.txt` (full install) / fly-start 
 
 | Board | Status | Notes |
 | --- | --- | --- |
-| Fly Lite 2.1 | Now | This README. H3, MicroSD only. |
-| Fly Pi V3 | Next | H618, Ethernet, optional FLY M2WE eMMC. New board file, not a Lite respin. |
+| Fly Lite 2.1 | Now (1.06) | H3, MicroSD only. |
+| Fly Pi V3 | Now (1.0) | H618, Ethernet, optional FLY M2 module. Separate images, not a Lite respin. |
 | Fly Pi V2, MiniPad, Gemini | Later | Different SoCs. Same first-boot idea, different images. |
 
 Community Armbian / alternate host firmware for other Mellow boards (Gemini H5, upstream Fly-C5, etc.) is catalogued in [`docs/community-alternate-firmware.md`](docs/community-alternate-firmware.md). Those projects are **not** Fly-bian images.
@@ -203,4 +203,4 @@ Community Armbian / alternate host firmware for other Mellow boards (Gemini H5, 
 
 ## Building an image
 
-A named image is produced with the [Armbian build framework](https://github.com/armbian/build), not by `dd` of a 32 GB card. Follow [`docs/build-named-image.md`](docs/build-named-image.md). From WSL: `scripts/run-armbian-compile.sh base|simpleaf|kiauh`. That build needs a Linux host with Docker or a native Armbian build tree, and the Lite on the bench to verify autoboot, Wi-Fi, serial, and resize.
+A named image is produced with the [Armbian build framework](https://github.com/armbian/build), not by `dd` of a 32 GB card. Follow [`docs/build-named-image.md`](docs/build-named-image.md). From WSL: `scripts/run-armbian-compile.sh base|simpleaf|kiauh` (Lite) or `pi-v3` / `pi-v3-simpleaf` / `pi-v3-kiauh` (Pi V3). That build needs a Linux host with Docker or a native Armbian build tree, and the matching board on the bench to verify autoboot, network, serial, and resize.

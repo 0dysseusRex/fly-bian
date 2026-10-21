@@ -255,6 +255,8 @@ if [[ $FLY_BOARD_FAMILY == pi-v3 ]]; then
       sed -i 's/[[:space:]]*systemd\.mask=dbus\.service//' /boot/armbianEnv.txt
       # The second udev coldplug returns, then the console dies within 15s.
       # Initramfs already started udev. serial-getty does not need this pass.
+      # Do not unmask this. Early /dev/fb0 and HID stay 0600; fly-grumpy-evdev.sh
+      # chmod's those nodes so GrumpyScreen can open them.
       if ! grep -q 'systemd.mask=systemd-udev-trigger.service' /boot/armbianEnv.txt; then
         sed -i 's/^extraargs=\(.*\)/extraargs=\1 systemd.mask=systemd-udev-trigger.service/' \
           /boot/armbianEnv.txt
