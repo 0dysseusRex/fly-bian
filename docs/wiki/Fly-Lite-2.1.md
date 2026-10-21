@@ -49,6 +49,6 @@ fly-grumpy-rotate  # Simple-AF / GrumpyScreen
 
 ## Do not flash
 
-- Fly Pi V3 images (when they exist)
+- Fly Pi V3 images (`Fly-Pi-V3` in the filename)
 - Raspberry Pi OS, Mainsail OS
 - Stock Orange Pi Lite images (wrong card-detect / no Fly DTB) except for recovery experiments

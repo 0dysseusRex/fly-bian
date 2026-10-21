@@ -12,7 +12,8 @@ C:\Users\udrdr\fly-lite-armbian-image\Releases\
   Fly-bian-1.05\
     Fly-Lite-2.1\    … GitHub Release v1.05
   Fly-bian-1.0\
-    Fly-Lite-2.1\    … GitHub RC
+    Fly-Lite-2.1\    … GitHub Release v1.0
+    Fly-Pi-V3\       … GitHub Release v1.0-pi-v3
   Fly-bian-0.1\
     Fly-Pi-V3\       … local bring-up only (not on GitHub Releases)
   lab-snapshots\     old full-card dd dumps
@@ -20,11 +21,16 @@ C:\Users\udrdr\fly-lite-armbian-image\Releases\
 
 Stage with: `scripts/stage-flybian-release.sh` (set `FLY_DEVICE` for Pi V3).
 
-## Fly Pi V3 (local / pre-RC)
+## Fly Pi V3
+
+Pi V3 product version is **1.0** (independent of the Lite line, currently 1.06). GitHub Release **[v1.0-pi-v3](https://github.com/0dysseusRex/fly-bian/releases/tag/v1.0-pi-v3)**. Kernel **6.12.114** (`legacy-sunxi64`), DTB `fly-h618.dtb`, MMC one-xfer.
 
 | File | SHA256 | What it is |
 | --- | --- | --- |
-| `Releases/Fly-bian-0.1/Fly-Pi-V3/Base/Fly-bian-0.1_Fly-Pi-V3_Base.img.xz` | `b7897664d934dfd20adbe96bd0bbc3ea282b454801c611e2cc80a5926c127062` | **Fly-bian 0.1 Base** bring-up. Kernel 6.18.54, `fly-h618.dtb`, no Klipper stack. **Not** a GitHub Release. |
+| `Releases/Fly-bian-1.0/Fly-Pi-V3/Base/Fly-bian-1.0_Fly-Pi-V3_Base.img.xz` | `fae0c947c20d6ea08ff10e389da92c84411611adc723662f2f15e68c476fb147` | **Fly-bian 1.0 Base.** Kernel 6.12.114, `fly-h618.dtb`, no Klipper stack. |
+| `Releases/Fly-bian-1.0/Fly-Pi-V3/Simple-AF/Fly-bian-1.0_Fly-Pi-V3_Simple-AF-ea7125a.img.xz` | `6d0d2c149d84016b34ce7480530cfc31626db58e4f3cfa39b5126f146abd4267` | **Fly-bian 1.0 Simple-AF** (pellcorp `ea7125a`). How-to: [`howto-simpleaf.md`](howto-simpleaf.md). |
+| `Releases/Fly-bian-1.0/Fly-Pi-V3/KIAUH/Fly-bian-1.0_Fly-Pi-V3_KIAUH-v6.3.2.img.xz` | `aa52dbde022253e62896497cfcd925f87f18efd8134374c6144b5c8ecde9d3da` | **Fly-bian 1.0 KIAUH** (`v6.3.2`). How-to: [`howto-kiauh.md`](howto-kiauh.md). |
+| `Releases/Fly-bian-0.1/Fly-Pi-V3/Base/Fly-bian-0.1_Fly-Pi-V3_Base.img.xz` | `b7897664d934dfd20adbe96bd0bbc3ea282b454801c611e2cc80a5926c127062` | **Fly-bian 0.1 Base** bring-up. Kernel 6.18.54. **Not** a GitHub Release. |
 
 ## Fly Lite 2.1
 

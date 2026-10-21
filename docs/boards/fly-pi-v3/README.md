@@ -2,14 +2,15 @@
 
 ![Fly Pi V3 (Fly-PI3)](fly-pi-v3.jpg)
 
-**Status:** Base **0.1** bring-up bake (hardware test image)  
+**Status:** Supported — Fly-bian **1.0** (GitHub Release [v1.0-pi-v3](https://github.com/0dysseusRex/fly-bian/releases/tag/v1.0-pi-v3))  
 **Vendor docs:** [FLY-Pi V3 Host Board](https://mellow.klipper.cn/en/docs/ProductDoc/SBC/fly-pi-v3/) · [FlyOS-FAST intro](https://mellow.klipper.cn/en/docs/ProductDoc/SBC/fly-pi-v3/host/)  
-**Armbian boards:** `fly-pi-v3` (Base); Simple-AF / KIAUH later  
+**Armbian boards:** `fly-pi-v3`, `fly-pi-v3-simpleaf`, `fly-pi-v3-kiauh`  
 **DTB:** `fly-h618.dtb` (captured from FlyOS-FAST H618 v1.4.0 on M2WS)  
+**Kernel:** **6.12.114** `legacy-sunxi64` with `drv-mmc-sunxi-one-xfer`  
 **OEM OS:** FlyOS-FAST **H618** image, `board=fly-pi-v3`  
-**Bake:** `scripts/launch-pi-v3-base.sh` → `Fly-bian-0.1_Fly-Pi-V3_Base.img.xz`
+**Bake:** `scripts/launch-pi-v3-10.sh` → `Fly-bian-1.0_Fly-Pi-V3_{Base,Simple-AF-ea7125a,KIAUH-v6.3.2}.img.xz`
 
-Unofficial Debian/Armbian for this PCB when bring-up lands — **not FlyOS**. Do **not** flash Fly-Lite-2.1 (H3) images onto a Pi V3.
+Unofficial Debian/Armbian for this PCB — **not FlyOS**. Do **not** flash Fly-Lite-2.1 (H3) images onto a Pi V3. Leftover lab gaps: [untested.md](untested.md).
 
 ---
 
@@ -79,7 +80,7 @@ Exact mount path and helper (`fly-…` script or first-boot note) TBD in bring-u
 
 ### Power and reset behavior
 
-- Soft reboot / DTR-RTS behavior: **TBD** on Fly-bian (measure on FlyOS first).
+- Soft `reboot` often hangs after `[ OK ]` on Fly-bian; use a 5 V (or 12–24 V) power cycle. Do not pulse DTR/RTS.
 - Power-loss features need OS enablement; factory default disabled.
 
 ---
@@ -170,7 +171,7 @@ Captured from M2WS USB gadget (H618 v1.4.0): see [`flyos-artifacts/live/m2ws-usb
 | --- | --- |
 | OEM Type-C | Mellow [Basic Tutorial](https://mellow.klipper.cn/en/docs/DebugDoc/BasicTutorial/): Type-C data cable → Windows **CH340** COM @ **115200** |
 | Lab FlyOS (working) | Type-C **does** enumerate **CH340** `VID_1A86&PID_7523` → COM4 @ **115200**. Console shows boot + bilingual “Press ENTER twice to login as root”. Hold DTR/RTS idle; do not pulse |
-| Lab Fly-bian 0.1 | Same cable/board: **no** CH340/COM — gap to close (not a docs myth) |
+| Lab Fly-bian 1.0 | Same cable/board: Type-C **does** enumerate CH340 @ **115200**. 0.1 lacked this |
 | UART header | Also **`ttyS0` @ 115200** on XH2.54-4P (pinout still TBD) |
 | Moon2UART | OEM default `/dev/ttyS1` @ 115200 (`config.txt`) |
 | HDMI | Micro HDMI + FPC-HDMI; `fly-pi-v3-hdmi` + `console=both` |
@@ -181,14 +182,14 @@ Captured from M2WS USB gadget (H618 v1.4.0): see [`flyos-artifacts/live/m2ws-usb
 
 | Observation | Apply to future builds |
 | --- | --- |
-| Type-C CH340 works on FlyOS, not on Fly-bian 0.1 | **Priority:** on a live FlyOS SSH session capture `lsusb -t`, `dmesg \| grep -i tty`, which tty the getty uses, and how CH340 is wired (hub vs musb). Mirror that in DTB/overlays — do not assume Lite Type-C = same as V3 |
+| Type-C CH340 works on FlyOS and on Fly-bian 1.0 | Hold DTR/RTS idle. Console stays `ttyS0` @ 115200 |
 | First boot can print A/B layout on **`mmcblk1`** (M2WE eMMC) then go quiet for a long time | Expect long first-boot silence; keep serial open; don’t declare hang until minutes pass. Fly-bian resize/swap messaging should also hit serial |
 | Login waiter: “Press ENTER twice…” (not a classic `login:` prompt) | Serial automation must match FlyOS **or** use Armbian’s normal getty; don’t require double-Enter unless we ship that UX |
 | Wi‑Fi from FAT config → mDNS-ish name **`flyos-<suffix>`**, DHCP (lab: `192.168.1.98`) | Keep `FLY-SETUP` / `fly-start.txt` Wi‑Fi path; announce hostname on LAN (mDNS/`avahi`) so “new device” discovery works like OEM |
 | SSH up after Wi‑Fi (`root` / OEM `mellow`) | First-boot must create usable SSH creds (wizard or `fly-start.txt`) before claiming headless success |
 | Console is real UART data @ 115200 over the CH340 COM port | Keep `console=serial` or `both`; never rely on USB-C gadget CDC alone for V3 |
 | `capture_boot` flush can drop early boot lines | For bring-up logs prefer continuous `read` / ring replay; arm before power apply |
-| SD, eMMC, and SDIO Wi-Fi share `sunxi-mmc` | Next image enables `patches.armbian/drv-mmc-sunxi-one-xfer.patch` on the 6.12 kernel so only one of mmc0, mmc1, and mmc2 has a DMA transfer in flight (same fix as Lite 1.06) |
+| SD, eMMC, and SDIO Wi-Fi share `sunxi-mmc` | **1.0** enables `patches.armbian/drv-mmc-sunxi-one-xfer.patch` on the 6.12 kernel so only one of mmc0, mmc1, and mmc2 has a DMA transfer in flight (same class of fix as Lite 1.06) |
 | KIAUH Spoolman is a container | The image does not ship Docker. Install Engine from Docker’s Debian apt repo, then add the login user to the `docker` group, before the Spoolman extension. See [spoolman.md](spoolman.md) |
 
 ---

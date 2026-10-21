@@ -17,7 +17,7 @@ Fly-bian-<VERSION>_<DEVICE>_KIAUH-<KIAUH_REV>.img.xz
 | Part | Meaning | Examples |
 | --- | --- | --- |
 | `VERSION` | Fly-bian product version | pre-1.0 steps of **0.05** (`0.50`, `0.55`, … `1.0`) |
-| `DEVICE` | Board this image is for | `Fly-Lite-2.1`, later `Fly-Pi-V3` |
+| `DEVICE` | Board this image is for | `Fly-Lite-2.1`, `Fly-Pi-V3` |
 | `FLAVOR` | Stack baked into the image | `Base`, `Simple-AF`, `KIAUH` |
 | `PELLCORP_SHA` | Short git HEAD of pellcorp/`creality` at bake | `58e5c1d` |
 | `KIAUH_REV` | KIAUH `git describe --tags` (or short SHA) at bake | `v6.0.0`, `abc1234` |
@@ -48,8 +48,8 @@ Rules:
 | Flavor token | Armbian `BOARD` (build only) | What it is |
 | --- | --- | --- |
 | `Base` | `fly-lite-21` / `fly-pi-v3` | Hardware + first-boot; no Klipper installer bake |
-| `Simple-AF` | `fly-lite-21-simpleaf` | pellcorp / Simple-AF pre-bake (Lite today) |
-| `KIAUH` | `fly-lite-21-kiauh` | KIAUH pre-bake (Lite today) |
+| `Simple-AF` | `fly-lite-21-simpleaf` / `fly-pi-v3-simpleaf` | pellcorp / Simple-AF pre-bake |
+| `KIAUH` | `fly-lite-21-kiauh` / `fly-pi-v3-kiauh` | KIAUH pre-bake |
 
 Armbian still emits long `Armbian-unofficial_…` names during compile. Staging
 renames (or copies as) the Fly-bian product name above. Do not publish the

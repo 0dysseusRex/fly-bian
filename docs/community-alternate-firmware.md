@@ -17,7 +17,7 @@ There are only a handful of active alternate-host projects. Most GitHub hits und
 | [kakwa/fly-gemini](https://github.com/kakwa/fly-gemini) | Fly Gemini | Notes and flash scripts | Small; useful for flashing tips, not a maintained image line. |
 | [armbian/build](https://github.com/armbian/build) `mellowflyc5` | **Mellow Fly-C5** (H618) | **Upstream Armbian board** (`config/boards/mellowflyc5.csc`) | Closest official mainline peer to Fly Pi V3 (same SoC family). Maintainer `deece` (Alastair D'Silva). Includes eMMC SPL slot, RTL8821CS packages, serial-getty on `ttyS1`, mainline-style DTS `sun50i-h618-mellow-fly-c5`. Merged mid-2026; U-Boot ported to v2026.07. **Primary reference for Pi V3 bring-up.** |
 | [FloralDroid/armbian](https://github.com/FloralDroid/armbian) | Fly-C5 lineage | Community Armbian tree with Fly-C5 DTS work | Overlaps / feeds the upstream `mellowflyc5` support; check before reinventing H618 Wi-Fi pwrseq / regulators / mmc1–2. |
-| [0dysseusRex/fly-bian](https://github.com/0dysseusRex/fly-bian) | Fly Lite 2.1 (H3); Fly Pi V3 (H618) next | This project — unofficial Armbian (Debian) for Mellow Fly SBCs | Not FlyOS. Lite 2.1 supported; Pi V3 in progress. |
+| [0dysseusRex/fly-bian](https://github.com/0dysseusRex/fly-bian) | Fly Lite 2.1 (H3); Fly Pi V3 (H618) | This project — unofficial Armbian (Debian) for Mellow Fly SBCs | Not FlyOS. Lite 2.1 (1.06) and Pi V3 (1.0) supported. |
 
 ---
 
@@ -52,7 +52,7 @@ There are only a handful of active alternate-host projects. Most GitHub hits und
 ## Relevance to Fly-bian
 
 1. **Gemini / H5** — Reemo + DerFuchs + kakwa document the community’s expectations for “Armbian instead of FlyOS” on older hosts. Useful if/when Gemini is scheduled; not a shortcut for Lite or Pi V3.  
-2. **H618 / Pi V3** — Study [armbian/build `mellowflyc5`](https://github.com/armbian/build/blob/main/config/boards/mellowflyc5.csc) and FloralDroid’s DTS: Wi-Fi power sequencing, mmc1/mmc2, eMMC SPL (`CONFIG_MMC_SUNXI_SLOT_EXTRA=2`), DRAM/PMIC caveats, and console on `ttyS1`. Pi V3 still needs its own board file and OEM `fly-h618.dtb` / overlays where they diverge from C5.  
+2. **H618 / Pi V3** — Study [armbian/build `mellowflyc5`](https://github.com/armbian/build/blob/main/config/boards/mellowflyc5.csc) and FloralDroid’s DTS: Wi-Fi power sequencing, mmc1/mmc2, eMMC SPL (`CONFIG_MMC_SUNXI_SLOT_EXTRA=2`), DRAM/PMIC caveats, and console on `ttyS1`. Pi V3 uses its own board file and OEM `fly-h618.dtb` / overlays where they diverge from C5.  
 3. **Vendor `Mellow-3D/build`** — Historical only; prefer current Armbian + Fly-bian userpatches.
 
 ### Applied in Fly-bian (Pi V3 bring-up)

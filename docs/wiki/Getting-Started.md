@@ -2,7 +2,9 @@
 
 This guide assumes you have **not** flashed Linux SBC images before. Follow it top to bottom.
 
-**Today this walkthrough is for Fly Lite 2.1** (images exist). For Fly Pi V3 status, see [Fly Pi V3](Fly-Pi-V3.md).
+**Pick the image for your board.** Filenames contain `Fly-Lite-2.1` or `Fly-Pi-V3`. Do not mix them.
+
+This walkthrough is written around **Fly Lite 2.1**. Fly Pi V3 uses the same burn → `FLY-SETUP` → first boot → SSH path; board-specific notes are on [Fly Pi V3](Fly-Pi-V3.md).
 
 ---
 
@@ -21,7 +23,7 @@ This guide assumes you have **not** flashed Linux SBC images before. Follow it t
 
 ## Step 1 - Choose an image
 
-Download from [Releases](https://github.com/0dysseusRex/fly-bian/releases) (latest **Fly-bian 1.0** or newer). Pick **one**:
+Download from [Releases](https://github.com/0dysseusRex/fly-bian/releases). Lite 2.1 current is **1.06** (`v1.06`). Pi V3 current is **1.0** (`v1.0-pi-v3`). Pick **one** flavor:
 
 | File name contains | Choose this if... |
 | --- | --- |
@@ -232,7 +234,8 @@ Full how-to: [Update Fly-bian over SSH](https://github.com/0dysseusRex/fly-bian/
 | --- | --- |
 | Powering from printer MCU 5 V | Use a dedicated 5 V supply |
 | No Wi-Fi antenna | Fit IPEX antenna before boot |
-| Flashed wrong OS (Pi OS, etc.) | Only Fly-bian `Fly-Lite-2.1` images |
+| Flashed wrong OS (Pi OS, etc.) | Only Fly-bian images whose filename contains your board (`Fly-Lite-2.1` or `Fly-Pi-V3`) |
+| Flashed Lite onto Pi V3 (or the reverse) | Reflash the matching board image |
 | Expected SSH with only Wi-Fi filled | Also set root + user in `fly-start.txt` |
 | Rebooted during a long install | Wait; check SSH session - then power-cycle if truly stuck |
 | Installed every Moonraker add-on on 512 MB | See [OOM guide](https://github.com/0dysseusRex/fly-bian/blob/main/docs/boards/fly-lite-2.1/oom.md) |
@@ -242,4 +245,4 @@ Full how-to: [Update Fly-bian over SSH](https://github.com/0dysseusRex/fly-bian/
 ## Next pages
 
 - [Fly Lite 2.1](Fly-Lite-2.1.md) - board-specific tips
-- [Fly Pi V3](Fly-Pi-V3.md) - status and what not to flash
+- [Fly Pi V3](Fly-Pi-V3.md) - H618 board tips and 1.0 images
