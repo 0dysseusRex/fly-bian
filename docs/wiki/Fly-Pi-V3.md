@@ -56,6 +56,10 @@ Exact pinmux and dual-storage `mmcblk` mapping still need a board with `board=fl
 - Watch [Releases](https://github.com/0dysseusRex/fly-bian/releases) for the first `Fly-Pi-V3` artifacts.
 - Same three-flavor model as the Lite: **Base**, **Simple-AF**, **KIAUH**.
 
+## Spoolman
+
+KIAUH’s Spoolman extension needs Docker Engine, and the login user has to be in the `docker` group, before the install. How-to: [Spoolman needs Docker first](../boards/fly-pi-v3/spoolman.md).
+
 ## Related
 
 - [Getting started](Getting-Started.md) (Lite today; same pattern later for Pi V3)

@@ -189,6 +189,7 @@ Captured from M2WS USB gadget (H618 v1.4.0): see [`flyos-artifacts/live/m2ws-usb
 | Console is real UART data @ 115200 over the CH340 COM port | Keep `console=serial` or `both`; never rely on USB-C gadget CDC alone for V3 |
 | `capture_boot` flush can drop early boot lines | For bring-up logs prefer continuous `read` / ring replay; arm before power apply |
 | SD, eMMC, and SDIO Wi-Fi share `sunxi-mmc` | Next image enables `patches.armbian/drv-mmc-sunxi-one-xfer.patch` on the 6.12 kernel so only one of mmc0, mmc1, and mmc2 has a DMA transfer in flight (same fix as Lite 1.06) |
+| KIAUH Spoolman is a container | The image does not ship Docker. Install Engine from Docker’s Debian apt repo, then add the login user to the `docker` group, before the Spoolman extension. See [spoolman.md](spoolman.md) |
 
 ---
 
@@ -251,6 +252,7 @@ The 4-stream 5 GHz send slowed down during the 15 s (220 retransmits). The 2.4 G
 
 | Doc | Topic |
 | --- | --- |
+| [Spoolman / Docker](spoolman.md) | Install Docker, add the login user to `docker`, then install Spoolman from KIAUH |
 | [Board index](../README.md) | All boards |
 | [Main project README](../../../README.md) | Project overview |
 | [Community alternate firmware](../../community-alternate-firmware.md) | Peer Armbian work (esp. upstream `mellowflyc5`) |
