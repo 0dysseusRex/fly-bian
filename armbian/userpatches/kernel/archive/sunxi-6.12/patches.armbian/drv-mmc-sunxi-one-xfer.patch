@@ -1,0 +1,86 @@
+--- a/drivers/mmc/host/sunxi-mmc.c
++++ b/drivers/mmc/host/sunxi-mmc.c
+@@ -36,6 +36,7 @@
+ #include <linux/scatterlist.h>
+ #include <linux/slab.h>
+ #include <linux/spinlock.h>
++#include <linux/semaphore.h>
+ 
+ /* register offset definitions */
+ #define SDXC_REG_GCTRL	(0x00) /* SMC Global Control Register */
+@@ -507,6 +508,18 @@
+ 		);
+ }
+ 
++/*
++ * One in-flight request for every sunxi-mmc host. down() sleeps in
++ * .request (process context). up() runs from the hard IRQ or the
++ * manual-stop thread, after dma_unmap_sg.
++ */
++static DEFINE_SEMAPHORE(sunxi_mmc_one_xfer, 1);
++
++static void sunxi_mmc_xfer_end(void)
++{
++	up(&sunxi_mmc_one_xfer);
++}
++
+ /* Called in interrupt context! */
+ static irqreturn_t sunxi_mmc_finalize_request(struct sunxi_mmc_host *host)
+ {
+@@ -613,8 +626,10 @@
+ 
+ 	spin_unlock(&host->lock);
+ 
+-	if (finalize && ret == IRQ_HANDLED)
++	if (finalize && ret == IRQ_HANDLED) {
++		sunxi_mmc_xfer_end();
+ 		mmc_request_done(host->mmc, mrq);
++	}
+ 
+ 	if (sdio_int)
+ 		mmc_signal_sdio_irq(host->mmc);
+@@ -634,6 +649,7 @@
+ 
+ 	if (!mrq) {
+ 		dev_err(mmc_dev(host->mmc), "no request for manual stop\n");
++		sunxi_mmc_xfer_end();
+ 		return IRQ_HANDLED;
+ 	}
+ 
+@@ -653,6 +669,7 @@
+ 	host->manual_stop_mrq = NULL;
+ 	spin_unlock_irqrestore(&host->lock, iflags);
+ 
++	sunxi_mmc_xfer_end();
+ 	mmc_request_done(host->mmc, mrq);
+ 
+ 	return IRQ_HANDLED;
+@@ -1023,9 +1040,12 @@
+ 	bool wait_dma = host->wait_dma;
+ 	int ret;
+ 
++	down(&sunxi_mmc_one_xfer);
++
+ 	/* Check for set_ios errors (should never happen) */
+ 	if (host->ferror) {
+ 		mrq->cmd->error = host->ferror;
++		sunxi_mmc_xfer_end();
+ 		mmc_request_done(mmc, mrq);
+ 		return;
+ 	}
+@@ -1036,6 +1056,7 @@
+ 			dev_err(mmc_dev(mmc), "map DMA failed\n");
+ 			cmd->error = ret;
+ 			data->error = ret;
++			sunxi_mmc_xfer_end();
+ 			mmc_request_done(mmc, mrq);
+ 			return;
+ 		}
+@@ -1089,6 +1110,7 @@
+ 
+ 		dev_err(mmc_dev(mmc), "request already pending\n");
+ 		mrq->cmd->error = -EBUSY;
++		sunxi_mmc_xfer_end();
+ 		mmc_request_done(mmc, mrq);
+ 		return;
+ 	}

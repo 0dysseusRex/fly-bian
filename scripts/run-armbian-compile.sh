@@ -65,10 +65,10 @@ mkdir -p "$build/userpatches" "$build/config/boards"
 rsync -a "$root/armbian/userpatches/" "$build/userpatches/"
 printf '%s\n' "$flavor" >"$build/userpatches/overlay/fly-flavor"
 # Product version for /etc/fly-debian/flybian-version (see docs/image-naming.md).
-# Pi V3 product line is 0.75 after the 0.70 benchmark. The repo file is the Lite line.
+# Pi V3 first public line is 1.0. The repo file is the Lite line (currently 1.06).
 case "$board" in
 	fly-pi-v3|fly-pi-v3-simpleaf|fly-pi-v3-kiauh)
-		printf '0.75\n' >"$build/userpatches/overlay/FLYBIAN_VERSION"
+		printf '1.0\n' >"$build/userpatches/overlay/FLYBIAN_VERSION"
 		;;
 	*)
 		cp -a "$root/FLYBIAN_VERSION" "$build/userpatches/overlay/FLYBIAN_VERSION"
