@@ -10,7 +10,7 @@ root=$(cd "$(dirname "$0")/.." && pwd)
 src=${FLY_ARMBIAN_IMAGES:-/home/rex/fly-build/armbian-build/output/images}
 releases=${FLY_RELEASES:-/mnt/f/Cursor/projects/fly-lite-armbian-image/Releases}
 device=${FLY_DEVICE:-Fly-Lite-2.1}
-ver=$(tr -d '[:space:]' <"$root/FLYBIAN_VERSION")
+ver=$(FLY_DEVICE="$device" bash "$root/scripts/flybian-product-version.sh")
 
 flavor=${1:-}
 if [[ -z $flavor ]]; then
@@ -18,7 +18,7 @@ if [[ -z $flavor ]]; then
 	exit 1
 fi
 
-# Every new publish must bump FLYBIAN_VERSION (docs/image-naming.md).
+# Every new publish must bump that board's product version (docs/image-naming.md).
 # Per-flavor: allow Base+Simple-AF+KIAUH under the same new version.
 if [[ $flavor == all ]]; then
 	bash "$root/scripts/flybian-require-new-version.sh"

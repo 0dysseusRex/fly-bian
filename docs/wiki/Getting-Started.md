@@ -23,7 +23,7 @@ This walkthrough is written around **Fly Lite 2.1**. Fly Pi V3 uses the same bur
 
 ## Step 1 - Choose an image
 
-Download from [Releases](https://github.com/0dysseusRex/fly-bian/releases). Lite 2.1 current is **1.06** (`v1.06`). Pi V3 current is **1.0** (`v1.0-pi-v3`). Pick **one** flavor:
+Download from [Releases](https://github.com/0dysseusRex/fly-bian/releases). Lite 2.1 current is **1.06** (`v1.06`). Pi V3 current is **1.05** (`v1.05-pi-v3`). Pick **one** flavor:
 
 | File name contains | Choose this if... |
 | --- | --- |
@@ -245,4 +245,4 @@ Full how-to: [Update Fly-bian over SSH](https://github.com/0dysseusRex/fly-bian/
 ## Next pages
 
 - [Fly Lite 2.1](Fly-Lite-2.1.md) - board-specific tips
-- [Fly Pi V3](Fly-Pi-V3.md) - H618 board tips and 1.0 images
+- [Fly Pi V3](Fly-Pi-V3.md) - H618 board tips and 1.05 images

@@ -103,6 +103,18 @@ Custom commands (this image)
 
   fly-crowsnest-strip-placeholders
       Remove stock [cam web] / /dev/video0 placeholders from a conf file.
+EOF
+	if [[ $(tr -d '[:space:]' </etc/fly-debian/flybian-device 2>/dev/null || true) == Fly-Pi-V3 ]]; then
+		cat <<'EOF'
+
+  fly-media-sd status|enable|disable [--format]
+      Pi V3 only. Put ~/printer_data gcodes, timelapse, and frames on
+      extra storage: onboard MicroSD when the OS is on eMMC/M2WS, or
+      one USB drive / USB SD reader when the OS is on the onboard
+      MicroSD. Do not unplug that media until you run disable.
+EOF
+	fi
+	cat <<'EOF'
 
 fly-start.txt (KIAUH)
 ---------------------
@@ -211,6 +223,18 @@ Custom commands (this image)
   fly-crowsnest-strip-placeholders
       Remove stock [cam web] / /dev/video0 placeholders from a conf file
       (used by the camera helper and image bake).
+EOF
+if [[ $(tr -d '[:space:]' </etc/fly-debian/flybian-device 2>/dev/null || true) == Fly-Pi-V3 ]]; then
+	cat <<'EOF'
+
+  fly-media-sd status|enable|disable [--format]
+      Pi V3 only. Put ~/printer_data gcodes, timelapse, and frames on
+      extra storage: onboard MicroSD when the OS is on eMMC/M2WS, or
+      one USB drive / USB SD reader when the OS is on the onboard
+      MicroSD. Do not unplug that media until you run disable.
+EOF
+fi
+cat <<'EOF'
 
 Display options in fly-start.txt
 --------------------------------

@@ -8,7 +8,7 @@ How to **build** the Lite 2.1 named image: [`build-named-image.md`](build-named-
 
 1. **Named Fly Lite 2.1 image** — small `.img.xz`, FAT `FLY-SETUP`, rootfs grows on first boot, first-run wizard. Lab dump `cpu-affinity` is the hardware reference, not the ship format.
 2. **Keep dumps** on the bench PC (`C:\Users\udrdr\fly-lite-armbian-image`). See [`images.md`](images.md).
-3. **Fly Pi V3** — H618, Ethernet, optional FLY M2 module. Public **1.0** images (version independent of the Lite line).
+3. **Fly Pi V3** — H618, Ethernet, optional FLY M2 module. Public **1.05** images (version independent of the Lite line).
 4. **Other Fly hosts** — same first-boot idea, different SoCs.
 
 ## First-boot contract (every named image)

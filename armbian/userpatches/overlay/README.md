@@ -51,6 +51,12 @@
 # USB V4L2 cams and append [cam] sections to ~/printer_data/config/crowsnest.conf.
 # bake + strip-placeholders remove pellcorp [cam web] / /dev/video0 examples.
 #
+# io/fly-pi-v3-sd.dts enables onboard MicroSD (mmc@4020000). Default-on:
+# SD-only boot cannot see rootfs if that node stays disabled. Extra media
+# bind mounts stay opt-in via tools/fly-media-sd (Pi V3 only): eMMC/M2WS
+# boot + onboard TF, or SD boot + one USB drive / USB SD reader.
+# fly-apply always keeps the overlay.
+#
 # hdmi/fly-lite-hdmi.dts enables &hdmi (Fly DTB ships it disabled).
 # board/fly-lite-board.dts disables the unused EMAC and fixes vdd-cpux gpios at a fixed 1.3 V.
 # tft/fly-lite-tft.dts + fly-lite-tft-c.dts: ST7796 panel-mipi-dbi + Cap GT911.

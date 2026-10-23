@@ -282,6 +282,7 @@ for dts in \
 	"$overlay/io/fly-pi-v3-uart1.dts" \
 	"$overlay/io/fly-pi-v3-rs232.dts" \
 	"$overlay/io/fly-pi-v3-adxl.dts" \
+	"$overlay/io/fly-pi-v3-sd.dts" \
 	"$overlay/usb/fly-pi-v3-usb1.dts" \
 	"$overlay/tft/fly-pi-v3-tft.dts" \
 	"$overlay/tft/fly-pi-v3-tft-c.dts" \
@@ -289,6 +290,7 @@ for dts in \
 do
 	inst 0644 "$dts" "$v3/usr/share/fly-debian/overlays/$(basename "$dts")"
 done
+inst 0755 "$overlay/tools/fly-media-sd" "$v3/usr/local/bin/fly-media-sd"
 inst 0644 "$overlay/pi-v3/fly-start.txt" \
 	"$v3/usr/share/fly-debian/first-boot/fly-start-pi-v3-base.txt"
 inst 0644 "$overlay/pi-v3/fly-start-simpleaf.txt" \

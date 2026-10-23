@@ -3,22 +3,35 @@
 fly_klipper_stack_apt() {
 	export DEBIAN_FRONTEND=noninteractive
 	apt-get update
-	apt-get install -y --no-install-recommends \
-		git wget curl ca-certificates make crudini rsync unzip \
-		python3 python3-venv python3-dev python3-pip python3-virtualenv python3-wheel \
-		python3-numpy python3-matplotlib python3-scipy python3-contourpy \
-		python3-pil python3-kiwisolver \
-		build-essential libffi-dev libncurses-dev \
-		libusb-dev libusb-1.0-0-dev \
-		libjpeg-dev libopenjp2-7 zlib1g-dev libsodium-dev \
-		libopenblas-dev \
-		nginx \
-		avrdude gcc-avr binutils-avr avr-libc \
-		stm32flash dfu-util pkg-config \
-		libnewlib-arm-none-eabi gcc-arm-none-eabi binutils-arm-none-eabi \
-		v4l-utils \
-		ustreamer \
+	local pkgs=(
+		git wget curl ca-certificates make crudini rsync unzip
+		python3 python3-venv python3-dev python3-pip python3-virtualenv python3-wheel
+		python3-numpy python3-matplotlib python3-scipy python3-contourpy
+		python3-pil python3-kiwisolver
+		build-essential libffi-dev libncurses-dev
+		libusb-dev libusb-1.0-0-dev
+		libjpeg-dev libopenjp2-7 zlib1g-dev libsodium-dev
+		libopenblas-dev
+		nginx
+		avrdude gcc-avr binutils-avr avr-libc
+		stm32flash dfu-util pkg-config
+		libnewlib-arm-none-eabi gcc-arm-none-eabi binutils-arm-none-eabi
+		v4l-utils
+		ustreamer
 		plymouth plymouth-themes
+	)
+	# qemu-user can SIGSEGV python3-cycler/matplotlib postinst (dpkg 139).
+	if ! apt-get install -y --no-install-recommends "${pkgs[@]}"; then
+		echo "fly-bake: apt install failed; retry dpkg --configure (qemu postinst 139)"
+		local i
+		for i in 1 2 3; do
+			PYTHONDONTWRITEBYTECODE=1 dpkg --configure -a && break
+			echo "fly-bake: dpkg --configure retry $i failed"
+			sleep 2
+		done
+		apt-get install -f -y || true
+		apt-get install -y --no-install-recommends "${pkgs[@]}"
+	fi
 	apt-get remove --purge -y brltty modemmanager 2>/dev/null || true
 }
 

@@ -1,6 +1,6 @@
 # Fly Pi V3 — not yet tested
 
-Hold this list for later notes. Fly-bian **1.0** shipped; this is leftover from the lab board (M2WE eMMC). Items already checked on that board are not listed.
+Hold this list for later notes. Fly-bian **1.05** shipped; this is leftover from the lab board (M2WE eMMC). Items already checked on that board are not listed.
 
 - **RS232 headers.** Both ports are enabled and not electrically tested. There is no RS232 adapter yet. `ttyS3` is PI9/PI10 and `ttyS4` is PI13/PI14. RTS/CTS is left off because the extra UART4 pins include PI16, the power LED. The TTL UART header (`ttyS1`) and the Type-C console (`ttyS0`) were tested separately.
 - **Micro HDMI jack.** The picture path is the same transmitter already proven with the Fly HDMI cable at 800×480. The micro-HDMI connector itself has not been plugged into a monitor.
@@ -10,6 +10,6 @@ Hold this list for later notes. Fly-bian **1.0** shipped; this is leftover from 
 - **SPI TFT as GrumpyScreen.** GrumpyScreen paints `/dev/fb0` (Fly-LCD HDMI, 800×480). The SPI panel is `/dev/fb1` and stays blank unless a picker is added later.
 - **`systemd-udev-trigger`.** Still masked. On earlier kernels the console died after the second udev pass. Do not unmask it. Early DRM/HID nodes stay `0600`; `fly-grumpy-evdev.sh` chmods those nodes so GrumpyScreen can open them.
 - **Weekly fstrim and Sunday e2scrub.** The timers start. Neither job has been seen running.
-- **Other storage layouts.** This board booted from its eMMC. SD-only and the 2.4 GHz-only M2 module were not run on this image.
+- **Other storage layouts.** eMMC and SD-only first boot are proven on **1.05** (`fly-pi-v3-sd` default-on). Stock **1.0** SD-only still hangs in initramfs unless that overlay is copied onto `FLY-SETUP`. Extra TF storage with the OS on eMMC is proven (`fly-media-sd`). Extra USB storage when the OS is on the onboard TF is not labbed yet. The 2.4 GHz-only M2 module is still not on the bench.
 - **HDMI audio.** Not tested.
 - **Soft reboot.** `reboot` often hangs after `[ OK ]`. Use a 5 V (or 12–24 V) power cycle.
