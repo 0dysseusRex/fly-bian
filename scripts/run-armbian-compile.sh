@@ -65,10 +65,10 @@ mkdir -p "$build/userpatches" "$build/config/boards"
 rsync -a "$root/armbian/userpatches/" "$build/userpatches/"
 printf '%s\n' "$flavor" >"$build/userpatches/overlay/fly-flavor"
 # Product version for /etc/fly-debian/flybian-version (see docs/image-naming.md).
-# Pi V3 first public line is 1.0. The repo file is the Lite line (currently 1.06).
+# Lite: repo FLYBIAN_VERSION. Pi V3: FLY_PI_V3_VERSION (do not bump Lite).
 case "$board" in
 	fly-pi-v3|fly-pi-v3-simpleaf|fly-pi-v3-kiauh)
-		printf '1.0\n' >"$build/userpatches/overlay/FLYBIAN_VERSION"
+		cp -a "$root/FLY_PI_V3_VERSION" "$build/userpatches/overlay/FLYBIAN_VERSION"
 		;;
 	*)
 		cp -a "$root/FLYBIAN_VERSION" "$build/userpatches/overlay/FLYBIAN_VERSION"
@@ -100,7 +100,8 @@ for dts in \
 	"$root/armbian/userpatches/overlay/usb/fly-pi-v3-usb.dts" \
 	"$root/armbian/userpatches/overlay/tft/fly-pi-v3-tft.dts" \
 	"$root/armbian/userpatches/overlay/tft/fly-pi-v3-tft-c.dts" \
-	"$root/armbian/userpatches/overlay/io/fly-pi-v3-io.dts"
+	"$root/armbian/userpatches/overlay/io/fly-pi-v3-io.dts" \
+	"$root/armbian/userpatches/overlay/io/fly-pi-v3-sd.dts"
 do
 	compile_overlay_dts "$dts"
 done

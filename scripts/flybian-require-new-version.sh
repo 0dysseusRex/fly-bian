@@ -12,7 +12,7 @@ set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
 releases=${FLY_RELEASES:-/mnt/f/Cursor/projects/fly-lite-armbian-image/Releases}
 device=${FLY_DEVICE:-Fly-Lite-2.1}
-ver=$(tr -d '[:space:]' <"$root/FLYBIAN_VERSION")
+ver=$(FLY_DEVICE="$device" bash "$root/scripts/flybian-product-version.sh")
 want=${1:-}
 
 if [[ ${FLY_FORCE:-0} == 1 || ${FLY_FORCE:-} == yes ]]; then
@@ -58,8 +58,8 @@ fi
 if [[ $failed -eq 1 ]]; then
 	cat >&2 <<EOF
 Bump the product version before a new image publish:
-  ./scripts/bump-flybian-version.sh
-  # or edit FLYBIAN_VERSION (currently $ver)
+  Lite: ./scripts/bump-flybian-version.sh  (or edit FLYBIAN_VERSION)
+  Pi V3: edit FLY_PI_V3_VERSION (currently $ver)
 Same version may still build Base+Simple-AF+KIAUH in one release; do not
 restage over an existing flavor file. Override only if intentional: FLY_FORCE=1
 See docs/image-naming.md.

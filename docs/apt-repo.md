@@ -6,7 +6,7 @@ User how-to: [`howto-update.md`](howto-update.md). This page is how we build and
 
 Ship **Architecture: all** helper packages so a running card can pull script/overlay fixes over SSH without a reflash. Kernel, DTB, and U-Boot stay apt-held. Klipper/Moonraker trees stay git (KIAUH / Simple-AF).
 
-One repo, not one repo per image file. Package **version** follows repo `FLYBIAN_VERSION` (Lite product line, currently 1.06). Pi V3 bake stamps (`1.0`, …) are independent; the **min-image** table decides whether that card may install the package set.
+One repo, not one repo per image file. Package **version** follows repo `FLYBIAN_VERSION` (Lite product line, currently 1.06). Pi V3 bake stamps (`1.0`, `1.05`, …) are independent; the **min-image** table decides whether that card may install the package set.
 
 ## Packages
 

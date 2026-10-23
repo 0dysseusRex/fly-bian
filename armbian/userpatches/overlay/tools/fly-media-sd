@@ -1,0 +1,565 @@
+#!/bin/bash
+# Use extra storage on the Fly Pi V3 for gcodes and timelapse.
+# Opt-in. Moonraker/Fluidd keep using ~/printer_data — these are bind mounts.
+# Pi V3 only. Pairings:
+#   OS on M2WE eMMC / M2WS → extra = onboard MicroSD
+#   OS on onboard MicroSD  → extra = one USB drive or USB SD reader
+set -euo pipefail
+
+STATE=/etc/fly-debian/media-sd
+MNT=/mnt/fly-media
+UNIT=fly-media-sd.service
+OVERLAY_NAME=fly-pi-v3-sd
+MMC0_DT=/proc/device-tree/soc/mmc@4020000
+ENV_FILE=/boot/armbianEnv.txt
+LABEL=FLY-MEDIA
+
+usage() {
+	cat <<'EOF'
+Usage: sudo fly-media-sd <status|enable|disable> [--format]
+
+  status    Extra media, mounts, and whether gcodes/timelapse are on it.
+  enable    Put gcodes, timelapse, and frames on extra storage.
+            Formats if there is no filesystem, or always with --format.
+            Survives reboot. Fluidd/Mainsail paths stay the same.
+  disable   Stop using extra storage. Files stay on the card or USB drive.
+
+This helper is only on Fly Pi V3.
+
+  OS on M2WE eMMC or M2WS: extra media is a second card in the onboard TF slot.
+  OS on the onboard MicroSD: extra media is one USB flash drive, or a
+  MicroSD in a USB reader.
+
+Do not unplug extra storage while it is enabled. Run disable first.
+Do not flash a Fly-bian image onto the extra card. Soft reboot often hangs —
+power-cycle if the SD-slot overlay was just written.
+EOF
+}
+
+need_root() {
+	[[ ${EUID:-0} -eq 0 ]] || exec sudo -E "$0" "$@"
+}
+
+die() {
+	echo "ERROR: $*" >&2
+	exit 1
+}
+
+log() {
+	echo "fly-media-sd: $*"
+}
+
+printer_user() {
+	if [[ -n ${SUDO_USER:-} && $SUDO_USER != root ]]; then
+		printf '%s\n' "$SUDO_USER"
+		return
+	fi
+	if [[ -f $STATE ]]; then
+		awk -F= '/^USER=/{print $2; exit}' "$STATE"
+		return
+	fi
+	if getent passwd fly >/dev/null; then
+		printf '%s\n' fly
+		return
+	fi
+	awk -F: '$3>=1000 && $3<65534 {print $1; exit}' /etc/passwd
+}
+
+home_of() {
+	getent passwd "$1" | awk -F: '{print $6}'
+}
+
+mmc0_status() {
+	if [[ -f $MMC0_DT/status ]]; then
+		tr -d '\0' <"$MMC0_DT/status"
+	fi
+}
+
+root_disk() {
+	local src disk
+	src=$(findmnt -n -o SOURCE /)
+	disk=$(lsblk -no PKNAME "$src" 2>/dev/null | head -n 1 || true)
+	if [[ -z $disk ]]; then
+		disk=${src#/dev/}
+		disk=${disk%%p[0-9]*}
+		disk=${disk%%[0-9]}
+	fi
+	printf '%s\n' "$disk"
+}
+
+# Onboard TF slot is mmc@4020000. Linux names it mmcblkN once the host exists.
+onboard_sd_disk() {
+	local host block
+	for host in /sys/bus/platform/devices/4020000.mmc/mmc_host/mmc*/mmc*:*/block/mmcblk*; do
+		[[ -e $host ]] || continue
+		block=$(basename "$host")
+		printf '%s\n' "$block"
+		return 0
+	done
+	return 1
+}
+
+is_usb_disk() {
+	local d=$1 tran sys
+	tran=$(lsblk -dn -o TRAN "/dev/$d" 2>/dev/null || true)
+	[[ $tran == usb ]] && return 0
+	sys=$(readlink -f "/sys/block/$d" 2>/dev/null || true)
+	[[ -n $sys && $sys == */usb[0-9]* ]] && return 0
+	return 1
+}
+
+usb_extra_disks() {
+	local name type root
+	root=$(root_disk)
+	while read -r name type _; do
+		[[ $type == disk ]] || continue
+		[[ $name != "$root" ]] || continue
+		is_usb_disk "$name" || continue
+		looks_like_os_image "$name" && continue
+		printf '%s\n' "$name"
+	done < <(lsblk -dn -o NAME,TYPE,TRAN 2>/dev/null)
+}
+
+# Prints "disk kind" (kind is sd or usb). Return 1 if none, 2 if too many USB.
+choose_extra_disk() {
+	local root onboard d n=0 last=""
+	root=$(root_disk)
+	onboard=$(onboard_sd_disk || true)
+	if [[ -n $onboard && $onboard != "$root" ]]; then
+		printf '%s sd\n' "$onboard"
+		return 0
+	fi
+	if [[ -n $onboard && $onboard == "$root" ]]; then
+		while read -r d; do
+			last=$d
+			n=$((n + 1))
+		done < <(usb_extra_disks)
+		if [[ $n -eq 1 ]]; then
+			printf '%s usb\n' "$last"
+			return 0
+		fi
+		if [[ $n -gt 1 ]]; then
+			return 2
+		fi
+		return 1
+	fi
+	return 1
+}
+
+# Probe the device itself. lsblk/udev can keep a stale vfat type after mkfs
+# (systemd-udev-trigger stays masked on this image).
+probe_fs() {
+	local dev=${1#/dev/}
+	blkid -p -o value -s TYPE "/dev/$dev" 2>/dev/null || true
+}
+
+probe_label() {
+	local dev=${1#/dev/}
+	blkid -p -o value -s LABEL "/dev/$dev" 2>/dev/null || true
+}
+
+probe_uuid() {
+	local dev=${1#/dev/}
+	blkid -p -o value -s UUID "/dev/$dev" 2>/dev/null || true
+}
+
+state_part() {
+	local uuid device
+	[[ -f $STATE ]] || return 1
+	uuid=$(awk -F= '/^UUID=/{print $2; exit}' "$STATE" || true)
+	if [[ -n $uuid ]]; then
+		device=$(blkid -o device -t "UUID=$uuid" 2>/dev/null | head -n 1 || true)
+		if [[ -n $device ]]; then
+			printf '%s\n' "${device#/dev/}"
+			return 0
+		fi
+	fi
+	device=$(awk -F= '/^DEVICE=/{print $2; exit}' "$STATE" || true)
+	if [[ -n $device && -e $device ]]; then
+		printf '%s\n' "${device#/dev/}"
+		return 0
+	fi
+	return 1
+}
+
+refresh_udev() {
+	local dev=${1#/dev/}
+	udevadm settle --timeout=8 >/dev/null 2>&1 || true
+	if [[ -e /sys/class/block/$dev ]]; then
+		udevadm trigger --action=change "/sys/class/block/$dev" >/dev/null 2>&1 || true
+	fi
+	udevadm settle --timeout=8 >/dev/null 2>&1 || true
+}
+
+looks_like_os_image() {
+	local disk=$1 part labels="" fstypes="" t l
+	for part in $(lsblk -nr -o NAME,TYPE "/dev/$disk" | awk '$2=="part"{print $1}'); do
+		t=$(probe_fs "$part")
+		l=$(probe_label "$part")
+		fstypes+="$t"$'\n'
+		labels+="$l"$'\n'
+	done
+	if printf '%s\n' "$labels" | grep -qxE 'FLY-SETUP|armbi_root|boot|rootfs|rootfs_A|rootfs_B|FlyOS-Conf'; then
+		return 0
+	fi
+	if printf '%s\n' "$fstypes" | grep -qx vfat && printf '%s\n' "$fstypes" | grep -qx ext4; then
+		return 0
+	fi
+	return 1
+}
+
+ensure_sd_overlay() {
+	local cur want dts dtbo boot
+	[[ -f $MMC0_DT/status ]] || return 0
+	if [[ $(mmc0_status) == okay ]]; then
+		return 0
+	fi
+	boot=/boot/overlay-user
+	mkdir -p "$boot"
+	dts=/usr/share/fly-debian/overlays/${OVERLAY_NAME}.dts
+	[[ -f $dts ]] || dts=/boot/overlay-user/${OVERLAY_NAME}.dts
+	dtbo=$boot/${OVERLAY_NAME}.dtbo
+	if [[ ! -f $dtbo ]]; then
+		command -v dtc >/dev/null || die "dtc missing; install device-tree-compiler"
+		[[ -f $dts ]] || die "missing $OVERLAY_NAME overlay source"
+		dtc -@ -I dts -O dtb -o "$dtbo" "$dts"
+	fi
+	[[ -f $ENV_FILE ]] || die "$ENV_FILE missing"
+	cur=$(awk -F= '/^user_overlays=/{print $2; exit}' "$ENV_FILE" || true)
+	if [[ " $cur " != *" $OVERLAY_NAME "* ]]; then
+		if [[ -n $cur ]]; then
+			want="$OVERLAY_NAME $cur"
+		else
+			want=$OVERLAY_NAME
+		fi
+		if grep -q '^user_overlays=' "$ENV_FILE"; then
+			sed -i "s|^user_overlays=.*|user_overlays=$want|" "$ENV_FILE"
+		else
+			printf 'user_overlays=%s\n' "$want" >>"$ENV_FILE"
+		fi
+	fi
+	echo "Onboard MicroSD slot was off in the device tree."
+	echo "Enabled overlay $OVERLAY_NAME. Power-cycle (do not soft reboot), then run:"
+	echo "  sudo fly-media-sd enable"
+	exit 2
+}
+
+part_of() {
+	local disk=$1 p
+	p=$(lsblk -nr -o NAME,TYPE "/dev/$disk" | awk '$2=="part"{print $1; exit}')
+	if [[ -n $p ]]; then
+		printf '%s\n' "$p"
+		return 0
+	fi
+	return 1
+}
+
+copy_tree() {
+	local src=$1 dest=$2
+	mkdir -p "$dest"
+	if command -v rsync >/dev/null; then
+		rsync -a "$src/" "$dest/"
+	else
+		cp -a "$src/." "$dest/"
+	fi
+}
+
+unmount_disk() {
+	local disk=$1 m
+	while read -r m; do
+		[[ -n $m ]] || continue
+		umount "$m" || umount -l "$m" || true
+	done < <(lsblk -nr -o MOUNTPOINT "/dev/$disk" 2>/dev/null)
+}
+
+confirm_format() {
+	local disk=$1
+	local why=${2:-}
+	if [[ ${FORMAT:-0} -eq 1 ]]; then
+		return 0
+	fi
+	if [[ -t 0 ]]; then
+		if [[ -n $why ]]; then
+			printf 'Create ext4 on /dev/%s (%s)? Existing data on that card is lost. Type yes: ' "$disk" "$why"
+		else
+			printf 'Create ext4 on /dev/%s? Existing data on that card is lost. Type yes: ' "$disk"
+		fi
+		read -r ans
+		[[ $ans == yes ]] || die "aborted"
+		return 0
+	fi
+	die "card needs ext4; re-run with --format"
+}
+
+format_disk() {
+	local disk=$1 part why="" fstype="" label=""
+	looks_like_os_image "$disk" && die "/dev/$disk looks like a Fly-bian/FlyOS image; will not format"
+	part=$(part_of "$disk" || true)
+	if [[ -n $part ]]; then
+		fstype=$(probe_fs "$part")
+		label=$(probe_label "$part")
+	fi
+	if [[ -n $fstype || -n $label ]]; then
+		why="${fstype:-no-fs}${label:+, label $label}"
+	fi
+	confirm_format "$disk" "$why"
+	unmount_disk "$disk"
+	log "partitioning /dev/$disk as ext4 ($LABEL)"
+	wipefs -a "/dev/$disk"
+	sfdisk --wipe always "/dev/$disk" <<'EOF'
+label: gpt
+start=1MiB, type=linux
+EOF
+	part=""
+	for _ in 1 2 3 4 5 6 7 8; do
+		sleep 1
+		part=$(part_of "$disk" || true)
+		[[ -n $part ]] && break
+	done
+	[[ -n $part ]] || die "no partition after format"
+	wipefs -a "/dev/$part" >/dev/null 2>&1 || true
+	mkfs.ext4 -F -L "$LABEL" "/dev/$part"
+	refresh_udev "$part"
+	fstype=$(probe_fs "$part")
+	[[ $fstype == ext4 ]] || die "/dev/$part is ${fstype:-empty} after mkfs (want ext4)"
+}
+
+write_unit() {
+	mkdir -p /etc/systemd/system
+	cat >"/etc/systemd/system/$UNIT" <<EOF
+[Unit]
+Description=Fly-bian extra media for gcodes and timelapse
+After=local-fs.target
+DefaultDependencies=yes
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/fly-media-sd apply
+ExecStop=/usr/local/bin/fly-media-sd teardown
+
+[Install]
+WantedBy=multi-user.target
+EOF
+	systemctl daemon-reload
+	systemctl enable "$UNIT"
+}
+
+data_dirs() {
+	printf '%s\n' gcodes timelapse frames
+}
+
+bind_one() {
+	local src=$1 dest=$2
+	mkdir -p "$src" "$dest"
+	if findmnt -n "$dest" >/dev/null 2>&1; then
+		return 0
+	fi
+	mount --bind "$src" "$dest"
+}
+
+unbind_one() {
+	local dest=$1
+	if findmnt -n "$dest" >/dev/null 2>&1; then
+		umount "$dest" || umount -l "$dest" || true
+	fi
+}
+
+cmd_apply() {
+	local user home part dir
+	[[ -f $STATE ]] || exit 0
+	user=$(awk -F= '/^USER=/{print $2; exit}' "$STATE")
+	home=$(home_of "$user")
+	[[ -n $home ]] || exit 0
+	part=$(state_part) || {
+		log "extra media not present; leaving printer_data on the boot disk"
+		log "unplug only after: sudo fly-media-sd disable"
+		exit 0
+	}
+	mkdir -p "$MNT"
+	if ! findmnt -n "$MNT" >/dev/null 2>&1; then
+		mount -o defaults "/dev/$part" "$MNT" || {
+			log "could not mount /dev/$part"
+			exit 0
+		}
+	fi
+	for dir in $(data_dirs); do
+		mkdir -p "$MNT/$dir" "$home/printer_data/$dir"
+		chown "$user:$user" "$MNT/$dir" "$home/printer_data/$dir" 2>/dev/null || true
+		bind_one "$MNT/$dir" "$home/printer_data/$dir"
+	done
+}
+
+cmd_teardown() {
+	local user home dir
+	user=$(printer_user || true)
+	home=$(home_of "${user:-}")
+	if [[ -n $home ]]; then
+		for dir in $(data_dirs); do
+			unbind_one "$home/printer_data/$dir"
+		done
+	fi
+	if findmnt -n "$MNT" >/dev/null 2>&1; then
+		umount "$MNT" || umount -l "$MNT" || true
+	fi
+}
+
+cmd_status() {
+	local user home disk onboard kind rc=0 choice usb
+	user=$(printer_user || true)
+	home=$(home_of "${user:-}" || true)
+	echo "user:        ${user:-?}  home=${home:-?}"
+	echo "root disk:   $(root_disk)"
+	echo "mmc0 status: $(mmc0_status)"
+	if onboard=$(onboard_sd_disk); then
+		echo "onboard SD:  /dev/$onboard"
+	else
+		echo "onboard SD:  not visible"
+	fi
+	choice=$(choose_extra_disk) || rc=$?
+	if [[ $rc -eq 0 && -n $choice ]]; then
+		read -r disk kind <<<"$choice"
+		echo "extra disk:  /dev/$disk ($kind)"
+		lsblk -o NAME,SIZE,FSTYPE,UUID,LABEL,MOUNTPOINT "/dev/$disk"
+	else
+		if onboard=$(onboard_sd_disk 2>/dev/null) && [[ $onboard == "$(root_disk)" ]]; then
+			usb=$(usb_extra_disks | tr '\n' ' ')
+			if [[ $rc -eq 2 || -n $usb ]]; then
+				echo "extra disk:  too many USB disks — leave one drive or USB SD reader plugged in"
+			else
+				echo "extra disk:  none (OS is on the onboard MicroSD; plug one USB drive or USB SD reader)"
+			fi
+		else
+			echo "extra disk:  none (eMMC boot: seat a card in the onboard TF slot)"
+		fi
+	fi
+	echo
+	if [[ -f $STATE ]]; then
+		echo "state:       enabled"
+		cat "$STATE"
+		echo "unit:        $(systemctl is-enabled "$UNIT" 2>/dev/null || echo not-enabled) / $(systemctl is-active "$UNIT" 2>/dev/null || echo inactive)"
+	else
+		echo "state:       not enabled"
+	fi
+	echo
+	if [[ -n $home ]]; then
+		for dir in $(data_dirs); do
+			if [[ -d $home/printer_data/$dir ]]; then
+				printf '%-12s %s\n' "$dir:" "$(findmnt -n -o SOURCE,TARGET "$home/printer_data/$dir" 2>/dev/null || echo "on boot disk $home/printer_data/$dir")"
+			else
+				printf '%-12s (missing)\n' "$dir:"
+			fi
+		done
+	fi
+}
+
+cmd_enable() {
+	local user home disk part fstype dir kind rc=0 uuid onboard choice
+	user=$(printer_user) || die "no printer user"
+	home=$(home_of "$user")
+	[[ -n $home ]] || die "no home for $user"
+	ensure_sd_overlay
+	choice=$(choose_extra_disk) || rc=$?
+	if [[ $rc -eq 2 ]]; then
+		die "plug only one USB drive or USB SD reader, then re-run"
+	fi
+	if [[ $rc -ne 0 || -z $choice ]]; then
+		if onboard=$(onboard_sd_disk) && [[ $onboard == "$(root_disk)" ]]; then
+			die "OS is on the onboard MicroSD. Plug one USB flash drive or a USB SD reader, then re-run."
+		fi
+		die "no extra media. eMMC/M2WS boot: seat a second card in the onboard TF slot. SD boot: plug one USB drive or USB SD reader."
+	fi
+	read -r disk kind <<<"$choice"
+	looks_like_os_image "$disk" && die "/dev/$disk looks like a Fly-bian/FlyOS card; use a blank card or USB drive"
+	part=$(part_of "$disk" || true)
+	fstype=""
+	if [[ -n $part ]]; then
+		fstype=$(probe_fs "$part")
+	fi
+	if [[ ${FORMAT:-0} -eq 1 || -z $part || -z $fstype || $fstype != ext4 ]]; then
+		format_disk "$disk"
+		part=$(part_of "$disk") || die "no partition after format"
+		fstype=$(probe_fs "$part")
+	fi
+	[[ $fstype == ext4 ]] || die "/dev/$part is ${fstype:-empty} after format (want ext4)"
+	mkdir -p "$MNT"
+	if ! findmnt -n "$MNT" >/dev/null 2>&1; then
+		mount "/dev/$part" "$MNT"
+	fi
+	mkdir -p "$home/printer_data"
+	for dir in $(data_dirs); do
+		mkdir -p "$MNT/$dir" "$home/printer_data/$dir"
+		if ! findmnt -n "$home/printer_data/$dir" >/dev/null 2>&1; then
+			copy_tree "$home/printer_data/$dir" "$MNT/$dir"
+		fi
+		chown -R "$user:$user" "$MNT/$dir"
+	done
+	uuid=$(probe_uuid "$part")
+	mkdir -p /etc/fly-debian
+	cat >"$STATE" <<EOF
+USER=$user
+DEVICE=/dev/$part
+UUID=$uuid
+LABEL=$LABEL
+KIND=$kind
+EOF
+	write_unit
+	systemctl start "$UNIT"
+	cmd_apply
+	if systemctl is-active moonraker >/dev/null 2>&1; then
+		systemctl restart moonraker || true
+	fi
+	uid=$(id -u "$user" 2>/dev/null || true)
+	if [[ -n $uid && -d /run/user/$uid ]]; then
+		systemctl --machine="$user@" --user restart moonraker 2>/dev/null || true
+	fi
+	echo "gcodes, timelapse, and frames now live on /dev/$part ($LABEL, $kind)"
+	echo "Moonraker/Fluidd still use ~/printer_data — no config change."
+	echo "Do not unplug that media until: sudo fly-media-sd disable"
+	cmd_status
+}
+
+cmd_disable() {
+	systemctl disable --now "$UNIT" 2>/dev/null || true
+	cmd_teardown
+	rm -f "/etc/systemd/system/$UNIT" "$STATE"
+	systemctl daemon-reload || true
+	echo "Extra media unbound. Files remain on the card or USB drive (label $LABEL)."
+	echo "You may unplug it now."
+	cmd_status
+}
+
+FORMAT=0
+args=()
+for a in "$@"; do
+	case "$a" in
+		--format) FORMAT=1 ;;
+		-h|--help) usage; exit 0 ;;
+		*) args+=("$a") ;;
+	esac
+done
+cmd=${args[0]:-status}
+
+case "$cmd" in
+	status)
+		cmd_status
+		;;
+	enable|disable|apply|teardown)
+		reexec=("$cmd")
+		[[ $FORMAT -eq 1 ]] && reexec+=(--format)
+		if [[ ${#args[@]} -gt 1 ]]; then
+			reexec+=("${args[@]:1}")
+		fi
+		need_root "${reexec[@]}"
+		case "$cmd" in
+			enable) cmd_enable ;;
+			disable) cmd_disable ;;
+			apply) cmd_apply ;;
+			teardown) cmd_teardown ;;
+		esac
+		;;
+	*)
+		usage
+		exit 1
+		;;
+esac

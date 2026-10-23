@@ -657,7 +657,10 @@ apply_spi_device() {
 			return 0
 			;;
 	esac
-	common="fly-pi-v3-uart1 fly-pi-v3-usb1 fly-pi-v3-rs232"
+	envf=/boot/armbianEnv.txt
+	cur=""
+	[ -f "$envf" ] && cur=$(grep '^user_overlays=' "$envf" | head -n 1 | cut -d= -f2- || true)
+	common="fly-pi-v3-sd fly-pi-v3-uart1 fly-pi-v3-usb1 fly-pi-v3-rs232"
 	if [ "$want" = adxl ]; then
 		ov="$common fly-pi-v3-adxl"
 		printf '%s\n' spidev >/etc/modules-load.d/fly-adxl.conf
@@ -667,12 +670,10 @@ apply_spi_device() {
 		printf '%s\n' panel-mipi-dbi goodix_ts >/etc/modules-load.d/fly-tft.conf
 		rm -f /etc/modules-load.d/fly-adxl.conf
 	fi
-	envf=/boot/armbianEnv.txt
 	[ -f "$envf" ] || {
 		log "SPI_DEVICE=$want not written; /boot/armbianEnv.txt missing"
 		return 0
 	}
-	cur=$(grep '^user_overlays=' "$envf" | head -n 1 | cut -d= -f2- || true)
 	if [ "$cur" = "$ov" ]; then
 		return 0
 	fi

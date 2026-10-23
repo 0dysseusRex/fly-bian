@@ -2,13 +2,13 @@
 
 ![Fly Pi V3 (Fly-PI3)](fly-pi-v3.jpg)
 
-**Status:** Supported — Fly-bian **1.0** (GitHub Release [v1.0-pi-v3](https://github.com/0dysseusRex/fly-bian/releases/tag/v1.0-pi-v3))  
+**Status:** Supported — public **1.05** (GitHub Release [v1.05-pi-v3](https://github.com/0dysseusRex/fly-bian/releases/tag/v1.05-pi-v3)). Product version is independent of Lite (Lite is 1.06). **1.0** remains at [v1.0-pi-v3](https://github.com/0dysseusRex/fly-bian/releases/tag/v1.0-pi-v3).  
 **Vendor docs:** [FLY-Pi V3 Host Board](https://mellow.klipper.cn/en/docs/ProductDoc/SBC/fly-pi-v3/) · [FlyOS-FAST intro](https://mellow.klipper.cn/en/docs/ProductDoc/SBC/fly-pi-v3/host/)  
 **Armbian boards:** `fly-pi-v3`, `fly-pi-v3-simpleaf`, `fly-pi-v3-kiauh`  
 **DTB:** `fly-h618.dtb` (captured from FlyOS-FAST H618 v1.4.0 on M2WS)  
 **Kernel:** **6.12.114** `legacy-sunxi64` with `drv-mmc-sunxi-one-xfer`  
 **OEM OS:** FlyOS-FAST **H618** image, `board=fly-pi-v3`  
-**Bake:** `scripts/launch-pi-v3-10.sh` → `Fly-bian-1.0_Fly-Pi-V3_{Base,Simple-AF-ea7125a,KIAUH-v6.3.2}.img.xz`
+**Bake:** `scripts/launch-pi-v3-105.sh` → `Fly-bian-1.05_Fly-Pi-V3_*.img.xz`. Public 1.0 set: `scripts/launch-pi-v3-10.sh`.
 
 Unofficial Debian/Armbian for this PCB — **not FlyOS**. Do **not** flash Fly-Lite-2.1 (H3) images onto a Pi V3. Leftover lab gaps: [untested.md](untested.md).
 
@@ -58,17 +58,47 @@ All use the same private FLY M2 socket. Fly-bian images must boot and run with *
 
 Do **not** assume eMMC/`mmcblk` numbering is identical across M2WE vs M2WS vs onboard SD — discover and document device nodes during bring-up.
 
-**One boot image only.** Do not flash Fly-bian onto both the onboard MicroSD and the M2 eMMC (or the M2WS module TF). U-Boot can load the kernel from one medium while the root UUID matches the other, so the board comes up on a mix of the two installs. A second card may sit in the slot for gcode and timelapse. It must not also contain this image. If the module already has FlyOS or another Fly-bian install, blank that medium or boot from it alone.
-
 **Wi-Fi band is a property of the module, not of the image.** The 2.4 GHz-only M2 has no 5 GHz radio. M2WE and M2WS do both. First boot must associate on 2.4 GHz for every module, and on 5 GHz when the module actually has that band. The lab AIC8800D80 path (5 GHz) does not cover the 2.4-only module. That module is not on the bench yet: `fly-apply` prints any other SDIO id and leaves the radio down, and the 2.4-only boot is tested when the module arrives.
 
-### Optional storage policy (gcode + timelapse)
+### Choosing boot media
 
-**Default image behavior:** keep OS, gcode, and timelapse on the boot medium the user chose (onboard MicroSD, M2WE eMMC, or M2WS module TF). Many users will prefer everything on the M2 module — that must remain a first-class, zero-config path.
+Flash Fly-bian onto **one** medium. Do not flash the image onto both the onboard MicroSD and the M2 eMMC (or the M2WS module TF). U-Boot can load the kernel from one while the root UUID matches the other, and the board comes up as a mix of the two installs.
 
-**Optional (documented, not forced):** when an onboard MicroSD is also present (common when booting from M2WE/M2WS), users may redirect **gcode** and **timelapse / camera video** to the onboard SD card reader so a 16 GB module is not filled with print data. Provide clear how-to instructions (Moonraker/Fluidd/Mainsail/`printer_data` paths or a bind-mount helper) so this is opt-in only.
+| You want to boot from | Do this | First run |
+| --- | --- | --- |
+| **M2WE eMMC** (typical) | Write the image to the module eMMC. Leave factory FlyOS only if you still want FlyOS. | SPL prefers the module (`Trying to boot from MMC2`). Root resizes on the 16 GB chip, a 512 MiB swapfile is created, then **Boot Complete**. Several minutes; quiet stretches are normal. |
+| **M2WS module TF** | Same image family, written to the module card. | Same first-boot work as eMMC. |
+| **Onboard MicroSD** | Write the image to the TF card. **Remove or blank** the M2 storage first. If FlyOS is still on the eMMC, the board boots FlyOS and ignores the card you just flashed. | **1.05** turns overlay `fly-pi-v3-sd` on so Linux can see the slot. Root resizes to the card. Stock **1.0** leaves that node off: SD-only hangs in initramfs waiting for the root UUID. |
 
-Exact mount path and helper (`fly-…` script or first-boot note) TBD in bring-up; capture this in the V3 getting-started wiki when images exist.
+A second card or USB drive may hold gcode and timelapse (below). It must **not** also contain this image.
+
+Ethernet is the easy first network. Wi-Fi needs an official M2 module and its antenna. Soft `reboot` often hangs after `[ OK ]` — power-cycle.
+
+### Extra storage (Pi V3 only)
+
+`fly-media-sd` ships only on Fly Pi V3 images. Lite does not have it.
+
+**Default:** OS, gcode, and timelapse stay on the boot medium.
+
+**Optional:** bind-mount `gcodes`, `timelapse`, and `frames` over `~/printer_data`. Moonraker/Fluidd/Mainsail paths do not change.
+
+| OS is on | Extra storage is | Notes |
+| --- | --- | --- |
+| M2WE eMMC or M2WS | Second card in the **onboard TF slot** | Do not flash Fly-bian onto that extra card. |
+| Onboard MicroSD | One **USB flash drive**, or a MicroSD in a **USB reader** | Plug only one extra USB disk. |
+
+```bash
+sudo fly-media-sd status
+sudo fly-media-sd enable          # prompts before formatting a blank card or USB drive
+sudo fly-media-sd enable --format # wipe the extra media and use it
+sudo fly-media-sd disable         # stop bind-mounts; files stay on the card or USB drive
+```
+
+The helper refuses the boot disk and anything that looks like Fly-bian/FlyOS (`FLY-SETUP` + `armbi_root`). Extra bind mounts stay opt-in.
+
+**Do not unplug extra storage while it is enabled.** Run `sudo fly-media-sd disable` first, then pull the card or USB drive. Unplugging while enabled leaves `~/printer_data` on the boot disk until the media is back, and risks a dirty filesystem.
+
+**1.0:** extra TF storage needs the OS on M2, and SD-only boot needs overlay `fly-pi-v3-sd` copied onto `FLY-SETUP` before the first power-on. **1.05** loads that overlay by default.
 
 ### Connectors (practical)
 
@@ -146,7 +176,7 @@ Captured from M2WS USB gadget (H618 v1.4.0): see [`flyos-artifacts/live/m2ws-usb
 | U-Boot / DTB | Start from captured **`fly-h618.dtb`** + `boot.scr` policy — do not reuse Lite H3 overlays |
 | User overlays | Per-V3 pinmux only (TFT vs SPI/RRF exclusion); OEM overlay prefix `sun50i-h616` |
 | Network | Prefer Ethernet first; M2 SDIO Wi-Fi (`rtl8821cs` / possible AIC8800) second |
-| Storage | Support SD-only, SD+Wi-Fi-M2, M2WE eMMC, M2WS TF; **optional** gcode/timelapse → onboard SD (M2-only OK) |
+| Storage | Support SD-only, SD+Wi-Fi-M2, M2WE eMMC, M2WS TF; **optional** gcode/timelapse on extra TF (eMMC boot) or USB (SD boot) — Pi V3 `fly-media-sd` only |
 | CPU / affinity | OEM isolates CPU3 (`isolcpus=3`); revisit Lite 8189fs/CPU0 rules for `rtw88` / `aic8800` |
 
 ---

@@ -17,7 +17,7 @@ There are only a handful of active alternate-host projects. Most GitHub hits und
 | [kakwa/fly-gemini](https://github.com/kakwa/fly-gemini) | Fly Gemini | Notes and flash scripts | Small; useful for flashing tips, not a maintained image line. |
 | [armbian/build](https://github.com/armbian/build) `mellowflyc5` | **Mellow Fly-C5** (H618) | **Upstream Armbian board** (`config/boards/mellowflyc5.csc`) | Closest official mainline peer to Fly Pi V3 (same SoC family). Maintainer `deece` (Alastair D'Silva). Includes eMMC SPL slot, RTL8821CS packages, serial-getty on `ttyS1`, mainline-style DTS `sun50i-h618-mellow-fly-c5`. Merged mid-2026; U-Boot ported to v2026.07. **Primary reference for Pi V3 bring-up.** |
 | [FloralDroid/armbian](https://github.com/FloralDroid/armbian) | Fly-C5 lineage | Community Armbian tree with Fly-C5 DTS work | Overlaps / feeds the upstream `mellowflyc5` support; check before reinventing H618 Wi-Fi pwrseq / regulators / mmc1–2. |
-| [0dysseusRex/fly-bian](https://github.com/0dysseusRex/fly-bian) | Fly Lite 2.1 (H3); Fly Pi V3 (H618) | This project — unofficial Armbian (Debian) for Mellow Fly SBCs | Not FlyOS. Lite 2.1 (1.06) and Pi V3 (1.0) supported. |
+| [0dysseusRex/fly-bian](https://github.com/0dysseusRex/fly-bian) | Fly Lite 2.1 (H3); Fly Pi V3 (H618) | This project — unofficial Armbian (Debian) for Mellow Fly SBCs | Not FlyOS. Lite 2.1 (1.06) and Pi V3 (1.05) supported. |
 
 ---
 

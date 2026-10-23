@@ -1,0 +1,19 @@
+/dts-v1/;
+/plugin/;
+
+/*
+ * Fly Pi V3 onboard MicroSD (mmc@4020000 / mmc0).
+ * fly-h618.dtb leaves this node disabled. Enable it so a second card
+ * can hold gcodes / timelapse while the OS stays on M2WE eMMC.
+ * Pinmux, CD GPIO, and broken-cd are already in the DTB.
+ */
+/ {
+	compatible = "mellow,fly-os", "allwinner,sun50i-h618", "allwinner,sun50i-h616";
+
+	fragment@0 {
+		target-path = "/soc/mmc@4020000";
+		__overlay__ {
+			status = "okay";
+		};
+	};
+};

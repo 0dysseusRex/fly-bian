@@ -18,7 +18,7 @@ It exists so you can run a normal Debian system on Fly hardware: real `apt`, a u
 4. Boot: the rootfs expands, a swapfile is created, and (on stack images) Klipper trees are bound into your home.
 5. SSH in and finish printer setup with `fly-start` (Simple-AF) or `fly-kiauh` (KIAUH).
 
-**Boards:** [Fly Lite 2.1](docs/boards/fly-lite-2.1/README.md) (1.06) and [Fly Pi V3](docs/boards/fly-pi-v3/README.md) (1.0). Do not flash a Lite image onto a Pi V3 (or the reverse). Pick the filename that contains your board.
+**Boards:** [Fly Lite 2.1](docs/boards/fly-lite-2.1/README.md) (1.06) and [Fly Pi V3](docs/boards/fly-pi-v3/README.md) (1.05). Do not flash a Lite image onto a Pi V3 (or the reverse). Pick the filename that contains your board.
 
 **First-time flash guide:** [Wiki — Getting started](https://github.com/0dysseusRex/fly-bian/wiki/Getting-Started) — download → burn → first boot. Boards: [Fly Lite 2.1](https://github.com/0dysseusRex/fly-bian/wiki/Fly-Lite-2.1) · [Fly Pi V3](https://github.com/0dysseusRex/fly-bian/wiki/Fly-Pi-V3). Same pages also live under [`docs/wiki/`](docs/wiki/Home.md).
 
@@ -176,7 +176,7 @@ Or set `INSTALL_BOOT_DISPLAY=Yes` in `fly-start.txt` (full install) / fly-start 
 | Board | Status | Notes |
 | --- | --- | --- |
 | Fly Lite 2.1 | Now (1.06) | H3, MicroSD only. |
-| Fly Pi V3 | Now (1.0) | H618, Ethernet, optional FLY M2 module. Separate images, not a Lite respin. |
+| Fly Pi V3 | Now (1.05) | H618, Ethernet, optional FLY M2 module. Separate images, not a Lite respin. |
 | Fly Pi V2, MiniPad, Gemini | Later | Different SoCs. Same first-boot idea, different images. |
 
 Community Armbian / alternate host firmware for other Mellow boards (Gemini H5, upstream Fly-C5, etc.) is catalogued in [`docs/community-alternate-firmware.md`](docs/community-alternate-firmware.md). Those projects are **not** Fly-bian images.
@@ -185,7 +185,7 @@ Community Armbian / alternate host firmware for other Mellow boards (Gemini H5, 
 
 | Path | What it is |
 | --- | --- |
-| `FLYBIAN_VERSION` | Product version (`0.2` … `1.0`). Bump before every new image (`scripts/bump-flybian-version.sh`). See [`docs/image-naming.md`](docs/image-naming.md) |
+| `FLYBIAN_VERSION` | Lite product version. Bump before every new Lite image (`scripts/bump-flybian-version.sh`). Pi V3 uses `FLY_PI_V3_VERSION` instead. See [`docs/image-naming.md`](docs/image-naming.md) |
 | `first-boot/` | `fly-start.txt` + `README.txt` that belong on `FLY-SETUP` |
 | `scripts/prepare-sd.sh` | Copy those files onto a mounted FAT volume |
 | `scripts/stage-flybian-release.sh` | Rename/copy Armbian output to Fly-bian product names |

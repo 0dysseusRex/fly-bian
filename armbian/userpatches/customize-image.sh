@@ -221,10 +221,13 @@ if [[ $FLY_BOARD_FAMILY == pi-v3 ]]; then
     # tft-c must follow tft so it disables the ADS7846 node.
     # HDMI is already okay in fly-h618.dtb. RS232 headers are enabled
     # but not electrically tested (no adapter yet).
+    # fly-pi-v3-sd turns on onboard TF (mmc0). Required for SD-only boot;
+    # fly-h618.dtb leaves that node disabled. Extra-card bind mounts stay
+    # opt-in via fly-media-sd.
     if grep -q '^user_overlays=' /boot/armbianEnv.txt; then
-      sed -i 's/^user_overlays=.*/user_overlays=fly-pi-v3-tft fly-pi-v3-tft-c fly-pi-v3-uart1 fly-pi-v3-usb1 fly-pi-v3-rs232/' /boot/armbianEnv.txt
+      sed -i 's/^user_overlays=.*/user_overlays=fly-pi-v3-sd fly-pi-v3-tft fly-pi-v3-tft-c fly-pi-v3-uart1 fly-pi-v3-usb1 fly-pi-v3-rs232/' /boot/armbianEnv.txt
     else
-      echo 'user_overlays=fly-pi-v3-tft fly-pi-v3-tft-c fly-pi-v3-uart1 fly-pi-v3-usb1 fly-pi-v3-rs232' >>/boot/armbianEnv.txt
+      echo 'user_overlays=fly-pi-v3-sd fly-pi-v3-tft fly-pi-v3-tft-c fly-pi-v3-uart1 fly-pi-v3-usb1 fly-pi-v3-rs232' >>/boot/armbianEnv.txt
     fi
     # OEM isolcpus=3 pattern; Pi V3 has 1 GB — avoid Lite maxcpus=1 boot.
     # fsck.mode=skip: systemd-fsck on FLY-SETUP FAT hung first boot (fstab is
@@ -682,6 +685,14 @@ fi
 # SSH helpers: help, guided start, cameras, GrumpyScreen, boot display, KIAUH
 if [[ -f $OVERLAY/tools/fly-help ]]; then
   install -m 0755 "$OVERLAY/tools/fly-help" /usr/local/bin/fly-help
+fi
+if [[ $FLY_BOARD_FAMILY == pi-v3 && -f $OVERLAY/tools/fly-media-sd ]]; then
+  install -m 0755 "$OVERLAY/tools/fly-media-sd" /usr/local/bin/fly-media-sd
+  install -d /usr/share/fly-debian/overlays
+  if [[ -f $OVERLAY/io/fly-pi-v3-sd.dts ]]; then
+    install -m 0644 "$OVERLAY/io/fly-pi-v3-sd.dts" \
+      /usr/share/fly-debian/overlays/fly-pi-v3-sd.dts
+  fi
 fi
 if [[ -f $OVERLAY/tools/fly-start ]]; then
   install -m 0755 "$OVERLAY/tools/fly-start" /usr/local/bin/fly-start

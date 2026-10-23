@@ -11,6 +11,7 @@ C:\Users\udrdr\fly-lite-armbian-image\Releases\
     Fly-Lite-2.1\    … GitHub Release v1.06
   Fly-bian-1.05\
     Fly-Lite-2.1\    … GitHub Release v1.05
+    Fly-Pi-V3\       … GitHub Release v1.05-pi-v3
   Fly-bian-1.0\
     Fly-Lite-2.1\    … GitHub Release v1.0
     Fly-Pi-V3\       … GitHub Release v1.0-pi-v3
@@ -23,10 +24,13 @@ Stage with: `scripts/stage-flybian-release.sh` (set `FLY_DEVICE` for Pi V3).
 
 ## Fly Pi V3
 
-Pi V3 product version is **1.0** (independent of the Lite line, currently 1.06). GitHub Release **[v1.0-pi-v3](https://github.com/0dysseusRex/fly-bian/releases/tag/v1.0-pi-v3)**. Kernel **6.12.114** (`legacy-sunxi64`), DTB `fly-h618.dtb`, MMC one-xfer.
+Pi V3 product version is independent of the Lite line (currently 1.06). Current GitHub Release is **[v1.05-pi-v3](https://github.com/0dysseusRex/fly-bian/releases/tag/v1.05-pi-v3)** (`FLY_PI_V3_VERSION`). Kernel **6.12.114** (`legacy-sunxi64`), DTB `fly-h618.dtb`, MMC one-xfer. Overlay `fly-pi-v3-sd` is default-on so SD-only boot can see rootfs. Extra gcode/timelapse media: `fly-media-sd` (eMMC/M2WS + onboard TF, or SD boot + one USB disk).
 
 | File | SHA256 | What it is |
 | --- | --- | --- |
+| `Releases/Fly-bian-1.05/Fly-Pi-V3/Base/Fly-bian-1.05_Fly-Pi-V3_Base.img.xz` | `a642c9e4914f72dc83b1a3a4f1bd711002543543d076141ceb702811d87d348e` | **Fly-bian 1.05 Base.** `fly-pi-v3-sd` default-on; `fly-media-sd` extra TF or USB. |
+| `Releases/Fly-bian-1.05/Fly-Pi-V3/Simple-AF/Fly-bian-1.05_Fly-Pi-V3_Simple-AF-ea7125a.img.xz` | `8b599d654c783535c77aee784dfda581b8d06b6937f3879514ca2d0a892111a0` | **Fly-bian 1.05 Simple-AF** (pellcorp `ea7125a`). How-to: [`howto-simpleaf.md`](howto-simpleaf.md). |
+| `Releases/Fly-bian-1.05/Fly-Pi-V3/KIAUH/Fly-bian-1.05_Fly-Pi-V3_KIAUH-v6.3.2.img.xz` | `a5da2b996ec38637bf14ae30000e9f1b1092d95cd05a347d3227f039e22b5aa5` | **Fly-bian 1.05 KIAUH** (`v6.3.2`). How-to: [`howto-kiauh.md`](howto-kiauh.md). |
 | `Releases/Fly-bian-1.0/Fly-Pi-V3/Base/Fly-bian-1.0_Fly-Pi-V3_Base.img.xz` | `fae0c947c20d6ea08ff10e389da92c84411611adc723662f2f15e68c476fb147` | **Fly-bian 1.0 Base.** Kernel 6.12.114, `fly-h618.dtb`, no Klipper stack. |
 | `Releases/Fly-bian-1.0/Fly-Pi-V3/Simple-AF/Fly-bian-1.0_Fly-Pi-V3_Simple-AF-ea7125a.img.xz` | `6d0d2c149d84016b34ce7480530cfc31626db58e4f3cfa39b5126f146abd4267` | **Fly-bian 1.0 Simple-AF** (pellcorp `ea7125a`). How-to: [`howto-simpleaf.md`](howto-simpleaf.md). |
 | `Releases/Fly-bian-1.0/Fly-Pi-V3/KIAUH/Fly-bian-1.0_Fly-Pi-V3_KIAUH-v6.3.2.img.xz` | `aa52dbde022253e62896497cfcd925f87f18efd8134374c6144b5c8ecde9d3da` | **Fly-bian 1.0 KIAUH** (`v6.3.2`). How-to: [`howto-kiauh.md`](howto-kiauh.md). |

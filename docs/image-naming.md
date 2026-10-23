@@ -88,5 +88,7 @@ Named images write at bake time:
 | `/etc/fly-debian/stack-rev` | `58e5c1d` |
 | `/etc/fly-debian/stack-flavor` | `simpleaf` |
 
-`FLYBIAN_VERSION` must be bumped **before** building so filename and card match.
-`fly-help` / MOTD can show `/etc/fly-debian/flybian-image`.
+Lite bakes read `FLYBIAN_VERSION`. Pi V3 bakes read `FLY_PI_V3_VERSION` (do not
+bump the Lite file for a Pi V3 image). That version must be raised **before**
+building so filename and card match. `fly-help` / MOTD can show
+`/etc/fly-debian/flybian-image`.
