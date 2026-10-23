@@ -2,12 +2,21 @@
 
 ![Fly Lite 2.1 (π-lite V2.1)](fly-lite-2.1.jpg)
 
-**Status:** Supported (Fly-bian 1.0)  
+**Status:** Supported — public **1.06** (GitHub Release [v1.06](https://github.com/0dysseusRex/fly-bian/releases/tag/v1.06)). Product version is independent of Pi V3 (Pi V3 is 1.05).  
 **Vendor docs:** [Mellow — Fly Lite 2](https://mellow.klipper.cn/en/docs/ProductDoc/SBC/fly-lite/lite2/)  
 **Armbian boards:** `fly-lite-21`, `fly-lite-21-simpleaf`, `fly-lite-21-kiauh`  
-**DTB:** `sun8i-h3-fly-lite.dtb`
+**DTB:** `sun8i-h3-fly-lite.dtb`  
+**Kernel:** **6.18.57** `current-sunxi` with `drv-mmc-sunxi-one-xfer`
 
-Unofficial Debian/Armbian for this PCB — **not FlyOS**. Flash only Fly-bian images built for **Fly-Lite-2.1**. Do not use Raspberry Pi OS, Mainsail OS, or other Fly SBC images.
+Unofficial Debian/Armbian for this PCB — **not FlyOS**. Flash only Fly-bian images whose names contain **`Fly-Lite-2.1`**. Do not use Raspberry Pi OS, Mainsail OS, Fly Pi V3 images, or other Fly SBC images.
+
+Current files from [v1.06](https://github.com/0dysseusRex/fly-bian/releases/tag/v1.06):
+
+- `Fly-bian-1.06_Fly-Lite-2.1_Base.img.xz`
+- `Fly-bian-1.06_Fly-Lite-2.1_Simple-AF-ea7125a.img.xz`
+- `Fly-bian-1.06_Fly-Lite-2.1_KIAUH-v6.3.2.img.xz`
+
+Flash flow: [Getting started](../../wiki/Getting-Started.md) — burn MicroSD → `FLY-SETUP` / wizard → SSH → `fly-start` or `fly-kiauh`.
 
 ---
 
@@ -49,10 +58,12 @@ Unofficial Debian/Armbian for this PCB — **not FlyOS**. Flash only Fly-bian im
 | U-Boot + Linux | Card-detect must treat SD as always present (`broken-cd` / `mmc-broken-cd`) — Orange Pi Lite’s **PF6 CD** is wrong on this PCB |
 | `fdtfile` | `sun8i-h3-fly-lite.dtb` |
 | User overlays (typical) | `mmc-broken-cd` `fly-lite-io` `fly-lite-hdmi` `fly-lite-board` |
+| `fly-lite-board` | Disables the unused H3 EMAC (no jack) and holds `vdd-cpux` at **1.3 V** so cpufreq cannot drop to 1.1 V |
 | Kernel cmdline extras | `maxcpus=1` then online isolated CPUs; `isolcpus=1-3` `irqaffinity=0` `cma=16M` … |
 | Swap | **2 GiB `/swapfile`** created on first boot after rootfs grow |
+| MMC | One DMA transfer at a time across the SD card and SDIO Wi-Fi (`drv-mmc-sunxi-one-xfer`) |
 
-First-boot FAT volume label: **`FLY-SETUP`** (`fly-start.txt` + README).
+First-boot FAT volume label: **`FLY-SETUP`** (`fly-start.txt` + README). `SERIAL_CONSOLE=Yes` keeps the Type-C login; set `No` only after SSH or HDMI works.
 
 ---
 
@@ -68,6 +79,8 @@ First-boot FAT volume label: **`FLY-SETUP`** (`fly-start.txt` + README).
 | Do **not** boot all four cores from t=0 | Wi-Fi often never joins the LAN |
 
 Klipper-family units use systemd `CPUAffinity=1-3` (drop-ins). Do not wrap `ExecStart` with `taskset` (installers rewrite units).
+
+**1.06** also allows only one `sunxi-mmc` DMA transfer at a time so the SD card and the 8189fs radio cannot unmap DMA together. The RCU grace-period thread stays on CPU 0. Soft `reboot` still often hangs after `[ OK ]` — power-cycle.
 
 ---
 
@@ -141,9 +154,20 @@ Autoboot countdown is short — easy to miss after a USB re-enum.
 
 Common helpers: `fly-help`, `fly-crowsnest-add-cams`, `fly-grumpy-rotate`, `fly-tft-check`, `fly-boot-display`, `fly-moonraker-polkit`.
 
+```bash
+fly-help
+fly-start                 # Simple-AF image
+fly-kiauh                 # KIAUH image
+sudo flybian-update       # helpers/overlays only; kernel/DTB/U-Boot stay held
+```
+
+`flybian-update` is baked with the apt source **disabled** until GitHub Pages serves Packages. Kernel in-place upgrade is not a supported path. Apt on this board installs one named package at a time so 512 MB cards do not OOM `dpkg`. How-to: [`howto-update.md`](../../howto-update.md). This board has **no** `fly-media-sd` (that helper is Pi V3 only).
+
 ---
 
 ## Benchmark (Fly-bian 1.05 base)
+
+Current public images are **1.06** on the same **6.18.57** kernel family. These numbers are from the 1.05 Base card.
 
 [sbc-bench](https://github.com/ThomasKaiser/sbc-bench) 0.9.72, unattended, on an idle 1.05 base card. Kernel `6.18.57-current-sunxi`, 484 MB RAM, 2 GB swap on the SD card. `vdd-cpux` is held at 1.3 V. sbc-bench switched the cpufreq governor to `performance` for the run. Measured clocks were 1002 MHz at the 1008 MHz step, 811 MHz at 816, and 642 MHz at 648. No throttling. Die temperature at the start of the run was 53–55 °C. sbc-bench reported swapping during the run, and that swap sits on the SD card.
 
@@ -179,7 +203,11 @@ OpenSSL `aes-*-cbc`, two runs, kB/s. The 16384-byte AES-256 column is what sbc-b
 | Doc | Topic |
 | --- | --- |
 | [oom.md](oom.md) | OOM / segfault / finish installs |
+| [`../../howto-update.md`](../../howto-update.md) | `flybian-update` without a new flash |
+| [`../../howto-simpleaf.md`](../../howto-simpleaf.md) | Simple-AF after login |
+| [`../../howto-kiauh.md`](../../howto-kiauh.md) | KIAUH after login |
 | [`../../fly-lite-armbian-notes.md`](../../fly-lite-armbian-notes.md) | Lab bring-up diary |
 | [`../../build-named-image.md`](../../build-named-image.md) | Image bake requirements |
 | [`../../lite21-bringup.md`](../../lite21-bringup.md) | Early U-Boot / PF6 notes |
 | [Main project README](../../../README.md) | Flash table, AI-first workflow |
+| [Wiki — Fly Lite 2.1](https://github.com/0dysseusRex/fly-bian/wiki/Fly-Lite-2.1) | Short board page |
